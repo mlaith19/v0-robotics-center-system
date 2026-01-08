@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id              String   @id @default(cuid())
+  name            String
+  idNumber        String? 
+  birthDate       String?
+  email           String?  @unique
+  phone           String?
+  address         String?
+  city            String?
+  father          String?
+  mother          String?
+  additionalPhone String?
+  healthFund      String?
+  allergies       String?
+  status          String   @default("מתעניין")
+  totalSessions   Int      @default(12)
+
+  // קורסים (לשלב ראשון נשמור פשוט)
+  courseIds       String[] @default([])
+  courseSessions  Json?    // יתרת מפגשים לכל קורס
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Teacher {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Course {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

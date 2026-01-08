@@ -1,0 +1,510 @@
+"use client"
+
+import { useState, useMemo, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { ChevronLeft, ChevronRight, Filter } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+const weekdayToNumber: Record<string, number> = {
+  ראשון: 0,
+  שני: 1,
+  שלישי: 2,
+  רביעי: 3,
+  חמישי: 4,
+  שישי: 5,
+  שבת: 6,
+}
+
+const courseColors = [
+  { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-300", hover: "hover:border-blue-500" },
+  { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-300", hover: "hover:border-purple-500" },
+  { bg: "bg-green-100", text: "text-green-700", border: "border-green-300", hover: "hover:border-green-500" },
+  { bg: "bg-orange-100", text: "text-orange-700", border: "border-orange-300", hover: "hover:border-orange-500" },
+  { bg: "bg-pink-100", text: "text-pink-700", border: "border-pink-300", hover: "hover:border-pink-500" },
+  { bg: "bg-teal-100", text: "text-teal-700", border: "border-teal-300", hover: "hover:border-teal-500" },
+  { bg: "bg-indigo-100", text: "text-indigo-700", border: "border-indigo-300", hover: "hover:border-indigo-500" },
+  { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-300", hover: "hover:border-amber-500" },
+]
+
+export default function SchedulePage() {
+  const [courses, setCourses] = useState<any[]>([])
+  const [students, setStudents] = useState<any[]>([])
+  const [courseColorMap, setCourseColorMap] = useState<Record<number, number>>({})
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedCourses = localStorage.getItem("robotics-courses")
+      const savedStudents = localStorage.getItem("robotics-students")
+      if (savedCourses) {
+        const parsedCourses = JSON.parse(savedCourses)
+        setCourses(parsedCourses)
+
+        const colorMap: Record<number, number> = {}
+        parsedCourses.forEach((course: any, index: number) => {
+          colorMap[course.id] = index % courseColors.length
+        })
+        setCourseColorMap(colorMap)
+      }
+      if (savedStudents) {
+        setStudents(JSON.parse(savedStudents))
+      }
+    }
+  }, [])
+
+  const getCourseColor = (courseId: number) => {
+    const colorIndex = courseColorMap[courseId] || 0
+    return courseColors[colorIndex]
+  }
+
+  const [viewMode, setViewMode] = useState<"day" | "week" | "month">("month")
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [selectedCourse, setSelectedCourse] = useState<any>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+
+  const [filterCourse, setFilterCourse] = useState<string>("all")
+  const [filterTeacher, setFilterTeacher] = useState<string>("all")
+  const [filterStudent, setFilterStudent] = useState<string>("all")
+
+  const teachers = useMemo(() => {
+    const uniqueTeachers = new Set<string>()
+    courses.forEach((course) => {
+      if (course.teachers && Array.isArray(course.teachers)) {
+        course.teachers.forEach((teacher: string) => uniqueTeachers.add(teacher))
+      }
+    })
+    return Array.from(uniqueTeachers)
+  }, [courses])
+
+  const filteredCourses = useMemo(() => {
+    return courses.filter((course) => {
+      if (filterCourse !== "all" && course.id.toString() !== filterCourse) return false
+      if (filterTeacher !== "all") {
+        if (!course.teachers || !Array.isArray(course.teachers) || !course.teachers.includes(filterTeacher)) {
+          return false
+        }
+      }
+      if (filterStudent !== "all") {
+        const student = students.find((s) => s.id.toString() === filterStudent)
+        if (student && course.name !== student.course) return false
+      }
+      return true
+    })
+  }, [courses, filterCourse, filterTeacher, filterStudent, students])
+
+  const getCoursesForDate = (date: Date) => {
+    const dayOfWeek = date.getDay()
+    const dayName = Object.keys(weekdayToNumber).find((key) => weekdayToNumber[key] === dayOfWeek)
+
+    return filteredCourses.filter((course) => {
+      if (!dayName) return false
+
+      if (!course.weekdays || !Array.isArray(course.weekdays) || course.weekdays.length === 0) {
+        return false
+      }
+
+      if (!course.weekdays.includes(dayName)) {
+        return false
+      }
+
+      return true
+    })
+  }
+
+  const renderDayView = () => {
+    const courses = getCoursesForDate(currentDate)
+    const hours = Array.from({ length: 14 }, (_, i) => i + 8)
+
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <div className="bg-muted/50 p-4 border-b">
+          <div className="text-lg font-semibold">
+            {currentDate.toLocaleDateString("he-IL", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </div>
+        </div>
+        <div className="divide-y">
+          {hours.map((hour) => {
+            const hourCourses = courses.filter((course) => {
+              const [startHour] = course.startTime.split(":").map(Number)
+              return startHour === hour
+            })
+
+            return (
+              <div key={hour} className="flex min-h-[80px]">
+                <div className="w-20 p-4 bg-muted/30 border-l text-sm font-medium text-muted-foreground">
+                  {hour.toString().padStart(2, "0")}:00
+                </div>
+                <div className="flex-1 p-2">
+                  {hourCourses.length > 0 ? (
+                    <div className="space-y-2">
+                      {hourCourses.map((course) => {
+                        const colors = getCourseColor(course.id)
+                        return (
+                          <Card
+                            key={course.id}
+                            className={`p-3 cursor-pointer transition-colors border-2 ${colors.bg} ${colors.border} ${colors.hover}`}
+                            onClick={() => handleCourseClick(course)}
+                          >
+                            <div className={`font-semibold text-sm mb-1 ${colors.text}`}>{course.name}</div>
+                            <div className={`text-xs ${colors.text} opacity-80`}>
+                              {course.startTime} - {course.endTime} • {course.teachers?.join(", ")}
+                            </div>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground text-sm">-</div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  const renderWeekView = () => {
+    const weekDates = getWeekDates()
+    const hours = Array.from({ length: 14 }, (_, i) => i + 8)
+
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <div className="grid grid-cols-8 bg-muted/50 border-b">
+          <div className="p-3 border-l"></div>
+          {weekDates.map((date, i) => (
+            <div key={i} className="p-3 text-center border-l">
+              <div className="text-sm font-medium">{date.toLocaleDateString("he-IL", { weekday: "short" })}</div>
+              <div className="text-lg font-bold mt-1">{date.getDate()}</div>
+            </div>
+          ))}
+        </div>
+        <div className="divide-y">
+          {hours.map((hour) => (
+            <div key={hour} className="grid grid-cols-8 min-h-[80px]">
+              <div className="p-3 bg-muted/30 border-l text-sm font-medium text-muted-foreground flex items-start">
+                {hour.toString().padStart(2, "0")}:00
+              </div>
+              {weekDates.map((date, i) => {
+                const dayCourses = getCoursesForDate(date).filter((course) => {
+                  const [startHour] = course.startTime.split(":").map(Number)
+                  return startHour === hour
+                })
+
+                return (
+                  <div key={i} className="p-1 border-l">
+                    {dayCourses.length > 0 ? (
+                      <div className="space-y-1">
+                        {dayCourses.map((course) => {
+                          const colors = getCourseColor(course.id)
+                          return (
+                            <Card
+                              key={course.id}
+                              className={`p-2 cursor-pointer transition-colors text-xs border-2 ${colors.bg} ${colors.border} ${colors.hover}`}
+                              onClick={() => handleCourseClick(course)}
+                            >
+                              <div className={`font-semibold truncate ${colors.text}`}>{course.name}</div>
+                              <div className={`truncate ${colors.text} opacity-80`}>
+                                {course.startTime}-{course.endTime}
+                              </div>
+                            </Card>
+                          )
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const renderMonthView = () => {
+    const year = currentDate.getFullYear()
+    const month = currentDate.getMonth()
+    const firstDay = new Date(year, month, 1).getDay()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+    const days = []
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null)
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i))
+    }
+
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <div className="grid grid-cols-7 bg-muted/50 border-b">
+          {["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"].map((day) => (
+            <div key={day} className="p-3 text-center border-l text-sm font-medium">
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {days.map((date, i) => {
+            const dayCourses = date ? getCoursesForDate(date) : []
+            const isToday = date && date.toDateString() === new Date().toDateString()
+
+            return (
+              <div
+                key={i}
+                className={`min-h-[120px] p-2 border-b border-l ${!date ? "bg-muted/20" : ""} ${
+                  isToday ? "bg-primary/5" : ""
+                }`}
+              >
+                {date && (
+                  <>
+                    <div
+                      className={`text-sm font-medium mb-2 ${
+                        isToday
+                          ? "bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center"
+                          : ""
+                      }`}
+                    >
+                      {date.getDate()}
+                    </div>
+                    {dayCourses.length > 0 && (
+                      <div className="space-y-1">
+                        {dayCourses.slice(0, 3).map((course) => {
+                          const colors = getCourseColor(course.id)
+                          return (
+                            <div
+                              key={course.id}
+                              className={`text-xs p-1.5 rounded cursor-pointer transition-colors truncate border ${colors.bg} ${colors.text} ${colors.border} ${colors.hover}`}
+                              onClick={() => handleCourseClick(course)}
+                            >
+                              {course.startTime} {course.name}
+                            </div>
+                          )
+                        })}
+                        {dayCourses.length > 3 && (
+                          <div className="text-xs text-muted-foreground px-1">+{dayCourses.length - 3} עוד</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  const handlePrevious = () => {
+    const newDate = new Date(currentDate)
+    if (viewMode === "day") {
+      newDate.setDate(newDate.getDate() - 1)
+    } else if (viewMode === "week") {
+      newDate.setDate(newDate.getDate() - 7)
+    } else {
+      newDate.setMonth(newDate.getMonth() - 1)
+    }
+    setCurrentDate(newDate)
+  }
+
+  const handleNext = () => {
+    const newDate = new Date(currentDate)
+    if (viewMode === "day") {
+      newDate.setDate(newDate.getDate() + 1)
+    } else if (viewMode === "week") {
+      newDate.setDate(newDate.getDate() + 7)
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1)
+    }
+    setCurrentDate(newDate)
+  }
+
+  const handleToday = () => {
+    setCurrentDate(new Date())
+  }
+
+  const handleCourseClick = (course: any) => {
+    setSelectedCourse(course)
+    setDialogOpen(true)
+  }
+
+  const getWeekDates = () => {
+    const start = new Date(currentDate)
+    const day = start.getDay()
+    start.setDate(start.getDate() - day)
+
+    const dates = []
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(start)
+      date.setDate(start.getDate() + i)
+      dates.push(date)
+    }
+    return dates
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">לוח זמנים</h1>
+          <p className="text-muted-foreground mt-2">צפה ונהל את לוח המפגשים</p>
+        </div>
+        <div className="text-xl font-semibold">
+          {viewMode === "month"
+            ? currentDate.toLocaleDateString("he-IL", { year: "numeric", month: "long" })
+            : currentDate.toLocaleDateString("he-IL", { year: "numeric", month: "long", day: "numeric" })}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Button variant={viewMode === "day" ? "default" : "outline"} size="sm" onClick={() => setViewMode("day")}>
+            יום
+          </Button>
+          <Button variant={viewMode === "week" ? "default" : "outline"} size="sm" onClick={() => setViewMode("week")}>
+            שבוע
+          </Button>
+          <Button variant={viewMode === "month" ? "default" : "outline"} size="sm" onClick={() => setViewMode("month")}>
+            חודש
+          </Button>
+
+          <div className="mr-4 flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={handlePrevious}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleNext}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" onClick={handleToday}>
+              היום
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={filterCourse} onValueChange={setFilterCourse}>
+            <SelectTrigger className="w-[180px]">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <SelectValue placeholder="כל הקורסים" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">כל הקורסים</SelectItem>
+              {courses.map((course) => (
+                <SelectItem key={course.id} value={course.id.toString()}>
+                  {course.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterTeacher} onValueChange={setFilterTeacher}>
+            <SelectTrigger className="w-[180px]">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <SelectValue placeholder="כל המורים" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">כל המורים</SelectItem>
+              {teachers.map((teacher) => (
+                <SelectItem key={teacher} value={teacher}>
+                  {teacher}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterStudent} onValueChange={setFilterStudent}>
+            <SelectTrigger className="w-[180px]">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <SelectValue placeholder="כל התלמידים" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">כל התלמידים</SelectItem>
+              {students.map((student) => (
+                <SelectItem key={student.id} value={student.id.toString()}>
+                  {student.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {viewMode === "day" && renderDayView()}
+      {viewMode === "week" && renderWeekView()}
+      {viewMode === "month" && renderMonthView()}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">{selectedCourse?.name}</DialogTitle>
+            <DialogDescription>{selectedCourse?.description}</DialogDescription>
+          </DialogHeader>
+          {selectedCourse && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">מורים</div>
+                  <div className="font-medium">{selectedCourse.teachers?.join(", ") || "לא צוין"}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">רמה</div>
+                  <div className="font-medium">{selectedCourse.level}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">תאריכים</div>
+                  <div className="font-medium text-sm">
+                    {new Date(selectedCourse.startDate).toLocaleDateString("he-IL")} -{" "}
+                    {new Date(selectedCourse.endDate).toLocaleDateString("he-IL")}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">שעות</div>
+                  <div className="font-medium">
+                    {selectedCourse.startTime} - {selectedCourse.endTime}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">ימי שבוע</div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCourse.weekdays?.map((day: string) => (
+                    <span key={day} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
+                      {day}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">תלמידים</div>
+                  <div className="font-medium">{selectedCourse.students}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">מחיר</div>
+                  <div className="font-medium text-lg text-primary">₪{selectedCourse.price}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
