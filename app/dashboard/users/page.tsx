@@ -1,7 +1,22 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowRight, UserPlus, Shield, Edit, Trash2 } from "lucide-react"
+import {
+  ArrowRight,
+  UserPlus,
+  Shield,
+  Edit,
+  Trash2,
+  Users,
+  GraduationCap,
+  BookOpen,
+  School,
+  Rocket,
+  DollarSign,
+  FileText,
+  Calendar,
+  SettingsIcon,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,6 +43,14 @@ type Permission = {
   description: string
 }
 
+type PermissionCategory = {
+  id: string
+  name: string
+  icon: any
+  permissions: Permission[]
+  color: string
+}
+
 type User = {
   id: string
   name: string
@@ -37,44 +60,142 @@ type User = {
   createdAt: string
 }
 
-const availablePermissions: Permission[] = [
-  { id: "dashboard", name: "דף הבית", description: "גישה לדף הבית" },
-  { id: "courses-view", name: "צפייה בקורסים", description: "צפייה ברשימת קורסים" },
-  { id: "courses-edit", name: "עריכת קורסים", description: "יצירה ועריכת קורסים" },
-  { id: "courses-delete", name: "מחיקת קורסים", description: "מחיקת קורסים" },
-  { id: "students-view", name: "צפייה בתלמידים", description: "צפייה ברשימת תלמידים" },
-  { id: "students-edit", name: "עריכת תלמידים", description: "יצירה ועריכת תלמידים" },
-  { id: "students-delete", name: "מחיקת תלמידים", description: "מחיקת תלמידים" },
-  { id: "teachers-view", name: "צפייה במורים", description: "צפייה ברשימת מורים" },
-  { id: "teachers-edit", name: "עריכת מורים", description: "יצירה ועריכת מורים" },
-  { id: "teachers-delete", name: "מחיקת מורים", description: "מחיקת מורים" },
-  { id: "schools-view", name: "צפייה בבתי ספר", description: "צפייה ברשימת בתי ספר" },
-  { id: "schools-edit", name: "עריכת בתי ספר", description: "יצירה ועריכת בתי ספר" },
-  { id: "schools-delete", name: "מחיקת בתי ספר", description: "מחיקת בתי ספר" },
-  { id: "gafan-view", name: "צפייה בתוכניות גפן", description: "צפייה ברשימת תוכניות גפן" },
-  { id: "gafan-edit", name: "עריכת תוכניות גפן", description: "יצירה ועריכת תוכניות גפן" },
-  { id: "gafan-delete", name: "מחיקת תוכניות גפן", description: "מחיקת תוכניות גפן" },
-  { id: "registration-view", name: "צפייה ברישומים", description: "צפייה ברשימת רישומים" },
-  { id: "registration-send", name: "שליחת טופס רישום", description: "שליחת טפסי רישום" },
-  { id: "users-view", name: "צפייה במשתמשים", description: "צפייה ברשימת משתמשים" },
-  { id: "users-edit", name: "עריכת משתמשים", description: "יצירה ועריכת משתמשים" },
-  { id: "users-delete", name: "מחיקת משתמשים", description: "מחיקת משתמשים" },
-  { id: "cashier-view", name: "צפייה בקופה", description: "צפייה בהכנסות והוצאות" },
-  { id: "cashier-income", name: "הוספת הכנסה", description: "רישום הכנסות" },
-  { id: "cashier-expense", name: "הוספת הוצאה", description: "רישום הוצאות" },
-  { id: "cashier-delete", name: "מחיקת תנועות", description: "מחיקת הכנסות והוצאות" },
-  { id: "reports-view", name: "צפייה בדוחות", description: "צפייה בדוחות" },
-  { id: "reports-export", name: "ייצוא דוחות", description: "ייצוא דוחות לקבצים" },
-  { id: "attendance-view", name: "צפייה בנוכחות", description: "צפייה בנוכחות" },
-  { id: "attendance-edit", name: "עריכת נוכחות", description: "עדכון נוכחות תלמידים ומורים" },
-  { id: "schedule-view", name: "צפייה בלוח זמנים", description: "צפייה בלוח הזמנים" },
-  { id: "schedule-edit", name: "עריכת לוח זמנים", description: "עדכון לוח הזמנים" },
-  { id: "settings-view", name: "צפייה בהגדרות", description: "צפייה בהגדרות המערכת" },
-  { id: "settings-edit", name: "עריכת הגדרות", description: "עדכון הגדרות המערכת" },
+const permissionCategories: PermissionCategory[] = [
+  {
+    id: "courses",
+    name: "קורסים",
+    icon: BookOpen,
+    color: "bg-blue-50 border-blue-200",
+    permissions: [
+      { id: "courses-view", name: "צפייה בקורסים", description: "צפייה ברשימת קורסים" },
+      { id: "courses-edit", name: "עריכת קורסים", description: "יצירה ועריכת קורסים" },
+      { id: "courses-delete", name: "מחיקת קורסים", description: "מחיקת קורסים" },
+    ],
+  },
+  {
+    id: "students",
+    name: "תלמידים",
+    icon: GraduationCap,
+    color: "bg-purple-50 border-purple-200",
+    permissions: [
+      { id: "students-view", name: "צפייה בתלמידים", description: "צפייה ברשימת תלמידים" },
+      { id: "students-edit", name: "עריכת תלמידים", description: "יצירה ועריכת תלמידים" },
+      { id: "students-delete", name: "מחיקת תלמידים", description: "מחיקת תלמידים" },
+    ],
+  },
+  {
+    id: "teachers",
+    name: "מורים",
+    icon: Users,
+    color: "bg-green-50 border-green-200",
+    permissions: [
+      { id: "teachers-view", name: "צפייה במורים", description: "צפייה ברשימת מורים" },
+      { id: "teachers-edit", name: "עריכת מורים", description: "יצירה ועריכת מורים" },
+      { id: "teachers-delete", name: "מחיקת מורים", description: "מחיקת מורים" },
+    ],
+  },
+  {
+    id: "schools",
+    name: "בתי ספר",
+    icon: School,
+    color: "bg-orange-50 border-orange-200",
+    permissions: [
+      { id: "schools-view", name: "צפייה בבתי ספר", description: "צפייה ברשימת בתי ספר" },
+      { id: "schools-edit", name: "עריכת בתי ספר", description: "יצירה ועריכת בתי ספר" },
+      { id: "schools-delete", name: "מחיקת בתי ספר", description: "מחיקת בתי ספר" },
+    ],
+  },
+  {
+    id: "gafan",
+    name: 'תוכניות גפ"ן',
+    icon: Rocket,
+    color: "bg-pink-50 border-pink-200",
+    permissions: [
+      { id: "gafan-view", name: 'צפייה בתוכניות גפ"ן', description: 'צפייה ברשימת תוכניות גפ"ן' },
+      { id: "gafan-edit", name: 'עריכת תוכניות גפ"ן', description: 'יצירה ועריכת תוכניות גפ"ן' },
+      { id: "gafan-delete", name: 'מחיקת תוכניות גפ"ן', description: 'מחיקת תוכניות גפ"ן' },
+    ],
+  },
+  {
+    id: "registration",
+    name: "רישום",
+    icon: FileText,
+    color: "bg-cyan-50 border-cyan-200",
+    permissions: [
+      { id: "registration-view", name: "צפייה ברישומים", description: "צפייה ברשימת רישומים" },
+      { id: "registration-send", name: "שליחת טופס רישום", description: "שליחת טפסי רישום" },
+    ],
+  },
+  {
+    id: "cashier",
+    name: "קופה",
+    icon: DollarSign,
+    color: "bg-emerald-50 border-emerald-200",
+    permissions: [
+      { id: "cashier-view", name: "צפייה בקופה", description: "צפייה בהכנסות והוצאות" },
+      { id: "cashier-income", name: "הוספת הכנסה", description: "רישום הכנסות" },
+      { id: "cashier-expense", name: "הוספת הוצאה", description: "רישום הוצאות" },
+      { id: "cashier-delete", name: "מחיקת תנועות", description: "מחיקת הכנסות והוצאות" },
+    ],
+  },
+  {
+    id: "reports",
+    name: "דוחות",
+    icon: FileText,
+    color: "bg-amber-50 border-amber-200",
+    permissions: [
+      { id: "reports-view", name: "צפייה בדוחות", description: "צפייה בדוחות" },
+      { id: "reports-export", name: "ייצוא דוחות", description: "ייצוא דוחות לקבצים" },
+    ],
+  },
+  {
+    id: "attendance",
+    name: "נוכחות",
+    icon: Calendar,
+    color: "bg-indigo-50 border-indigo-200",
+    permissions: [
+      { id: "attendance-view", name: "צפייה בנוכחות", description: "צפייה בנוכחות" },
+      { id: "attendance-edit", name: "עריכת נוכחות", description: "עדכון נוכחות תלמידים ומורים" },
+    ],
+  },
+  {
+    id: "schedule",
+    name: "לוח זמנים",
+    icon: Calendar,
+    color: "bg-teal-50 border-teal-200",
+    permissions: [
+      { id: "schedule-view", name: "צפייה בלוח זמנים", description: "צפייה בלוח הזמנים" },
+      { id: "schedule-edit", name: "עריכת לוח זמנים", description: "עדכון לוח הזמנים" },
+    ],
+  },
+  {
+    id: "users",
+    name: "משתמשים",
+    icon: Users,
+    color: "bg-violet-50 border-violet-200",
+    permissions: [
+      { id: "users-view", name: "צפייה במשתמשים", description: "צפייה ברשימת משתמשים" },
+      { id: "users-edit", name: "עריכת משתמשים", description: "יצירה ועריכת משתמשים" },
+      { id: "users-delete", name: "מחיקת משתמשים", description: "מחיקת משתמשים" },
+    ],
+  },
+  {
+    id: "settings",
+    name: "הגדרות",
+    icon: SettingsIcon,
+    color: "bg-slate-50 border-slate-200",
+    permissions: [
+      { id: "dashboard", name: "דף הבית", description: "גישה לדף הבית" },
+      { id: "settings-view", name: "צפייה בהגדרות", description: "צפייה בהגדרות המערכת" },
+      { id: "settings-edit", name: "עריכת הגדרות", description: "עדכון הגדרות המערכת" },
+    ],
+  },
 ]
 
+const allPermissions = permissionCategories.flatMap((cat) => cat.permissions)
+
 const roleDefaultPermissions: Record<UserRole, string[]> = {
-  "סופר אדמין": availablePermissions.map((p) => p.id),
+  "סופר אדמין": allPermissions.map((p) => p.id),
   מזכירה: [
     "dashboard",
     "courses-view",
@@ -141,6 +262,32 @@ export default function UsersPage() {
       : [...formData.permissions, permissionId]
 
     setFormData({ ...formData, permissions: newPermissions })
+  }
+
+  const isCategoryFullySelected = (categoryId: string) => {
+    const category = permissionCategories.find((c) => c.id === categoryId)
+    if (!category) return false
+    return category.permissions.every((p) => formData.permissions.includes(p.id))
+  }
+
+  const toggleCategoryPermissions = (categoryId: string) => {
+    const category = permissionCategories.find((c) => c.id === categoryId)
+    if (!category) return
+
+    const categoryPermissionIds = category.permissions.map((p) => p.id)
+    const allSelected = categoryPermissionIds.every((id) => formData.permissions.includes(id))
+
+    if (allSelected) {
+      // Remove all category permissions
+      setFormData({
+        ...formData,
+        permissions: formData.permissions.filter((id) => !categoryPermissionIds.includes(id)),
+      })
+    } else {
+      // Add all category permissions
+      const newPermissions = [...new Set([...formData.permissions, ...categoryPermissionIds])]
+      setFormData({ ...formData, permissions: newPermissions })
+    }
   }
 
   const handleSubmit = () => {
@@ -247,7 +394,7 @@ export default function UsersPage() {
                 הוסף משתמש
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+            <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingUser ? "עריכת משתמש" : "משתמש חדש"}</DialogTitle>
                 <DialogDescription>הגדר את פרטי המשתמש והרשאותיו במערכת</DialogDescription>
@@ -296,35 +443,61 @@ export default function UsersPage() {
                   </Select>
                 </div>
 
-                {/* Permissions */}
+                {/* Permissions by Category */}
                 {formData.role && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Shield className="h-5 w-5 text-blue-600" />
                       <Label className="text-base font-semibold">הרשאות</Label>
+                      <Badge variant="secondary" className="mr-auto">
+                        {formData.permissions.length} הרשאות נבחרו
+                      </Badge>
                     </div>
 
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="grid gap-4">
-                          {availablePermissions.map((permission) => (
-                            <div key={permission.id} className="flex items-start space-x-3 space-x-reverse">
-                              <Checkbox
-                                id={permission.id}
-                                checked={formData.permissions.includes(permission.id)}
-                                onCheckedChange={() => handlePermissionToggle(permission.id)}
-                              />
-                              <div className="flex-1">
-                                <Label htmlFor={permission.id} className="cursor-pointer font-medium">
-                                  {permission.name}
-                                </Label>
-                                <p className="text-sm text-gray-500">{permission.description}</p>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {permissionCategories.map((category) => {
+                        const Icon = category.icon
+                        const isFullySelected = isCategoryFullySelected(category.id)
+
+                        return (
+                          <Card key={category.id} className={`border-2 ${category.color}`}>
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Icon className="h-5 w-5" />
+                                  <CardTitle className="text-base">{category.name}</CardTitle>
+                                </div>
+                                <Button
+                                  variant={isFullySelected ? "secondary" : "outline"}
+                                  size="sm"
+                                  onClick={() => toggleCategoryPermissions(category.id)}
+                                  className="h-7 text-xs"
+                                >
+                                  {isFullySelected ? "בטל הכל" : "בחר הכל"}
+                                </Button>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              {category.permissions.map((permission) => (
+                                <div key={permission.id} className="flex items-start space-x-3 space-x-reverse">
+                                  <Checkbox
+                                    id={permission.id}
+                                    checked={formData.permissions.includes(permission.id)}
+                                    onCheckedChange={() => handlePermissionToggle(permission.id)}
+                                  />
+                                  <div className="flex-1">
+                                    <Label htmlFor={permission.id} className="cursor-pointer text-sm font-medium">
+                                      {permission.name}
+                                    </Label>
+                                    <p className="text-xs text-gray-500">{permission.description}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
 
