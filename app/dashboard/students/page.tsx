@@ -3,8 +3,19 @@
 import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Plus, Mail, Phone, LayoutGrid, List, BookOpen, Eye, Edit } from "lucide-react"
+import { Plus, Mail, Phone, LayoutGrid, List, BookOpen, Eye, Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type Student = {
   id: string
@@ -29,12 +40,12 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 
   useEffect(() => {
     let cancelled = false
-
     ;(async () => {
       try {
         setLoading(true)
@@ -56,6 +67,24 @@ export default function StudentsPage() {
       cancelled = true
     }
   }, [])
+
+  const handleDelete = async (id: string) => {
+    try {
+      setDeletingId(id)
+      const res = await fetch(`/api/students/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) throw new Error("Failed to delete student")
+
+      // Remove from local state
+      setStudents((prev) => prev.filter((s) => s.id !== id))
+    } catch (e: any) {
+      alert(e?.message ?? "שגיאה במחיקת תלמיד")
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const hasStudents = useMemo(() => students.length > 0, [students.length])
 
@@ -96,22 +125,14 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {loading && (
-        <div className="border rounded-lg p-6 text-muted-foreground">
-          טוען תלמידים...
-        </div>
-      )}
+      {loading && <div className="border rounded-lg p-6 text-muted-foreground">טוען תלמידים...</div>}
 
       {!loading && error && (
         <div className="border rounded-lg p-6">
           <div className="font-medium text-red-600">שגיאה</div>
           <div className="text-sm text-muted-foreground mt-1">{error}</div>
           <div className="mt-4">
-            <Button
-              variant="outline"
-              onClick={() => window.location.reload()}
-              className="bg-transparent"
-            >
+            <Button variant="outline" onClick={() => window.location.reload()} className="bg-transparent">
               נסה שוב
             </Button>
           </div>
@@ -183,6 +204,36 @@ export default function StudentsPage() {
                       ערוך
                     </Button>
                   </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 bg-transparent text-destructive hover:text-destructive"
+                        disabled={deletingId === student.id}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          פעולה זו תמחק את התלמיד <strong>{student.name}</strong> לצמיתות. לא ניתן יהיה לשחזר את
+                          הנתונים.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>ביטול</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDelete(student.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          מחק
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </Card>
@@ -257,12 +308,42 @@ export default function StudentsPage() {
                             ערוך
                           </Button>
                         </Link>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-2 text-destructive hover:text-destructive"
+                              disabled={deletingId === student.id}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              מחק
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                פעולה זו תמחק את התלמיד <strong>{student.name}</strong> לצמיתות. לא ניתן יהיה לשחזר את
+                                הנתונים.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>ביטול</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(student.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                מחק
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
-
             </table>
           </div>
         </div>
