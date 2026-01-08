@@ -4,7 +4,19 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
-import { Plus, Mail, Phone, LayoutGrid, List, MapPin, Eye, Edit, Users } from "lucide-react"
+import { Plus, Mail, Phone, LayoutGrid, List, MapPin, Eye, Edit, Users, Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { hasPermission } from "@/lib/permissions"
 
 interface GafanProgram {
   id: number
@@ -64,6 +76,19 @@ export default function GafanProgramsPage() {
   }, [programs])
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [canDelete, setCanDelete] = useState(false)
+
+  useEffect(() => {
+    setCanDelete(hasPermission("gafan-delete"))
+  }, [])
+
+  const handleDelete = (programId: number, programName: string) => {
+    const updatedPrograms = programs.filter((p) => p.id !== programId)
+    setPrograms(updatedPrograms)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("robotics-gafan-programs", JSON.stringify(updatedPrograms))
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -170,6 +195,38 @@ export default function GafanProgramsPage() {
                       ערוך
                     </Button>
                   </Link>
+                  {canDelete && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 bg-transparent text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            פעולה זו תמחק לצמיתות את תוכנית גפ"ן <strong>{program.name}</strong>.
+                            <br />
+                            לא ניתן לשחזר את המידע לאחר המחיקה.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>ביטול</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(program.id, program.name)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            מחק
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </div>
             </Card>
@@ -263,6 +320,39 @@ export default function GafanProgramsPage() {
                             ערוך
                           </Button>
                         </Link>
+                        {canDelete && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-2 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                מחק
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  פעולה זו תמחק לצמיתות את תוכנית גפ"ן <strong>{program.name}</strong>.
+                                  <br />
+                                  לא ניתן לשחזר את המידע לאחר המחיקה.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>ביטול</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(program.id, program.name)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  מחק
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </td>
                   </tr>

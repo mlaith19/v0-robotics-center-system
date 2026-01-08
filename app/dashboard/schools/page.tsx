@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { hasPermission } from "@/lib/permissions"
 
 interface School {
   id: number
@@ -80,6 +81,11 @@ export default function SchoolsPage() {
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [canDelete, setCanDelete] = useState(false)
+
+  useEffect(() => {
+    setCanDelete(hasPermission("schools-delete"))
+  }, [])
 
   const handleDelete = (id: number) => {
     setDeletingId(id)
@@ -190,36 +196,38 @@ export default function SchoolsPage() {
                       ערוך
                     </Button>
                   </Link>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 bg-transparent text-destructive hover:text-destructive"
-                        disabled={deletingId === school.id}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          פעולה זו תמחק את בית הספר <strong>{school.name}</strong> לצמיתות. לא ניתן יהיה לשחזר את
-                          הנתונים.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>ביטול</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDelete(school.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  {canDelete && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 bg-transparent text-destructive hover:text-destructive"
+                          disabled={deletingId === school.id}
                         >
-                          מחק
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            פעולה זו תמחק את בית הספר <strong>{school.name}</strong> לצמיתות. לא ניתן יהיה לשחזר את
+                            הנתונים.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>ביטול</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(school.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            מחק
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </div>
             </Card>
@@ -313,37 +321,39 @@ export default function SchoolsPage() {
                             ערוך
                           </Button>
                         </Link>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-2 text-destructive hover:text-destructive"
-                              disabled={deletingId === school.id}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              מחק
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                פעולה זו תמחק את בית הספר <strong>{school.name}</strong> לצמיתות. לא ניתן יהיה לשחזר את
-                                הנתונים.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>ביטול</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDelete(school.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        {canDelete && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-2 text-destructive hover:text-destructive"
+                                disabled={deletingId === school.id}
                               >
+                                <Trash2 className="h-4 w-4" />
                                 מחק
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  פעולה זו תמחק את בית הספר <strong>{school.name}</strong> לצמיתות. לא ניתן יהיה לשחזר
+                                  את הנתונים.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>ביטול</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(school.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  מחק
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </td>
                   </tr>
