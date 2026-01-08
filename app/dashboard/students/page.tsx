@@ -25,9 +25,6 @@ type Student = {
   phone?: string | null
   status?: string | null
   createdAt?: string
-  // שדות נוספים שיש לך ב-DB (לא חובה למסך הזה)
-  // city?: string | null
-  // address?: string | null
 }
 
 function formatDate(dateString?: string) {
@@ -37,17 +34,30 @@ function formatDate(dateString?: string) {
   return new Intl.DateTimeFormat("he-IL").format(d)
 }
 
+async function safeReadError(res: Response) {
+  try {
+    const text = await res.text()
+    return text?.trim() || `HTTP ${res.status}`
+  } catch {
+    return `HTTP ${res.status}`
+  }
+}
+
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [canDelete, setCanDelete] = useState(false)
 
+  // מחיקה
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [openDeleteId, setOpenDeleteId] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
+
     ;(async () => {
       try {
         setLoading(true)
@@ -75,16 +85,22 @@ export default function StudentsPage() {
   }, [])
 
   const handleDelete = async (id: string) => {
+    if (deletingId) return
+
     try {
       setDeletingId(id)
-      const res = await fetch(`/api/students/${id}`, {
-        method: "DELETE",
-      })
 
-      if (!res.ok) throw new Error("Failed to delete student")
+      const res = await fetch(`/api/students/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const msg = await safeReadError(res)
+        throw new Error(msg || "Failed to delete student")
+      }
 
       // Remove from local state
       setStudents((prev) => prev.filter((s) => s.id !== id))
+
+      // close dialog
+      setOpenDeleteId(null)
     } catch (e: any) {
       alert(e?.message ?? "שגיאה במחיקת תלמיד")
     } finally {
@@ -210,8 +226,12 @@ export default function StudentsPage() {
                       ערוך
                     </Button>
                   </Link>
+
                   {canDelete && (
-                    <AlertDialog>
+                    <AlertDialog
+                      open={openDeleteId === student.id}
+                      onOpenChange={(open) => setOpenDeleteId(open ? student.id : null)}
+                    >
                       <AlertDialogTrigger asChild>
                         <Button
                           variant="outline"
@@ -222,21 +242,22 @@ export default function StudentsPage() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
+
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            פעולה זו תמחק את התלמיד <strong>{student.name}</strong> לצמיתות. לא ניתן יהיה לשחזר את
-                            הנתונים.
+                            פעולה זו תמחק את התלמיד <strong>{student.name}</strong> לצמיתות. לא ניתן יהיה לשחזר את הנתונים.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>ביטול</AlertDialogCancel>
+                          <AlertDialogCancel disabled={deletingId === student.id}>ביטול</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => handleDelete(student.id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={deletingId === student.id}
                           >
-                            מחק
+                            {deletingId === student.id ? "מוחק..." : "מחק"}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -316,8 +337,12 @@ export default function StudentsPage() {
                             ערוך
                           </Button>
                         </Link>
+
                         {canDelete && (
-                          <AlertDialog>
+                          <AlertDialog
+                            open={openDeleteId === student.id}
+                            onOpenChange={(open) => setOpenDeleteId(open ? student.id : null)}
+                          >
                             <AlertDialogTrigger asChild>
                               <Button
                                 variant="ghost"
@@ -329,21 +354,22 @@ export default function StudentsPage() {
                                 מחק
                               </Button>
                             </AlertDialogTrigger>
+
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  פעולה זו תמחק את התלמיד <strong>{student.name}</strong> לצמיתות. לא ניתן יהיה לשחזר את
-                                  הנתונים.
+                                  פעולה זו תמחק את התלמיד <strong>{student.name}</strong> לצמיתות. לא ניתן יהיה לשחזר את הנתונים.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>ביטול</AlertDialogCancel>
+                                <AlertDialogCancel disabled={deletingId === student.id}>ביטול</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => handleDelete(student.id)}
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  disabled={deletingId === student.id}
                                 >
-                                  מחק
+                                  {deletingId === student.id ? "מוחק..." : "מחק"}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
