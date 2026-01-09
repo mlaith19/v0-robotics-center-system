@@ -55,6 +55,8 @@ type User = {
   id: string
   name: string
   email: string
+  username: string
+  password: string
   role: UserRole
   permissions: string[]
   createdAt: string
@@ -233,6 +235,8 @@ export default function UsersPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    username: "",
+    password: "",
     role: "" as UserRole,
     permissions: [] as string[],
   })
@@ -291,7 +295,7 @@ export default function UsersPage() {
   }
 
   const handleSubmit = () => {
-    if (!formData.name || !formData.email || !formData.role) {
+    if (!formData.name || !formData.email || !formData.username || !formData.password || !formData.role) {
       alert("יש למלא את כל השדות הנדרשים")
       return
     }
@@ -300,6 +304,8 @@ export default function UsersPage() {
       id: editingUser?.id || `user-${Date.now()}`,
       name: formData.name,
       email: formData.email,
+      username: formData.username,
+      password: formData.password,
       role: formData.role,
       permissions: formData.permissions,
       createdAt: editingUser?.createdAt || new Date().toISOString(),
@@ -323,6 +329,8 @@ export default function UsersPage() {
     setFormData({
       name: user.name,
       email: user.email,
+      username: user.username,
+      password: user.password,
       role: user.role,
       permissions: user.permissions,
     })
@@ -341,6 +349,8 @@ export default function UsersPage() {
     setFormData({
       name: "",
       email: "",
+      username: "",
+      password: "",
       role: "" as UserRole,
       permissions: [],
     })
@@ -421,6 +431,27 @@ export default function UsersPage() {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="example@email.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="username">שם משתמש *</Label>
+                    <Input
+                      id="username"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      placeholder="הזן שם משתמש..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">סיסמה *</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="הזן סיסמה..."
                     />
                   </div>
                 </div>
@@ -523,6 +554,7 @@ export default function UsersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>שם</TableHead>
+                    <TableHead>שם משתמש</TableHead>
                     <TableHead>אימייל</TableHead>
                     <TableHead>תפקיד</TableHead>
                     <TableHead>הרשאות</TableHead>
@@ -534,6 +566,7 @@ export default function UsersPage() {
                   {users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.username}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
                         <Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge>
