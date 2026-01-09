@@ -2,7 +2,10 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,12 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CityCombobox } from "@/components/ui/combobox-city"
-import { ArrowRight, User, Award as IdCard, Phone, Users, Heart, BookOpen, X } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
 
-export default function EditStudentPage({ params }: { params: { id: string } }) {
+import { ArrowRight, User, Award as IdCard, Phone, Users, Heart, BookOpen, X } from "lucide-react"
+
+export default function EditStudentPage() {
   const router = useRouter()
+  const params = useParams<{ id: string }>()
+  const id = useMemo(() => (typeof params?.id === "string" ? params.id : ""), [params?.id])
+
   const [courses, setCourses] = useState<any[]>([])
   const [student, setStudent] = useState({
     name: "",
@@ -38,13 +43,16 @@ export default function EditStudentPage({ params }: { params: { id: string } }) 
   })
 
   useEffect(() => {
+    if (!id) return
+
     const savedCourses = localStorage.getItem("robotics-courses")
     if (savedCourses) {
       setCourses(JSON.parse(savedCourses))
     }
 
     const students = JSON.parse(localStorage.getItem("robotics-students") || "[]")
-    const foundStudent = students.find((s: any) => s.id === Number.parseInt(params.id))
+    const foundStudent = students.find((s: any) => String(s.id) === String(id) || s.id === Number.parseInt(id))
+
     if (foundStudent) {
       setStudent({
         name: foundStudent.name || "",
@@ -65,24 +73,27 @@ export default function EditStudentPage({ params }: { params: { id: string } }) 
         courseSessions: foundStudent.courseSessions || {},
       })
     }
-  }, [params.id])
+  }, [id])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!id) return
 
     const students = JSON.parse(localStorage.getItem("robotics-students") || "[]")
     const updatedStudents = students.map((s: any) =>
-      s.id === Number.parseInt(params.id) ? { ...s, ...student, id: Number.parseInt(params.id) } : s,
+      String(s.id) === String(id) || s.id === Number.parseInt(id)
+        ? { ...s, ...student, id: Number.parseInt(id) }
+        : s,
     )
 
     localStorage.setItem("robotics-students", JSON.stringify(updatedStudents))
-    router.push(`/dashboard/students/${params.id}`)
+    router.push(`/dashboard/students/${id}`)
   }
 
   const toggleCourse = (courseId: string) => {
     setStudent((prev) => {
       const updatedCourseIds = prev.courseIds.includes(courseId)
-        ? prev.courseIds.filter((id) => id !== courseId)
+        ? prev.courseIds.filter((cid) => cid !== courseId)
         : [...prev.courseIds, courseId]
 
       const updatedCourseSessions = { ...prev.courseSessions }
@@ -101,7 +112,7 @@ export default function EditStudentPage({ params }: { params: { id: string } }) 
   return (
     <div className="container mx-auto max-w-4xl p-6 space-y-6" dir="rtl">
       <div className="flex items-center gap-4">
-        <Link href={`/dashboard/students/${params.id}`}>
+        <Link href={id ? `/dashboard/students/${id}` : "/dashboard/students"}>
           <Button variant="ghost" size="icon">
             <ArrowRight className="h-5 w-5" />
           </Button>
@@ -326,10 +337,7 @@ export default function EditStudentPage({ params }: { params: { id: string } }) 
               <Label htmlFor="healthFund" className="text-base font-medium">
                 קופת חולים
               </Label>
-              <Select
-                value={student.healthFund}
-                onValueChange={(value) => setStudent({ ...student, healthFund: value })}
-              >
+              <Select value={student.healthFund} onValueChange={(value) => setStudent({ ...student, healthFund: value })}>
                 <SelectTrigger id="healthFund" className="h-12 bg-white">
                   <SelectValue placeholder="בחר קופת חולים" />
                 </SelectTrigger>
@@ -407,6 +415,7 @@ export default function EditStudentPage({ params }: { params: { id: string } }) 
                     </div>
                   ))}
                 </div>
+
                 {student.courseIds.length > 0 && (
                   <div className="pt-4 border-t-2 border-purple-100">
                     <p className="text-sm font-medium text-muted-foreground mb-3">קורסים נבחרים:</p>
@@ -440,10 +449,11 @@ export default function EditStudentPage({ params }: { params: { id: string } }) 
         </Card>
 
         <div className="flex gap-3 justify-start">
-          <Button type="submit" size="lg" className="h-12 px-8 text-base" disabled={!student.name || !student.email}>
+          <Button type="submit" size="lg" className="h-12 px-8 text-base" disabled={!student.name || !student.email || !id}>
             שמור שינויים
           </Button>
-          <Link href={`/dashboard/students/${params.id}`}>
+
+          <Link href={id ? `/dashboard/students/${id}` : "/dashboard/students"}>
             <Button type="button" variant="outline" size="lg" className="h-12 px-8 text-base bg-transparent">
               ביטול
             </Button>

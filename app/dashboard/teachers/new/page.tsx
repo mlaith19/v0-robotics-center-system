@@ -22,80 +22,12 @@ import {
   MapPin,
 } from "lucide-react"
 
-const ISRAELI_CITIES = [
-  "ירושלים",
-  "תל אביב-יפו",
-  "חיפה",
-  "ראשון לציון",
-  "פתח תקווה",
-  "אשדוד",
-  "נתניה",
-  "באר שבע",
-  "בני ברק",
-  "חולון",
-  "רמת גן",
-  "אשקלון",
-  "רחובות",
-  "בת ים",
-  "בית שמש",
-  "כפר סבא",
-  "הרצליה",
-  "חדרה",
-  "מודיעין-מכבים-רעות",
-  "נצרת",
-  "לוד",
-  "רעננה",
-  "רמלה",
-  "גבעתיים",
-  "נהריה",
-  "יבנה",
-  "הוד השרון",
-  "אור יהודה",
-  "קריית גת",
-  "עפולה",
-  "קריית מוצקין",
-  "נס ציונה",
-  "אילת",
-  "טבריה",
-  "רהט",
-  "רמת השרון",
-  "כרמיאל",
-  "אור עקיבא",
-  "בית שאן",
-  "מגדל העמק",
-  "דימונה",
-  "תמרה",
-  "טירה",
-  "שפרעם",
-  "קלנסווה",
-  "סחנין",
-  "אום אל-פחם",
-  "יפיע",
-  "באקה אל-גרביה",
-]
-
-interface Teacher {
-  id: number
-  name: string
-  idNumber?: string
-  birthDate?: string
-  city?: string
-  email: string
-  phone: string
-  specialization: string
-  status: string
-  joinDate: string
-  bio?: string
-  courses?: string[]
-  centerHourlyRate: number
-  travelRate: number
-  externalCourseRate: number
-}
-
 export default function NewTeacherPage() {
-  console.log("[v0] NewTeacherPage component mounted")
-
   const router = useRouter()
+
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
   const [newTeacher, setNewTeacher] = useState({
     name: "",
     idNumber: "",
@@ -111,40 +43,37 @@ export default function NewTeacherPage() {
     externalCourseRate: 80,
   })
 
-  const handleAddTeacher = () => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("robotics-teachers")
-      const teachers: Teacher[] = saved ? JSON.parse(saved) : []
+  const handleAddTeacher = async () => {
+    try {
+      setError(null)
+      setSubmitting(true)
 
-      const teacher: Teacher = {
-        id: teachers.length > 0 ? Math.max(...teachers.map((t) => t.id)) + 1 : 1,
-        ...newTeacher,
-        joinDate: new Date().toLocaleDateString("he-IL"),
-        courses: [],
-      }
-
-      teachers.push(teacher)
-      localStorage.setItem("robotics-teachers", JSON.stringify(teachers))
-
-      const registrations = JSON.parse(localStorage.getItem("robotics-registrations") || "[]")
-      const registration = {
-        id: `teacher-${teacher.id}-${Date.now()}`,
-        name: newTeacher.name,
-        type: "teacher" as const,
-        phone: newTeacher.phone,
-        email: newTeacher.email,
-        status: "הושלם" as const,
-        sentAt: new Date().toLocaleDateString("he-IL", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
+      // בשלב הזה ה-DB (Prisma Teacher) כולל: name, email, phone
+      // את שאר השדות נשמור בעתיד אחרי שנרחיב את schema
+      const res = await fetch("/api/teachers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newTeacher.name.trim(),
+          email: newTeacher.email.trim() || null,
+          phone: newTeacher.phone.trim() || null,
         }),
+      })
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "")
+        throw new Error(txt || `Failed to create teacher (${res.status})`)
       }
-      localStorage.setItem("robotics-registrations", JSON.stringify([...registrations, registration]))
+
+      // אם ה-API מחזיר את המורה החדש, אפשר להשתמש בזה בעתיד
+      // const created = await res.json()
 
       router.push("/dashboard/teachers")
+      router.refresh()
+    } catch (e: any) {
+      setError(e?.message ?? "שגיאה בהוספת מורה")
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -161,7 +90,16 @@ export default function NewTeacherPage() {
           </div>
         </div>
 
-        {/* Status card at the top with colorful design */}
+        {error && (
+          <Card className="border-red-200 bg-red-50/60">
+            <CardContent className="p-4">
+              <div className="font-semibold text-red-700">שגיאה</div>
+              <div className="text-sm text-red-700/80 mt-1 whitespace-pre-wrap">{error}</div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Status */}
         <Card className="border-blue-200 bg-blue-50/50">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
@@ -175,10 +113,7 @@ export default function NewTeacherPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Select
-              value={newTeacher.status}
-              onValueChange={(value) => setNewTeacher({ ...newTeacher, status: value })}
-            >
+            <Select value={newTeacher.status} onValueChange={(value) => setNewTeacher({ ...newTeacher, status: value })}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -191,7 +126,7 @@ export default function NewTeacherPage() {
           </CardContent>
         </Card>
 
-        {/* Colorful card with icon for personal info */}
+        {/* Personal info */}
         <Card className="border-green-200 bg-green-50/50">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -208,7 +143,7 @@ export default function NewTeacherPage() {
             <div className="grid gap-2">
               <Label htmlFor="name" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                שם מלא
+                שם מלא *
               </Label>
               <Input
                 id="name"
@@ -216,6 +151,7 @@ export default function NewTeacherPage() {
                 onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
                 placeholder="לדוגמה: ד״ר משה לוי"
                 className="text-lg"
+                required
               />
             </div>
 
@@ -288,7 +224,7 @@ export default function NewTeacherPage() {
           </CardContent>
         </Card>
 
-        {/* Colorful card with icon for contact info */}
+        {/* Contact info */}
         <Card className="border-blue-200 bg-blue-50/50">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -305,7 +241,7 @@ export default function NewTeacherPage() {
             <div className="grid gap-2">
               <Label htmlFor="email" className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                אימייל
+                אימייל *
               </Label>
               <Input
                 id="email"
@@ -313,6 +249,7 @@ export default function NewTeacherPage() {
                 value={newTeacher.email}
                 onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
                 placeholder="teacher@robotics.com"
+                required
               />
             </div>
 
@@ -331,7 +268,7 @@ export default function NewTeacherPage() {
           </CardContent>
         </Card>
 
-        {/* Colorful card with icon for payment rates */}
+        {/* Rates (UI only for now) */}
         <Card className="border-orange-200 bg-orange-50/50">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -381,11 +318,16 @@ export default function NewTeacherPage() {
         </Card>
 
         <div className="flex gap-3 justify-end">
-          <Button variant="outline" size="lg" onClick={() => router.back()}>
+          <Button variant="outline" size="lg" onClick={() => router.back()} disabled={submitting}>
             ביטול
           </Button>
-          <Button size="lg" onClick={handleAddTeacher} disabled={!newTeacher.name || !newTeacher.email}>
-            הוסף מורה
+
+          <Button
+            size="lg"
+            onClick={handleAddTeacher}
+            disabled={submitting || !newTeacher.name.trim() || !newTeacher.email.trim()}
+          >
+            {submitting ? "שומר..." : "הוסף מורה"}
           </Button>
         </div>
       </div>

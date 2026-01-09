@@ -17,17 +17,31 @@ import {
   CheckCircle,
   AlertCircle,
   X,
+  Trash2,
 } from "lucide-react"
 import Link from "next/link"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { hasPermission } from "@/lib/permissions" // Import permission check
 
 export default function CoursesPage() {
+  const [canDelete, setCanDelete] = useState(false)
+
   const [courses, setCourses] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("robotics-courses")
@@ -129,10 +143,16 @@ export default function CoursesPage() {
     }
   }, [courses])
 
+  useEffect(() => {
+    setCanDelete(hasPermission("courses-delete"))
+  }, [])
+
   const [open, setOpen] = useState(false)
   const [viewOpen, setViewOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<any>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [courseToDelete, setCourseToDelete] = useState<any>(null)
 
   const [newCourse, setNewCourse] = useState({
     name: "",
@@ -226,6 +246,19 @@ export default function CoursesPage() {
   const handleOpenEdit = (course: any) => {
     setSelectedCourse({ ...course })
     setEditOpen(true)
+  }
+
+  const handleDeleteClick = (course: any) => {
+    setCourseToDelete(course)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (courseToDelete) {
+      setCourses(courses.filter((c) => c.id !== courseToDelete.id))
+      setDeleteDialogOpen(false)
+      setCourseToDelete(null)
+    }
   }
 
   const getTeacherNames = (teacherIds: number[] = []) => {
@@ -390,6 +423,16 @@ export default function CoursesPage() {
                         ערוך
                       </Button>
                     </Link>
+                    {canDelete && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteClick(course)}
+                        className="gap-2 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -504,6 +547,17 @@ export default function CoursesPage() {
                               ערוך
                             </Button>
                           </Link>
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteClick(course)}
+                              className="gap-2 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              מחק
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1057,6 +1111,26 @@ export default function CoursesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+            <AlertDialogDescription>
+              פעולה זו תמחק את הקורס "{courseToDelete?.name}" לצמיתות. לא ניתן לבטל פעולה זו.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              מחק
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
