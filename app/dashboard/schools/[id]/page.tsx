@@ -1,187 +1,99 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowRight, Mail, Phone, MapPin, Users, BookOpen, Calendar } from "lucide-react"
+import { prisma } from "@/lib/prisma"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { ArrowRight, Pencil, Mail, Phone, MapPin, User2 } from "lucide-react"
 
-interface School {
-  id: number
-  name: string
-  address: string
-  phone: string
-  email: string
-  contactPerson: string
-  type: string
-  status: string
-  joinDate: string
-  notes?: string
-  coursesCount?: number
-  studentsCount?: number
+type Params = { id: string }
+async function unwrapParams(params: any): Promise<Params> {
+  return await Promise.resolve(params)
 }
 
-export default function SchoolViewPage() {
-  const params = useParams()
-  const [school, setSchool] = useState<School | null>(null)
+function safe(v: any) {
+  if (v === null || v === undefined || v === "") return "—"
+  return String(v)
+}
 
-  useEffect(() => {
-    const schools = JSON.parse(localStorage.getItem("robotics-schools") || "[]")
-    const found = schools.find((s: School) => s.id === Number(params.id))
-    if (found) {
-      setSchool(found)
-    }
-  }, [params.id])
+export default async function SchoolViewPage({ params }: { params: Params | Promise<Params> }) {
+  const { id } = await unwrapParams(params)
 
-  if (!school) {
-    return <div className="p-6">טוען...</div>
-  }
+  const school = await prisma.school.findUnique({ where: { id } })
+  if (!school) return <div className="p-6">לא נמצא בית ספר</div>
 
   return (
-    <div className="container mx-auto max-w-4xl p-6">
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div dir="rtl" className="container mx-auto max-w-4xl p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <Link href="/dashboard/schools">
             <Button variant="ghost" size="icon">
               <ArrowRight className="h-5 w-5" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">פרטי בית ספר</h1>
-            <p className="text-muted-foreground mt-1">בתי ספר ‹ {school.name}</p>
+            <h1 className="text-3xl font-bold">פרטי בית ספר</h1>
+            <p className="text-muted-foreground mt-1">{school.name}</p>
           </div>
         </div>
+
         <Link href={`/dashboard/schools/${school.id}/edit`}>
-          <Button>ערוך פרטים</Button>
+          <Button className="gap-2">
+            <Pencil className="h-4 w-4" />
+            ערוך
+          </Button>
         </Link>
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <Tabs defaultValue="general" dir="rtl">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="general">כללי</TabsTrigger>
-              <TabsTrigger value="courses">קורסים</TabsTrigger>
-              <TabsTrigger value="students">תלמידים</TabsTrigger>
-              <TabsTrigger value="activity">פעילות</TabsTrigger>
-            </TabsList>
+      <Card className="p-6 space-y-4">
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="p-4 border rounded-lg space-y-2">
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> עיר
+            </div>
+            <div className="font-medium">{safe(school.city)}</div>
+          </div>
 
-            <TabsContent value="general" className="space-y-6">
-              <div className="text-center space-y-2">
-                <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                  <Users className="h-10 w-10 text-primary" />
-                </div>
-                <h2 className="text-2xl font-bold text-foreground">{school.name}</h2>
-                <span
-                  className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                    school.status === "פעיל"
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : school.status === "מתעניין"
-                        ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                        : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                  }`}
-                >
-                  {school.status}
-                </span>
-              </div>
+          <div className="p-4 border rounded-lg space-y-2">
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <User2 className="h-4 w-4" /> איש קשר
+            </div>
+            <div className="font-medium">{safe(school.contactName)}</div>
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3 p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="h-5 w-5" />
-                    <div>
-                      <div className="text-xs">כתובת</div>
-                      <div className="text-sm font-medium text-foreground">{school.address}</div>
-                    </div>
-                  </div>
-                </div>
+          <div className="p-4 border rounded-lg space-y-2">
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <Phone className="h-4 w-4" /> טלפון
+            </div>
+            <div className="font-medium">{safe(school.phone)}</div>
+          </div>
 
-                <div className="space-y-3 p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-5 w-5" />
-                    <div>
-                      <div className="text-xs">טלפון</div>
-                      <div className="text-sm font-medium text-foreground">{school.phone}</div>
-                    </div>
-                  </div>
-                </div>
+          <div className="p-4 border rounded-lg space-y-2">
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <Mail className="h-4 w-4" /> אימייל
+            </div>
+            <div className="font-medium">{safe(school.email)}</div>
+          </div>
+        </div>
 
-                <div className="space-y-3 p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-5 w-5" />
-                    <div>
-                      <div className="text-xs">אימייל</div>
-                      <div className="text-sm font-medium text-foreground">{school.email}</div>
-                    </div>
-                  </div>
-                </div>
+        <div className="p-4 border rounded-lg space-y-2">
+          <div className="text-sm text-muted-foreground">כתובת</div>
+          <div className="font-medium">{safe(school.address)}</div>
+        </div>
 
-                <div className="space-y-3 p-4 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="h-5 w-5" />
-                    <div>
-                      <div className="text-xs">איש קשר</div>
-                      <div className="text-sm font-medium text-foreground">{school.contactPerson}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <div className="p-4 border rounded-lg space-y-2 bg-muted/30">
+          <div className="text-sm text-muted-foreground">הערות</div>
+          <div className="font-medium whitespace-pre-wrap">{safe(school.notes)}</div>
+        </div>
 
-              <div className="space-y-3 p-4 bg-muted rounded-lg">
-                <div className="text-xs text-muted-foreground">סוג בית הספר</div>
-                <div className="text-sm font-medium text-foreground">{school.type}</div>
-              </div>
-
-              <div className="space-y-3 p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="h-5 w-5" />
-                  <div>
-                    <div className="text-xs">תאריך הצטרפות</div>
-                    <div className="text-sm font-medium text-foreground">{school.joinDate}</div>
-                  </div>
-                </div>
-              </div>
-
-              {school.notes && (
-                <div className="space-y-3 p-4 bg-muted rounded-lg">
-                  <div className="text-xs text-muted-foreground">הערות</div>
-                  <div className="text-sm text-foreground whitespace-pre-wrap">{school.notes}</div>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="courses" className="space-y-4">
-              <div className="text-center py-8">
-                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  {school.coursesCount && school.coursesCount > 0
-                    ? `${school.coursesCount} קורסים פעילים`
-                    : "אין קורסים משויכים"}
-                </p>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="students" className="space-y-4">
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  {school.studentsCount && school.studentsCount > 0
-                    ? `${school.studentsCount} תלמידים רשומים`
-                    : "אין תלמידים רשומים"}
-                </p>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="activity" className="space-y-4">
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">אין פעילות אחרונה</p>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <div className="text-muted-foreground">נוצר</div>
+            <div>{new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(school.createdAt)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">עודכן</div>
+            <div>{new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(school.updatedAt)}</div>
+          </div>
+        </div>
       </Card>
     </div>
   )
