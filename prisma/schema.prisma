@@ -7,117 +7,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Student {
-  id              String   @id @default(cuid())
-  name            String
-  idNumber        String?
-  birthDate       String?
-  email           String?  @unique
-  phone           String?
-  address         String?
-  city            String?
-  father          String?
-  mother          String?
-  additionalPhone String?
-  healthFund      String?
-  allergies       String?
-  status          String   @default("מתעניין")
-  totalSessions   Int      @default(12)
-
-  // הישן - אפשר להשאיר זמנית כדי לא לשבור מסכים קיימים
-  courseIds       String[] @default([])
-  courseSessions  Json?
-
-  // Relations (חדש)
-  enrollments     Enrollment[]
-  payments        Payment[]
-  attendances     Attendance[]
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model Teacher {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String?
-  email     String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Course {
-  id          String       @id @default(cuid())
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
   name        String
-
-  // Relations
-  enrollments Enrollment[]
-  payments    Payment[]
-  attendances Attendance[]
-
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  email       String?  @unique
+  phone       String?
+  status      String   @default("active")
+  roleId      String?
+  role        Role?    @relation(fields: [roleId], references: [id])
+  permissions Json?    @default("[]")
+  createdAt   DateTime @default(now())
 }
 
-model Enrollment {
-  id        String   @id @default(cuid())
-
-  studentId String
-  courseId  String
-
-  // יתרת מפגשים לתלמיד בקורס הזה
-  sessionsLeft Int @default(0)
-
-  joinedAt  DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  @@unique([studentId, courseId])
-  @@index([studentId])
-  @@index([courseId])
+model Role {
+  id              String           @id @default(cuid())
+  key             String           @unique
+  name            String
+  description     String?
+  rolePermissions RolePermission[]
+  users           User[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
-model Payment {
-  id        String   @id @default(cuid())
-
-  studentId String
-  courseId  String?  // אם תשלום כללי בלי קורס – יכול להיות null
-
-  amount    Int
-  method    String?  // "אשראי" / "מזומן" / "העברה"
-  status    String   @default("שולם") // "שולם" / "ממתין" / "בוטל"
-  note      String?
-
-  paidAt    DateTime @default(now())
-  createdAt DateTime @default(now())
-
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
-
-  @@index([studentId])
-  @@index([courseId])
-  @@index([paidAt])
+model Permission {
+  id          String           @id
+  name        String
+  description String?
+  roles       RolePermission[]
 }
 
-model Attendance {
-  id        String   @id @default(cuid())
+model RolePermission {
+  roleId       String
+  permissionId String
 
-  studentId String
-  courseId  String
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  date      DateTime @default(now())
-  status    String   @default("נוכח") // "נוכח" / "נעדר" / "איחור"
-  minutes   Int      @default(0)
-  note      String?
-
-  createdAt DateTime @default(now())
-
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  @@index([studentId])
-  @@index([courseId])
-  @@index([date])
+  @@id([roleId, permissionId])
 }

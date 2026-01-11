@@ -22,6 +22,28 @@ ALTER TABLE "Enrollment" ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
 ALTER TABLE "Payment" ADD COLUMN     "courseId" TEXT,
 ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
+-- CreateTable
+CREATE TABLE "School" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "city" TEXT,
+    "contactPerson" TEXT,
+    "phone" TEXT,
+    "email" TEXT,
+    "address" TEXT,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "School_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "School_name_idx" ON "School"("name");
+
+-- CreateIndex
+CREATE INDEX "School_city_idx" ON "School"("city");
+
 -- CreateIndex
 CREATE INDEX "Payment_courseId_idx" ON "Payment"("courseId");
 
