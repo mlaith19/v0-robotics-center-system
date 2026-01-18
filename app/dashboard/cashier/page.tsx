@@ -224,6 +224,7 @@ export default function CashierPage() {
   }
 
   const filterByTimePeriod = <T extends { date: string }>(items: T[]): T[] => {
+    if (!Array.isArray(items)) return []
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
