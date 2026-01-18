@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { LogIn, User, Lock, AlertCircle } from "lucide-react"
+import { LogIn, User, Lock, AlertCircle, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,55 +18,49 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  // יוזר סופר אדמין ברירת מחדל
-  const SUPER_ADMIN = {
-    username: "admin",
-    password: "admin123",
-    role: "סופר אדמין",
-  }
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
-    // המתנה קצרה לסימולציה
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      })
 
-    // בדיקה מול יוזר סופר אדמין
-    if (username === SUPER_ADMIN.username && password === SUPER_ADMIN.password) {
-      // שמירת המשתמש המחובר
-      const currentUser = {
-        username: SUPER_ADMIN.username,
-        role: SUPER_ADMIN.role,
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "שם משתמש או סיסמה שגויים")
+        setIsLoading(false)
+        return
+      }
+
+      // Store user session in cookie and redirect
+      const userSession = {
+        id: data.user.id,
+        username: data.user.username,
+        full_name: data.user.full_name,
+        role: data.user.role,
+        permissions: data.user.permissions,
         loginTime: new Date().toISOString(),
       }
-      localStorage.setItem("robotics-current-user", JSON.stringify(currentUser))
+      document.cookie = `robotics-session=${encodeURIComponent(JSON.stringify(userSession))}; path=/; max-age=86400`
 
-      // ניתוב לדף משתמשים
-      router.push("/dashboard/users")
-    } else {
-      // בדיקה מול משתמשים רשומים
-      const users = JSON.parse(localStorage.getItem("robotics-users") || "[]")
-      const user = users.find((u: any) => u.username === username && u.password === password)
-
-      if (user) {
-        const currentUser = {
-          username: user.username,
-          role: user.role,
-          loginTime: new Date().toISOString(),
-          permissions: user.permissions,
-        }
-        localStorage.setItem("robotics-current-user", JSON.stringify(currentUser))
-
-        // ניתוב לדף הבית
-        router.push("/dashboard")
+      // Redirect based on role
+      if (data.user.role === "סופר אדמין") {
+        router.push("/dashboard/users")
       } else {
-        setError("שם משתמש או סיסמה שגויים")
+        router.push("/dashboard")
       }
+    } catch (err) {
+      setError("שגיאה בהתחברות לשרת")
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
@@ -110,6 +104,7 @@ export default function LoginPage() {
                     placeholder="הכנס שם משתמש"
                     className="pr-10 h-11"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -128,6 +123,7 @@ export default function LoginPage() {
                     placeholder="הכנס סיסמה"
                     className="pr-10 h-11"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -138,7 +134,10 @@ export default function LoginPage() {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  "מתחבר..."
+                  <>
+                    <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                    מתחבר...
+                  </>
                 ) : (
                   <>
                     <LogIn className="ml-2 h-5 w-5" />

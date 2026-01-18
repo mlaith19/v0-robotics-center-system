@@ -42,24 +42,53 @@ const navItems = [
   { href: "/dashboard/settings", icon: Settings, label: "הגדרות" },
 ]
 
+interface CurrentUser {
+  id: number
+  username: string
+  full_name: string
+  role: string
+  permissions?: string[]
+  loginTime: string
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const userStr = localStorage.getItem("robotics-current-user")
-    if (!userStr) {
-      router.push("/login")
+    // Get user from cookie instead of localStorage
+    const cookies = document.cookie.split(";")
+    const sessionCookie = cookies.find((c) => c.trim().startsWith("robotics-session="))
+
+    if (sessionCookie) {
+      try {
+        const sessionValue = sessionCookie.split("=")[1]
+        const user = JSON.parse(decodeURIComponent(sessionValue))
+        setCurrentUser(user)
+      } catch (e) {
+        router.push("/login")
+      }
     } else {
-      setCurrentUser(JSON.parse(userStr))
+      router.push("/login")
     }
+    setIsLoading(false)
   }, [router])
 
   const handleLogout = () => {
-    localStorage.removeItem("robotics-current-user")
+    // Clear the session cookie
+    document.cookie = "robotics-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
     router.push("/login")
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
   }
 
   if (!currentUser) {
@@ -92,7 +121,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 p-4">
+          <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
             {navItems.map((item) => {
               const isActive = pathname === item.href
               return (
@@ -117,10 +146,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="border-t border-border p-4 space-y-2">
             <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
-                {currentUser.username.charAt(0).toUpperCase()}
+                {currentUser.full_name?.charAt(0) || currentUser.username.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{currentUser.username}</p>
+                <p className="text-sm font-medium text-foreground truncate">
+                  {currentUser.full_name || currentUser.username}
+                </p>
                 <p className="text-xs text-muted-foreground truncate">{currentUser.role}</p>
               </div>
             </div>

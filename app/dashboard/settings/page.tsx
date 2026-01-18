@@ -8,38 +8,50 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Building2, Save, Upload, X } from "lucide-react"
+import { Building2, Save, Upload, X, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import useSWR from "swr"
 
 interface CenterSettings {
-  centerName: string
+  id?: number
+  center_name: string
   logo: string
   phone: string
   whatsapp: string
   address: string
 }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
 export default function SettingsPage() {
+  const { data: settingsData, error, mutate, isLoading } = useSWR<CenterSettings>("/api/settings", fetcher)
+  
   const [settings, setSettings] = useState<CenterSettings>({
-    centerName: "",
+    center_name: "",
     logo: "",
     phone: "",
     whatsapp: "",
     address: "",
   })
   const [logoPreview, setLogoPreview] = useState<string>("")
+  const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
-    const savedSettings = localStorage.getItem("robotics-center-settings")
-    if (savedSettings) {
-      const parsed = JSON.parse(savedSettings)
-      setSettings(parsed)
-      if (parsed.logo) {
-        setLogoPreview(parsed.logo)
+    if (settingsData && !error) {
+      setSettings({
+        id: settingsData.id,
+        center_name: settingsData.center_name || "",
+        logo: settingsData.logo || "",
+        phone: settingsData.phone || "",
+        whatsapp: settingsData.whatsapp || "",
+        address: settingsData.address || "",
+      })
+      if (settingsData.logo) {
+        setLogoPreview(settingsData.logo)
       }
     }
-  }, [])
+  }, [settingsData, error])
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -59,12 +71,45 @@ export default function SettingsPage() {
     setSettings({ ...settings, logo: "" })
   }
 
-  const handleSave = () => {
-    localStorage.setItem("robotics-center-settings", JSON.stringify(settings))
-    toast({
-      title: "ההגדרות נשמרו בהצלחה",
-      description: "פרטי המרכז עודכנו במערכת",
-    })
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const response = await fetch("/api/settings", {
+        method: settings.id ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(settings),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to save settings")
+      }
+
+      const savedSettings = await response.json()
+      mutate(savedSettings)
+      
+      toast({
+        title: "ההגדרות נשמרו בהצלחה",
+        description: "פרטי המרכז עודכנו במערכת",
+      })
+    } catch (err) {
+      toast({
+        title: "שגיאה בשמירת ההגדרות",
+        description: "אנא נסה שנית",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -89,8 +134,8 @@ export default function SettingsPage() {
             <Input
               id="centerName"
               placeholder="לדוגמה: מרכז הרובוטיקה"
-              value={settings.centerName}
-              onChange={(e) => setSettings({ ...settings, centerName: e.target.value })}
+              value={settings.center_name}
+              onChange={(e) => setSettings({ ...settings, center_name: e.target.value })}
             />
           </div>
 
@@ -165,9 +210,18 @@ export default function SettingsPage() {
 
           {/* כפתור שמירה */}
           <div className="flex justify-end pt-4">
-            <Button onClick={handleSave} className="gap-2">
-              <Save className="h-4 w-4" />
-              שמור הגדרות
+            <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  שומר...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  שמור הגדרות
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
