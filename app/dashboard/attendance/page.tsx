@@ -1,201 +1,148 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { CalendarIcon, Check, X, Thermometer, Plane, ArrowRight, AlertCircle, Plus } from "lucide-react"
+import { CalendarIcon, Check, X, Thermometer, Plane, ArrowRight, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 import { he } from "date-fns/locale"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import useSWR, { mutate } from "swr"
 
 type AttendanceType = "course" | "teacher" | "student"
 type AttendanceStatus = "present" | "absent" | "sick" | "vacation"
 
 interface Student {
   id: string
-  firstName: string
-  lastName: string
+  name: string
   phone: string
   courseSessions?: Record<string, number>
 }
 
 interface Teacher {
   id: string
-  firstName: string
-  lastName: string
+  name: string
   phone: string
 }
 
 interface Course {
   id: string
   name: string
-  courseName?: string
 }
+
+interface Enrollment {
+  id: string
+  studentId: string
+  courseId: string
+  studentName?: string
+}
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function AttendancePage() {
   const router = useRouter()
   const [attendanceType, setAttendanceType] = useState<AttendanceType>("course")
   const [selectedId, setSelectedId] = useState<string>("")
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [students, setStudents] = useState<Student[]>([])
-  const [teachers, setTeachers] = useState<Teacher[]>([])
-  const [courses, setCourses] = useState<Course[]>([])
   const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({})
+  const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({})
 
-  const addSampleData = () => {
-    const sampleCourse = {
-      id: "demo-course-1",
-      name: "רובוטיקה מתקדמת - דוגמה",
-      courseName: "רובוטיקה מתקדמת - דוגמה",
-      description: "קורס לדוגמה",
-      status: "פעיל",
-      type: "לפי תוכנית גפ״ן",
-      location: "בית ספר הראלי",
-      school: "חטיבת ביניים הראלי",
-      price: 1200,
-      duration: 8,
-      level: "מתחילים",
+  // Fetch data from API
+  const { data: students = [] } = useSWR<Student[]>("/api/students", fetcher)
+  const { data: teachers = [] } = useSWR<Teacher[]>("/api/teachers", fetcher)
+  const { data: courses = [] } = useSWR<Course[]>("/api/courses", fetcher)
+
+  // Fetch enrollments for selected course
+  const { data: enrollments = [] } = useSWR<Enrollment[]>(
+    selectedId && attendanceType === "course" ? `/api/enrollments?courseId=${selectedId}` : null,
+    fetcher
+  )
+
+  // Fetch attendance for selected date and course/student
+  const dateStr = format(selectedDate, "yyyy-MM-dd")
+  const { data: existingAttendance = [] } = useSWR(
+    selectedId && selectedDate
+      ? `/api/attendance?${attendanceType === "course" ? `courseId=${selectedId}` : `studentId=${selectedId}`}&date=${dateStr}`
+      : null,
+    fetcher,
+    {
+      onSuccess: (data) => {
+        // Convert array to record for easier lookup
+        const attendanceRecord: Record<string, AttendanceStatus> = {}
+        data.forEach((a: any) => {
+          attendanceRecord[a.studentId] = a.status
+        })
+        setAttendanceData(attendanceRecord)
+      },
     }
-
-    const sampleStudents = [
-      {
-        id: "demo-student-1",
-        firstName: "יוסי",
-        lastName: "כהן",
-        phone: "050-1234567",
-        email: "yossi@example.com",
-        idNumber: "123456789",
-        gender: "male",
-        birthDate: "2010-01-15",
-        parentName: "דוד כהן",
-        parentPhone: "050-1234567",
-        courseSessions: { "demo-course-1": 2 },
-      },
-      {
-        id: "demo-student-2",
-        firstName: "שרה",
-        lastName: "לוי",
-        phone: "052-9876543",
-        email: "sara@example.com",
-        idNumber: "987654321",
-        gender: "female",
-        birthDate: "2011-05-20",
-        parentName: "רחל לוי",
-        parentPhone: "052-9876543",
-        courseSessions: { "demo-course-1": 2 },
-      },
-      {
-        id: "demo-student-3",
-        firstName: "דניאל",
-        lastName: "אברהם",
-        phone: "054-5551234",
-        email: "daniel@example.com",
-        idNumber: "456789123",
-        gender: "male",
-        birthDate: "2010-09-10",
-        parentName: "משה אברהם",
-        parentPhone: "054-5551234",
-        courseSessions: { "demo-course-1": 2 },
-      },
-    ]
-
-    const sampleEnrollments = sampleStudents.map((student) => ({
-      id: `enrollment-${student.id}`,
-      studentId: student.id,
-      courseId: sampleCourse.id,
-      enrollmentDate: new Date().toISOString(),
-    }))
-
-    localStorage.setItem("robotics-courses", JSON.stringify([sampleCourse]))
-    localStorage.setItem("robotics-students", JSON.stringify(sampleStudents))
-    localStorage.setItem("robotics-enrollments", JSON.stringify(sampleEnrollments))
-
-    setCourses([sampleCourse])
-    setStudents(sampleStudents)
-
-    alert("נוספו נתוני דוגמה! עכשיו תוכל לבחור את הקורס 'רובוטיקה מתקדמת - דוגמה' ולראות 3 תלמידים.")
-  }
-
-  useEffect(() => {
-    const studentsData = JSON.parse(localStorage.getItem("robotics-students") || "[]")
-    const teachersData = JSON.parse(localStorage.getItem("robotics-teachers") || "[]")
-    const coursesData = JSON.parse(localStorage.getItem("robotics-courses") || "[]")
-
-    setStudents(studentsData)
-    setTeachers(teachersData)
-    setCourses(coursesData)
-  }, [])
-
-  useEffect(() => {
-    if (selectedId && selectedDate) {
-      const dateStr = format(selectedDate, "yyyy-MM-dd")
-      const storageKey = `attendance-${attendanceType}-${selectedId}-${dateStr}`
-      const savedAttendance = JSON.parse(localStorage.getItem(storageKey) || "{}")
-      setAttendanceData(savedAttendance)
-    }
-  }, [selectedId, selectedDate, attendanceType])
+  )
 
   const getTableData = () => {
     if (attendanceType === "course") {
-      const course = courses.find((c) => c.id === selectedId)
-      if (!course) return []
-
-      const courseStudents = students.filter((s) => {
-        const enrollments = JSON.parse(localStorage.getItem("robotics-enrollments") || "[]")
-        return enrollments.some((e: any) => e.courseId === selectedId && e.studentId === s.id)
-      })
-      return courseStudents
+      // Get students enrolled in selected course
+      const enrolledStudentIds = enrollments.map((e: Enrollment) => e.studentId)
+      return students.filter((s: Student) => enrolledStudentIds.includes(s.id))
     } else if (attendanceType === "teacher") {
-      return teachers.filter((t) => t.id === selectedId)
+      return teachers.filter((t: Teacher) => t.id === selectedId)
     } else {
-      return students.filter((s) => s.id === selectedId)
+      return students.filter((s: Student) => s.id === selectedId)
     }
   }
 
-  const handleStatusChange = (personId: string, status: AttendanceStatus) => {
-    const newAttendanceData = {
-      ...attendanceData,
+  const handleStatusChange = async (personId: string, status: AttendanceStatus) => {
+    const previousStatus = attendanceData[personId]
+    
+    // Optimistic update
+    setAttendanceData((prev) => ({
+      ...prev,
       [personId]: status,
-    }
-    setAttendanceData(newAttendanceData)
+    }))
+    setSavingStatus((prev) => ({ ...prev, [personId]: true }))
 
-    const dateStr = format(selectedDate, "yyyy-MM-dd")
-    const storageKey = `attendance-${attendanceType}-${selectedId}-${dateStr}`
-    localStorage.setItem(storageKey, JSON.stringify(newAttendanceData))
-
-    if (attendanceType === "course" && status === "present") {
-      const studentsData = JSON.parse(localStorage.getItem("robotics-students") || "[]")
-      const updatedStudents = studentsData.map((student: any) => {
-        if (student.id === personId) {
-          const courseSessions = student.courseSessions || {}
-          const currentBalance = courseSessions[selectedId] || 0
-
-          // Only deduct if there's balance and student wasn't already marked as present
-          if (currentBalance > 0 && attendanceData[personId] !== "present") {
-            courseSessions[selectedId] = currentBalance - 1
-            return { ...student, courseSessions }
-          }
-        }
-        return student
+    try {
+      const res = await fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: personId,
+          courseId: selectedId,
+          date: dateStr,
+          status,
+        }),
       })
 
-      localStorage.setItem("robotics-students", JSON.stringify(updatedStudents))
-      setStudents(updatedStudents)
+      if (!res.ok) {
+        throw new Error("Failed to save attendance")
+      }
+
+      // Revalidate attendance data
+      mutate(`/api/attendance?courseId=${selectedId}&date=${dateStr}`)
+    } catch (error) {
+      // Revert on error
+      setAttendanceData((prev) => ({
+        ...prev,
+        [personId]: previousStatus,
+      }))
+      console.error("Failed to save attendance:", error)
+    } finally {
+      setSavingStatus((prev) => ({ ...prev, [personId]: false }))
     }
   }
 
   const getStatusButton = (personId: string, status: AttendanceStatus, label: string, icon: any) => {
     const Icon = icon
     const isActive = attendanceData[personId] === status
+    const isSaving = savingStatus[personId]
 
     return (
       <Button
         variant={isActive ? "default" : "outline"}
         size="sm"
         onClick={() => handleStatusChange(personId, status)}
+        disabled={isSaving}
         className={`gap-1 ${
           isActive
             ? status === "present"
@@ -205,7 +152,7 @@ export default function AttendancePage() {
                 : status === "sick"
                   ? "bg-orange-600 hover:bg-orange-700"
                   : "bg-blue-600 hover:bg-blue-700"
-            : ""
+            : "bg-transparent"
         }`}
       >
         <Icon className="h-4 w-4" />
@@ -217,10 +164,10 @@ export default function AttendancePage() {
   const tableData = getTableData()
   const selectedItem =
     attendanceType === "course"
-      ? courses.find((c) => c.id === selectedId)
+      ? courses.find((c: Course) => c.id === selectedId)
       : attendanceType === "teacher"
-        ? teachers.find((t) => t.id === selectedId)
-        : students.find((s) => s.id === selectedId)
+        ? teachers.find((t: Teacher) => t.id === selectedId)
+        : students.find((s: Student) => s.id === selectedId)
 
   const getList = () => {
     if (attendanceType === "course") return courses
@@ -243,12 +190,6 @@ export default function AttendancePage() {
               <p className="text-sm text-muted-foreground">ניהול נוכחות לקורסים, מורים ותלמידים</p>
             </div>
           </div>
-          {!hasData && (
-            <Button onClick={addSampleData} variant="outline" className="gap-2 bg-transparent">
-              <Plus className="h-4 w-4" />
-              הוסף נתוני דוגמה
-            </Button>
-          )}
         </div>
 
         {!hasData && (
@@ -257,7 +198,7 @@ export default function AttendancePage() {
             <AlertTitle className="text-orange-900">אין נתונים זמינים</AlertTitle>
             <AlertDescription className="text-orange-800">
               לא נמצאו {attendanceType === "course" ? "קורסים" : attendanceType === "teacher" ? "מורים" : "תלמידים"}{" "}
-              במערכת. לחץ על כפתור "הוסף נתוני דוגמה" כדי לראות הדגמה של דף הנוכחות.
+              במערכת. הוסף נתונים דרך הדפים הרלוונטיים.
             </AlertDescription>
           </Alert>
         )}
@@ -279,6 +220,7 @@ export default function AttendancePage() {
                   onValueChange={(value: AttendanceType) => {
                     setAttendanceType(value)
                     setSelectedId("")
+                    setAttendanceData({})
                   }}
                 >
                   <SelectTrigger className="h-10">
@@ -296,7 +238,14 @@ export default function AttendancePage() {
                 <label className="text-sm font-medium">
                   {attendanceType === "course" ? "קורס" : attendanceType === "teacher" ? "מורה" : "תלמיד"}
                 </label>
-                <Select value={selectedId} onValueChange={setSelectedId} disabled={!hasData}>
+                <Select 
+                  value={selectedId} 
+                  onValueChange={(value) => {
+                    setSelectedId(value)
+                    setAttendanceData({})
+                  }} 
+                  disabled={!hasData}
+                >
                   <SelectTrigger className="h-10">
                     <SelectValue
                       placeholder={
@@ -308,21 +257,21 @@ export default function AttendancePage() {
                   </SelectTrigger>
                   <SelectContent>
                     {attendanceType === "course" &&
-                      courses.map((course) => (
+                      courses.map((course: Course) => (
                         <SelectItem key={course.id} value={course.id}>
-                          {course.name || course.courseName}
+                          {course.name}
                         </SelectItem>
                       ))}
                     {attendanceType === "teacher" &&
-                      teachers.map((teacher) => (
+                      teachers.map((teacher: Teacher) => (
                         <SelectItem key={teacher.id} value={teacher.id}>
-                          {teacher.firstName} {teacher.lastName}
+                          {teacher.name}
                         </SelectItem>
                       ))}
                     {attendanceType === "student" &&
-                      students.map((student) => (
+                      students.map((student: Student) => (
                         <SelectItem key={student.id} value={student.id}>
-                          {student.firstName} {student.lastName}
+                          {student.name}
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -334,7 +283,10 @@ export default function AttendancePage() {
                 <input
                   type="date"
                   value={format(selectedDate, "yyyy-MM-dd")}
-                  onChange={(e) => setSelectedDate(new Date(e.target.value + "T12:00:00"))}
+                  onChange={(e) => {
+                    setSelectedDate(new Date(e.target.value + "T12:00:00"))
+                    setAttendanceData({})
+                  }}
                   disabled={!hasData}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
@@ -348,10 +300,10 @@ export default function AttendancePage() {
             <CardHeader>
               <CardTitle className="text-lg">
                 {attendanceType === "course"
-                  ? `נוכחות קורס: ${selectedItem?.name || (selectedItem as Course)?.courseName}`
+                  ? `נוכחות קורס: ${selectedItem?.name}`
                   : attendanceType === "teacher"
-                    ? `נוכחות מורה: ${(selectedItem as Teacher)?.firstName} ${(selectedItem as Teacher)?.lastName}`
-                    : `נוכחות תלמיד: ${(selectedItem as Student)?.firstName} ${(selectedItem as Student)?.lastName}`}
+                    ? `נוכחות מורה: ${(selectedItem as Teacher)?.name}`
+                    : `נוכחות תלמיד: ${(selectedItem as Student)?.name}`}
               </CardTitle>
               <CardDescription>{format(selectedDate, "dd MMMM yyyy", { locale: he })}</CardDescription>
             </CardHeader>
@@ -369,7 +321,7 @@ export default function AttendancePage() {
                     {tableData.map((person: any) => (
                       <TableRow key={person.id}>
                         <TableCell className="font-medium">
-                          {person.firstName || person.name} {person.lastName || ""}
+                          {person.name}
                         </TableCell>
                         <TableCell className="text-muted-foreground">{person.phone}</TableCell>
                         <TableCell>

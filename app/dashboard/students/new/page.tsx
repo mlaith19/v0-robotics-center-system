@@ -14,14 +14,19 @@ import { ArrowRight, User, Award as IdCard, Phone, Users, Heart, BookOpen, X } f
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { CityCombobox } from "@/components/ui/combobox-city"
+import useSWR from "swr"
 
 type Course = { id: string | number; name: string }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
 export default function NewStudentPage() {
   const router = useRouter()
-  const [courses, setCourses] = useState<Course[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Fetch courses from API
+  const { data: courses = [] } = useSWR<Course[]>("/api/courses", fetcher)
 
   const [newStudent, setNewStudent] = useState({
     name: "",
@@ -42,14 +47,6 @@ export default function NewStudentPage() {
     courseSessions: {} as Record<string, number>,
   })
 
-  // זמנית: עדיין טוענים קורסים מ-localStorage (עד שנחבר Courses API)
-  useEffect(() => {
-    const savedCourses = localStorage.getItem("robotics-courses")
-    if (savedCourses) {
-      setCourses(JSON.parse(savedCourses))
-    }
-  }, [])
-
   const toggleCourse = (courseId: string) => {
     setNewStudent((prev) => ({
       ...prev,
@@ -65,7 +62,7 @@ export default function NewStudentPage() {
     setSubmitError(null)
 
     try {
-      // בונים יתרת מפגשים לכל קורס
+      // Build session balance for each course
       const courseSessions: Record<string, number> = {}
       newStudent.courseIds.forEach((courseId) => {
         courseSessions[courseId] = newStudent.totalSessions
@@ -73,7 +70,6 @@ export default function NewStudentPage() {
 
       const payload = {
         ...newStudent,
-        // שמירה ל-DB: נרצה null במקום מחרוזות ריקות
         idNumber: newStudent.idNumber || null,
         birthDate: newStudent.birthDate || null,
         email: newStudent.email || null,
@@ -99,24 +95,20 @@ export default function NewStudentPage() {
         throw new Error(err?.error || `Failed to create student (${res.status})`)
       }
 
-      // (אופציונלי) להשאיר את registrations בלוקאל - או להסיר לגמרי
-      const registrations = JSON.parse(localStorage.getItem("robotics-registrations") || "[]")
-      const registration = {
-        id: `student-${Date.now()}`,
-        name: newStudent.name,
-        type: "student" as const,
-        phone: newStudent.phone,
-        email: newStudent.email,
-        status: "הושלם" as const,
-        sentAt: new Date().toLocaleDateString("he-IL", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+      const createdStudent = await res.json()
+
+      // Create enrollments for each selected course
+      for (const courseId of newStudent.courseIds) {
+        await fetch("/api/enrollments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            studentId: createdStudent.id,
+            courseId: courseId,
+            status: "active",
+          }),
+        })
       }
-      localStorage.setItem("robotics-registrations", JSON.stringify([...registrations, registration]))
 
       router.push("/dashboard/students")
       router.refresh()
@@ -242,7 +234,7 @@ export default function NewStudentPage() {
           <div className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email" className="text-base font-medium">
-                אימייל *
+                אימייל
               </Label>
               <Input
                 id="email"
@@ -251,7 +243,6 @@ export default function NewStudentPage() {
                 onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
                 placeholder="student@example.com"
                 className="text-base h-12 bg-white"
-                required
               />
             </div>
 
@@ -486,7 +477,7 @@ export default function NewStudentPage() {
             type="submit"
             size="lg"
             className="h-12 px-8 text-base"
-            disabled={isSubmitting || !newStudent.name || !newStudent.email}
+            disabled={isSubmitting || !newStudent.name}
           >
             {isSubmitting ? "שומר..." : "הוסף תלמיד"}
           </Button>

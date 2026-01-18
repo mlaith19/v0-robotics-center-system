@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import useSWR from "swr"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -17,12 +18,20 @@ import { CityCombobox } from "@/components/ui/combobox-city"
 
 import { ArrowRight, User, Award as IdCard, Phone, Users, Heart, BookOpen, X } from "lucide-react"
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
 export default function EditStudentPage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
   const id = useMemo(() => (typeof params?.id === "string" ? params.id : ""), [params?.id])
 
-  const [courses, setCourses] = useState<any[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Fetch courses and student from API
+  const { data: courses = [] } = useSWR("/api/courses", fetcher)
+  const { data: studentData, error: studentError } = useSWR(id ? `/api/students/${id}` : null, fetcher)
+
   const [student, setStudent] = useState({
     name: "",
     idNumber: "",
@@ -42,52 +51,71 @@ export default function EditStudentPage() {
     courseSessions: {} as Record<string, number>,
   })
 
+  // Update local state when student data is fetched
   useEffect(() => {
-    if (!id) return
-
-    const savedCourses = localStorage.getItem("robotics-courses")
-    if (savedCourses) {
-      setCourses(JSON.parse(savedCourses))
-    }
-
-    const students = JSON.parse(localStorage.getItem("robotics-students") || "[]")
-    const foundStudent = students.find((s: any) => String(s.id) === String(id) || s.id === Number.parseInt(id))
-
-    if (foundStudent) {
+    if (studentData && !studentError) {
       setStudent({
-        name: foundStudent.name || "",
-        idNumber: foundStudent.idNumber || "",
-        birthDate: foundStudent.birthDate || "",
-        email: foundStudent.email || "",
-        phone: foundStudent.phone || "",
-        address: foundStudent.address || "",
-        city: foundStudent.city || "",
-        father: foundStudent.father || "",
-        mother: foundStudent.mother || "",
-        additionalPhone: foundStudent.additionalPhone || "",
-        healthFund: foundStudent.healthFund || "",
-        allergies: foundStudent.allergies || "",
-        courseIds: foundStudent.courseIds || [],
-        status: foundStudent.status || "פעיל",
-        totalSessions: foundStudent.totalSessions || 12,
-        courseSessions: foundStudent.courseSessions || {},
+        name: studentData.name || "",
+        idNumber: studentData.idNumber || "",
+        birthDate: studentData.birthDate ? studentData.birthDate.split("T")[0] : "",
+        email: studentData.email || "",
+        phone: studentData.phone || "",
+        address: studentData.address || "",
+        city: studentData.city || "",
+        father: studentData.father || "",
+        mother: studentData.mother || "",
+        additionalPhone: studentData.additionalPhone || "",
+        healthFund: studentData.healthFund || "",
+        allergies: studentData.allergies || "",
+        courseIds: studentData.courseIds || [],
+        status: studentData.status || "פעיל",
+        totalSessions: studentData.totalSessions || 12,
+        courseSessions: studentData.courseSessions || {},
       })
     }
-  }, [id])
+  }, [studentData, studentError])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!id) return
 
-    const students = JSON.parse(localStorage.getItem("robotics-students") || "[]")
-    const updatedStudents = students.map((s: any) =>
-      String(s.id) === String(id) || s.id === Number.parseInt(id)
-        ? { ...s, ...student, id: Number.parseInt(id) }
-        : s,
-    )
+    setIsSubmitting(true)
+    setSubmitError(null)
 
-    localStorage.setItem("robotics-students", JSON.stringify(updatedStudents))
-    router.push(`/dashboard/students/${id}`)
+    try {
+      const payload = {
+        ...student,
+        idNumber: student.idNumber || null,
+        birthDate: student.birthDate || null,
+        email: student.email || null,
+        phone: student.phone || null,
+        address: student.address || null,
+        city: student.city || null,
+        father: student.father || null,
+        mother: student.mother || null,
+        additionalPhone: student.additionalPhone || null,
+        healthFund: student.healthFund || null,
+        allergies: student.allergies || null,
+      }
+
+      const res = await fetch(`/api/students/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error || `Failed to update student (${res.status})`)
+      }
+
+      router.push(`/dashboard/students/${id}`)
+      router.refresh()
+    } catch (err: any) {
+      setSubmitError(err?.message ?? "שגיאה בעדכון תלמיד")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const toggleCourse = (courseId: string) => {
@@ -109,6 +137,16 @@ export default function EditStudentPage() {
     })
   }
 
+  if (studentError) {
+    return (
+      <div className="container mx-auto max-w-4xl p-6">
+        <Card className="border-2 border-red-200 bg-red-50 p-4">
+          <div className="font-medium text-red-700">שגיאה בטעינת התלמיד</div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto max-w-4xl p-6 space-y-6" dir="rtl">
       <div className="flex items-center gap-4">
@@ -122,6 +160,13 @@ export default function EditStudentPage() {
           <p className="text-muted-foreground mt-1">עדכן את פרטי התלמיד במערכת</p>
         </div>
       </div>
+
+      {submitError && (
+        <Card className="border-2 border-red-200 bg-red-50 p-4">
+          <div className="font-medium text-red-700">שגיאה</div>
+          <div className="text-sm text-red-700/80 mt-1">{submitError}</div>
+        </Card>
+      )}
 
       <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50 p-6">
         <div className="flex items-start gap-4">
@@ -215,7 +260,7 @@ export default function EditStudentPage() {
           <div className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email" className="text-base font-medium">
-                אימייל *
+                אימייל
               </Label>
               <Input
                 id="email"
@@ -224,7 +269,6 @@ export default function EditStudentPage() {
                 onChange={(e) => setStudent({ ...student, email: e.target.value })}
                 placeholder="student@example.com"
                 className="text-base h-12 bg-white"
-                required
               />
             </div>
 
@@ -395,7 +439,7 @@ export default function EditStudentPage() {
             {courses.length > 0 ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  {courses.map((course) => (
+                  {courses.map((course: any) => (
                     <div
                       key={course.id}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 transition-colors"
@@ -449,8 +493,8 @@ export default function EditStudentPage() {
         </Card>
 
         <div className="flex gap-3 justify-start">
-          <Button type="submit" size="lg" className="h-12 px-8 text-base" disabled={!student.name || !student.email || !id}>
-            שמור שינויים
+          <Button type="submit" size="lg" className="h-12 px-8 text-base" disabled={isSubmitting || !student.name || !id}>
+            {isSubmitting ? "שומר..." : "שמור שינויים"}
           </Button>
 
           <Link href={id ? `/dashboard/students/${id}` : "/dashboard/students"}>
