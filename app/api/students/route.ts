@@ -1,37 +1,56 @@
-import { prisma } from "@/lib/prisma"
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-export async function GET() {
-  const students = await prisma.student.findMany({ orderBy: { createdAt: "desc" } })
-  return Response.json(students)
+export const runtime = "nodejs";
+
+function buildName(body: any) {
+  const name = String(body?.name ?? "").trim();
+  const firstName = String(body?.firstName ?? "").trim();
+  const lastName = String(body?.lastName ?? "").trim();
+
+  if (name) return name;
+  const combined = `${firstName} ${lastName}`.trim();
+  return combined;
 }
 
 export async function POST(req: Request) {
-  const body = await req.json()
+  try {
+    const body = await req.json();
 
-  if (!body?.name) {
-    return Response.json({ error: "name is required" }, { status: 400 })
+    const name = buildName(body);
+    const email = body?.email ? String(body.email).trim() : null;
+    const phone = body?.phone ? String(body.phone).trim() : null;
+    const status = body?.status ? String(body.status).trim() : "מתעניין";
+
+    if (!name) {
+      return NextResponse.json({ error: "name is required" }, { status: 400 });
+    }
+
+    const student = await prisma.student.create({
+      data: { name, email, phone, status },
+    });
+
+    return NextResponse.json(student, { status: 201 });
+  } catch (err: any) {
+    console.error("POST /api/students error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error", details: String(err?.message ?? err) },
+      { status: 500 }
+    );
   }
+}
 
-  const student = await prisma.student.create({
-    data: {
-      name: body.name,
-      idNumber: body.idNumber ?? null,
-      birthDate: body.birthDate ?? null,
-      email: body.email ?? null,
-      phone: body.phone ?? null,
-      address: body.address ?? null,
-      city: body.city ?? null,
-      father: body.father ?? null,
-      mother: body.mother ?? null,
-      additionalPhone: body.additionalPhone ?? null,
-      healthFund: body.healthFund ?? null,
-      allergies: body.allergies ?? null,
-      status: body.status ?? "מתעניין",
-      totalSessions: Number.isFinite(body.totalSessions) ? body.totalSessions : 12,
-      courseIds: Array.isArray(body.courseIds) ? body.courseIds : [],
-      courseSessions: body.courseSessions ?? null,
-    },
-  })
-
-  return Response.json(student)
+export async function GET() {
+  try {
+    const students = await prisma.student.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json(students);
+  } catch (err: any) {
+    console.error("GET /api/students error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error", details: String(err?.message ?? err) },
+      { status: 500 }
+    );
+  }
 }
