@@ -1,11 +1,33 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
+import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ChevronLeft, ChevronRight, Filter } from "lucide-react"
+import { ChevronLeft, ChevronRight, Filter, Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+interface Course {
+  id: string
+  name: string
+  description?: string
+  level?: string
+  price?: number
+  startTime?: string
+  endTime?: string
+  startDate?: string
+  endDate?: string
+  weekdays?: string[]
+  teachers?: { id: string; firstName: string; lastName: string }[]
+  students?: number
+}
+
+interface Student {
+  id: string
+  firstName: string
+  lastName: string
+}
 
 const weekdayToNumber: Record<string, number> = {
   ראשון: 0,
@@ -28,70 +50,61 @@ const courseColors = [
   { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-300", hover: "hover:border-amber-500" },
 ]
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
 export default function SchedulePage() {
-  const [courses, setCourses] = useState<any[]>([])
-  const [students, setStudents] = useState<any[]>([])
-  const [courseColorMap, setCourseColorMap] = useState<Record<number, number>>({})
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedCourses = localStorage.getItem("robotics-courses")
-      const savedStudents = localStorage.getItem("robotics-students")
-      if (savedCourses) {
-        const parsedCourses = JSON.parse(savedCourses)
-        setCourses(parsedCourses)
-
-        const colorMap: Record<number, number> = {}
-        parsedCourses.forEach((course: any, index: number) => {
-          colorMap[course.id] = index % courseColors.length
-        })
-        setCourseColorMap(colorMap)
-      }
-      if (savedStudents) {
-        setStudents(JSON.parse(savedStudents))
-      }
-    }
-  }, [])
-
-  const getCourseColor = (courseId: number) => {
-    const colorIndex = courseColorMap[courseId] || 0
-    return courseColors[colorIndex]
-  }
+  const { data: courses = [], isLoading: coursesLoading } = useSWR<Course[]>("/api/courses", fetcher)
+  const { data: students = [], isLoading: studentsLoading } = useSWR<Student[]>("/api/students", fetcher)
 
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("month")
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedCourse, setSelectedCourse] = useState<any>(null)
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const [filterCourse, setFilterCourse] = useState<string>("all")
   const [filterTeacher, setFilterTeacher] = useState<string>("all")
   const [filterStudent, setFilterStudent] = useState<string>("all")
 
+  const courseColorMap = useMemo(() => {
+    const colorMap: Record<string, number> = {}
+    courses.forEach((course, index) => {
+      colorMap[course.id] = index % courseColors.length
+    })
+    return colorMap
+  }, [courses])
+
+  const getCourseColor = (courseId: string) => {
+    const colorIndex = courseColorMap[courseId] || 0
+    return courseColors[colorIndex]
+  }
+
   const teachers = useMemo(() => {
-    const uniqueTeachers = new Set<string>()
+    const uniqueTeachers: { id: string; name: string }[] = []
+    const seenIds = new Set<string>()
     courses.forEach((course) => {
       if (course.teachers && Array.isArray(course.teachers)) {
-        course.teachers.forEach((teacher: string) => uniqueTeachers.add(teacher))
+        course.teachers.forEach((teacher) => {
+          if (!seenIds.has(teacher.id)) {
+            seenIds.add(teacher.id)
+            uniqueTeachers.push({ id: teacher.id, name: `${teacher.firstName} ${teacher.lastName}` })
+          }
+        })
       }
     })
-    return Array.from(uniqueTeachers)
+    return uniqueTeachers
   }, [courses])
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
-      if (filterCourse !== "all" && course.id.toString() !== filterCourse) return false
+      if (filterCourse !== "all" && course.id !== filterCourse) return false
       if (filterTeacher !== "all") {
-        if (!course.teachers || !Array.isArray(course.teachers) || !course.teachers.includes(filterTeacher)) {
+        if (!course.teachers || !course.teachers.some((t) => t.id === filterTeacher)) {
           return false
         }
       }
-      if (filterStudent !== "all") {
-        const student = students.find((s) => s.id.toString() === filterStudent)
-        if (student && course.name !== student.course) return false
-      }
       return true
     })
-  }, [courses, filterCourse, filterTeacher, filterStudent, students])
+  }, [courses, filterCourse, filterTeacher])
 
   const getCoursesForDate = (date: Date) => {
     const dayOfWeek = date.getDay()
@@ -99,21 +112,65 @@ export default function SchedulePage() {
 
     return filteredCourses.filter((course) => {
       if (!dayName) return false
-
       if (!course.weekdays || !Array.isArray(course.weekdays) || course.weekdays.length === 0) {
         return false
       }
-
       if (!course.weekdays.includes(dayName)) {
         return false
       }
-
       return true
     })
   }
 
+  const getWeekDates = () => {
+    const start = new Date(currentDate)
+    const day = start.getDay()
+    start.setDate(start.getDate() - day)
+
+    const dates = []
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(start)
+      date.setDate(start.getDate() + i)
+      dates.push(date)
+    }
+    return dates
+  }
+
+  const handlePrevious = () => {
+    const newDate = new Date(currentDate)
+    if (viewMode === "day") {
+      newDate.setDate(newDate.getDate() - 1)
+    } else if (viewMode === "week") {
+      newDate.setDate(newDate.getDate() - 7)
+    } else {
+      newDate.setMonth(newDate.getMonth() - 1)
+    }
+    setCurrentDate(newDate)
+  }
+
+  const handleNext = () => {
+    const newDate = new Date(currentDate)
+    if (viewMode === "day") {
+      newDate.setDate(newDate.getDate() + 1)
+    } else if (viewMode === "week") {
+      newDate.setDate(newDate.getDate() + 7)
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1)
+    }
+    setCurrentDate(newDate)
+  }
+
+  const handleToday = () => {
+    setCurrentDate(new Date())
+  }
+
+  const handleCourseClick = (course: Course) => {
+    setSelectedCourse(course)
+    setDialogOpen(true)
+  }
+
   const renderDayView = () => {
-    const courses = getCoursesForDate(currentDate)
+    const dayCourses = getCoursesForDate(currentDate)
     const hours = Array.from({ length: 14 }, (_, i) => i + 8)
 
     return (
@@ -130,7 +187,8 @@ export default function SchedulePage() {
         </div>
         <div className="divide-y">
           {hours.map((hour) => {
-            const hourCourses = courses.filter((course) => {
+            const hourCourses = dayCourses.filter((course) => {
+              if (!course.startTime) return false
               const [startHour] = course.startTime.split(":").map(Number)
               return startHour === hour
             })
@@ -153,7 +211,7 @@ export default function SchedulePage() {
                           >
                             <div className={`font-semibold text-sm mb-1 ${colors.text}`}>{course.name}</div>
                             <div className={`text-xs ${colors.text} opacity-80`}>
-                              {course.startTime} - {course.endTime} • {course.teachers?.join(", ")}
+                              {course.startTime} - {course.endTime} • {course.teachers?.map((t) => `${t.firstName} ${t.lastName}`).join(", ")}
                             </div>
                           </Card>
                         )
@@ -194,6 +252,7 @@ export default function SchedulePage() {
               </div>
               {weekDates.map((date, i) => {
                 const dayCourses = getCoursesForDate(date).filter((course) => {
+                  if (!course.startTime) return false
                   const [startHour] = course.startTime.split(":").map(Number)
                   return startHour === hour
                 })
@@ -235,7 +294,7 @@ export default function SchedulePage() {
     const firstDay = new Date(year, month, 1).getDay()
     const daysInMonth = new Date(year, month + 1, 0).getDate()
 
-    const days = []
+    const days: (Date | null)[] = []
     for (let i = 0; i < firstDay; i++) {
       days.push(null)
     }
@@ -304,51 +363,12 @@ export default function SchedulePage() {
     )
   }
 
-  const handlePrevious = () => {
-    const newDate = new Date(currentDate)
-    if (viewMode === "day") {
-      newDate.setDate(newDate.getDate() - 1)
-    } else if (viewMode === "week") {
-      newDate.setDate(newDate.getDate() - 7)
-    } else {
-      newDate.setMonth(newDate.getMonth() - 1)
-    }
-    setCurrentDate(newDate)
-  }
-
-  const handleNext = () => {
-    const newDate = new Date(currentDate)
-    if (viewMode === "day") {
-      newDate.setDate(newDate.getDate() + 1)
-    } else if (viewMode === "week") {
-      newDate.setDate(newDate.getDate() + 7)
-    } else {
-      newDate.setMonth(newDate.getMonth() + 1)
-    }
-    setCurrentDate(newDate)
-  }
-
-  const handleToday = () => {
-    setCurrentDate(new Date())
-  }
-
-  const handleCourseClick = (course: any) => {
-    setSelectedCourse(course)
-    setDialogOpen(true)
-  }
-
-  const getWeekDates = () => {
-    const start = new Date(currentDate)
-    const day = start.getDay()
-    start.setDate(start.getDate() - day)
-
-    const dates = []
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(start)
-      date.setDate(start.getDate() + i)
-      dates.push(date)
-    }
-    return dates
+  if (coursesLoading || studentsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -401,7 +421,7 @@ export default function SchedulePage() {
             <SelectContent>
               <SelectItem value="all">כל הקורסים</SelectItem>
               {courses.map((course) => (
-                <SelectItem key={course.id} value={course.id.toString()}>
+                <SelectItem key={course.id} value={course.id}>
                   {course.name}
                 </SelectItem>
               ))}
@@ -418,8 +438,8 @@ export default function SchedulePage() {
             <SelectContent>
               <SelectItem value="all">כל המורים</SelectItem>
               {teachers.map((teacher) => (
-                <SelectItem key={teacher} value={teacher}>
-                  {teacher}
+                <SelectItem key={teacher.id} value={teacher.id}>
+                  {teacher.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -435,8 +455,8 @@ export default function SchedulePage() {
             <SelectContent>
               <SelectItem value="all">כל התלמידים</SelectItem>
               {students.map((student) => (
-                <SelectItem key={student.id} value={student.id.toString()}>
-                  {student.name}
+                <SelectItem key={student.id} value={student.id}>
+                  {student.firstName} {student.lastName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -459,25 +479,27 @@ export default function SchedulePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">מורים</div>
-                  <div className="font-medium">{selectedCourse.teachers?.join(", ") || "לא צוין"}</div>
+                  <div className="font-medium">
+                    {selectedCourse.teachers?.map((t) => `${t.firstName} ${t.lastName}`).join(", ") || "לא צוין"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">רמה</div>
-                  <div className="font-medium">{selectedCourse.level}</div>
+                  <div className="font-medium">{selectedCourse.level || "לא צוין"}</div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">תאריכים</div>
                   <div className="font-medium text-sm">
-                    {new Date(selectedCourse.startDate).toLocaleDateString("he-IL")} -{" "}
-                    {new Date(selectedCourse.endDate).toLocaleDateString("he-IL")}
+                    {selectedCourse.startDate ? new Date(selectedCourse.startDate).toLocaleDateString("he-IL") : "-"} -{" "}
+                    {selectedCourse.endDate ? new Date(selectedCourse.endDate).toLocaleDateString("he-IL") : "-"}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">שעות</div>
                   <div className="font-medium">
-                    {selectedCourse.startTime} - {selectedCourse.endTime}
+                    {selectedCourse.startTime || "-"} - {selectedCourse.endTime || "-"}
                   </div>
                 </div>
               </div>
@@ -488,17 +510,17 @@ export default function SchedulePage() {
                     <span key={day} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
                       {day}
                     </span>
-                  ))}
+                  )) || <span className="text-muted-foreground">לא צוין</span>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">תלמידים</div>
-                  <div className="font-medium">{selectedCourse.students}</div>
+                  <div className="font-medium">{selectedCourse.students || 0}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">מחיר</div>
-                  <div className="font-medium text-lg text-primary">₪{selectedCourse.price}</div>
+                  <div className="font-medium text-lg text-primary">₪{selectedCourse.price || 0}</div>
                 </div>
               </div>
             </div>

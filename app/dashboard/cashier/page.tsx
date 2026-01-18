@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import useSWR, { mutate } from "swr"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowRight, Plus, Trash2, TrendingUp, TrendingDown, Calendar, CreditCard } from "lucide-react"
+import { ArrowRight, Plus, Trash2, TrendingUp, TrendingDown, Calendar, CreditCard, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface Expense {
@@ -27,23 +28,22 @@ interface Expense {
   accountNumber?: string
 }
 
-interface Income {
+interface Payment {
   id: string
-  description: string
   amount: number
   date: string
-  type: "student" | "school" | "other"
-  reference?: string
-  paymentMethod: "cash" | "credit" | "transfer" | "check" | "bit"
-  cardLastDigits?: string
-  bankName?: string
-  bankBranch?: string
-  accountNumber?: string
+  paymentMethod: string
+  description?: string
+  studentId?: string
+  schoolId?: string
+  student?: { id: string; firstName: string; lastName: string }
+  school?: { id: string; name: string }
 }
 
 interface Student {
   id: string
-  name: string
+  firstName: string
+  lastName: string
 }
 
 interface School {
@@ -51,33 +51,32 @@ interface School {
   name: string
 }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
 export default function CashierPage() {
   const router = useRouter()
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [incomes, setIncomes] = useState<Income[]>([])
-  const [students, setStudents] = useState<Student[]>([])
-  const [schools, setSchools] = useState<School[]>([])
   const [timePeriod, setTimePeriod] = useState<"day" | "week" | "month" | "quarter" | "year">("month")
+  const [isAddingExpense, setIsAddingExpense] = useState(false)
+  const [isAddingIncome, setIsAddingIncome] = useState(false)
 
+  // Expense form state
   const [expenseDescription, setExpenseDescription] = useState("")
   const [expenseAmount, setExpenseAmount] = useState("")
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split("T")[0])
   const [expenseCategory, setExpenseCategory] = useState("")
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurringDay, setRecurringDay] = useState("1")
-  const [expensePaymentMethod, setExpensePaymentMethod] = useState<"cash" | "credit" | "transfer" | "check" | "bit">(
-    "cash",
-  )
+  const [expensePaymentMethod, setExpensePaymentMethod] = useState<"cash" | "credit" | "transfer" | "check" | "bit">("cash")
   const [expenseCardLastDigits, setExpenseCardLastDigits] = useState("")
   const [expenseBankName, setExpenseBankName] = useState("")
   const [expenseBankBranch, setExpenseBankBranch] = useState("")
   const [expenseAccountNumber, setExpenseAccountNumber] = useState("")
 
+  // Income form state
   const [incomeDescription, setIncomeDescription] = useState("")
   const [incomeAmount, setIncomeAmount] = useState("")
   const [incomeDate, setIncomeDate] = useState(new Date().toISOString().split("T")[0])
   const [incomeType, setIncomeType] = useState<"student" | "school" | "other">("student")
-  const [incomeReference, setIncomeReference] = useState("")
   const [selectedStudentId, setSelectedStudentId] = useState("")
   const [selectedSchoolId, setSelectedSchoolId] = useState("")
   const [customName, setCustomName] = useState("")
@@ -86,160 +85,145 @@ export default function CashierPage() {
   const [bankName, setBankName] = useState("")
   const [bankBranch, setBankBranch] = useState("")
   const [accountNumber, setAccountNumber] = useState("")
-  const [selectedEntityBalance, setSelectedEntityBalance] = useState<number | null>(null)
 
-  useEffect(() => {
-    const storedExpenses = localStorage.getItem("robotics-expenses")
-    const storedIncomes = localStorage.getItem("robotics-incomes")
-    const storedStudents = localStorage.getItem("robotics-students")
-    const storedSchools = localStorage.getItem("robotics-schools")
+  // Fetch data from API
+  const { data: expenses = [], isLoading: expensesLoading } = useSWR<Expense[]>("/api/expenses", fetcher)
+  const { data: payments = [], isLoading: paymentsLoading } = useSWR<Payment[]>("/api/payments", fetcher)
+  const { data: students = [] } = useSWR<Student[]>("/api/students", fetcher)
+  const { data: schools = [] } = useSWR<School[]>("/api/schools", fetcher)
 
-    if (storedExpenses) setExpenses(JSON.parse(storedExpenses))
-    if (storedIncomes) setIncomes(JSON.parse(storedIncomes))
-    if (storedStudents) setStudents(JSON.parse(storedStudents))
-    if (storedSchools) setSchools(JSON.parse(storedSchools))
-  }, [])
+  const israeliBanks = [
+    "בנק לאומי",
+    "בנק הפועלים",
+    "בנק דיסקונט",
+    "בנק מזרחי טפחות",
+    "בנק יהב",
+    "בנק ירושלים",
+    "בנק איגוד",
+    "בנק מסד",
+    "בנק אוצר החייל",
+    "בנק דואר",
+  ]
 
-  const saveExpenses = (newExpenses: Expense[]) => {
-    setExpenses(newExpenses)
-    localStorage.setItem("robotics-expenses", JSON.stringify(newExpenses))
-  }
-
-  const saveIncomes = (newIncomes: Income[]) => {
-    setIncomes(newIncomes)
-    localStorage.setItem("robotics-incomes", JSON.stringify(newIncomes))
-  }
-
-  const addExpense = () => {
+  const addExpense = async () => {
     if (!expenseDescription || !expenseAmount || !expenseCategory) return
-
     if (expensePaymentMethod === "credit" && !expenseCardLastDigits) return
-    if (
-      (expensePaymentMethod === "transfer" || expensePaymentMethod === "check") &&
-      (!expenseBankName || !expenseBankBranch || !expenseAccountNumber)
-    )
-      return
+    if ((expensePaymentMethod === "transfer" || expensePaymentMethod === "check") && (!expenseBankName || !expenseBankBranch || !expenseAccountNumber)) return
 
-    const newExpense: Expense = {
-      id: Date.now().toString(),
-      description: expenseDescription,
-      amount: Number.parseFloat(expenseAmount),
-      date: expenseDate,
-      isRecurring,
-      recurringDay: isRecurring ? Number.parseInt(recurringDay) : undefined,
-      category: expenseCategory,
-      paymentMethod: expensePaymentMethod,
-      cardLastDigits: expensePaymentMethod === "credit" ? expenseCardLastDigits : undefined,
-      bankName: expensePaymentMethod === "transfer" || expensePaymentMethod === "check" ? expenseBankName : undefined,
-      bankBranch:
-        expensePaymentMethod === "transfer" || expensePaymentMethod === "check" ? expenseBankBranch : undefined,
-      accountNumber:
-        expensePaymentMethod === "transfer" || expensePaymentMethod === "check" ? expenseAccountNumber : undefined,
+    setIsAddingExpense(true)
+    try {
+      const response = await fetch("/api/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: expenseDescription,
+          amount: Number.parseFloat(expenseAmount),
+          date: expenseDate,
+          isRecurring,
+          recurringDay: isRecurring ? Number.parseInt(recurringDay) : null,
+          category: expenseCategory,
+          paymentMethod: expensePaymentMethod,
+        }),
+      })
+
+      if (response.ok) {
+        mutate("/api/expenses")
+        // Reset form
+        setExpenseDescription("")
+        setExpenseAmount("")
+        setExpenseDate(new Date().toISOString().split("T")[0])
+        setExpenseCategory("")
+        setIsRecurring(false)
+        setRecurringDay("1")
+        setExpensePaymentMethod("cash")
+        setExpenseCardLastDigits("")
+        setExpenseBankName("")
+        setExpenseBankBranch("")
+        setExpenseAccountNumber("")
+      }
+    } catch (error) {
+      console.error("Failed to add expense:", error)
     }
-
-    saveExpenses([...expenses, newExpense])
-
-    setExpenseDescription("")
-    setExpenseAmount("")
-    setExpenseDate(new Date().toISOString().split("T")[0])
-    setExpenseCategory("")
-    setIsRecurring(false)
-    setRecurringDay("1")
-    setExpensePaymentMethod("cash")
-    setExpenseCardLastDigits("")
-    setExpenseBankName("")
-    setExpenseBankBranch("")
-    setExpenseAccountNumber("")
+    setIsAddingExpense(false)
   }
 
-  const addIncome = () => {
+  const addIncome = async () => {
     if (!incomeDescription || !incomeAmount) return
 
-    let referenceName = ""
-    let referenceId = ""
+    let studentId = null
+    let schoolId = null
 
     if (incomeType === "student" && selectedStudentId) {
-      const student = students.find((s) => s.id === selectedStudentId)
-      referenceName = student?.name || ""
-      referenceId = selectedStudentId
+      studentId = selectedStudentId
     } else if (incomeType === "school" && selectedSchoolId) {
-      const school = schools.find((s) => s.id === selectedSchoolId)
-      referenceName = school?.name || ""
-      referenceId = selectedSchoolId
-    } else if (incomeType === "other") {
-      referenceName = customName
+      schoolId = selectedSchoolId
+    } else if (incomeType === "other" && !customName) {
+      return
     }
-
-    if (!referenceName) return
 
     if (paymentMethod === "credit" && !cardLastDigits) return
-    if ((paymentMethod === "transfer" || paymentMethod === "check") && (!bankName || !bankBranch || !accountNumber))
-      return
+    if ((paymentMethod === "transfer" || paymentMethod === "check") && (!bankName || !bankBranch || !accountNumber)) return
 
-    const newIncome: Income = {
-      id: Date.now().toString(),
-      description: incomeDescription,
-      amount: Number.parseFloat(incomeAmount),
-      date: incomeDate,
-      type: incomeType,
-      reference: referenceName,
-      paymentMethod,
-      cardLastDigits: paymentMethod === "credit" ? cardLastDigits : undefined,
-      bankName: paymentMethod === "transfer" || paymentMethod === "check" ? bankName : undefined,
-      bankBranch: paymentMethod === "transfer" || paymentMethod === "check" ? bankBranch : undefined,
-      accountNumber: paymentMethod === "transfer" || paymentMethod === "check" ? accountNumber : undefined,
-    }
-
-    saveIncomes([...incomes, newIncome])
-
-    if (incomeType === "student" && referenceId) {
-      const studentPayments = JSON.parse(localStorage.getItem(`robotics-student-payments-${referenceId}`) || "[]")
-      studentPayments.push({
-        id: Date.now().toString(),
-        date: incomeDate,
-        amount: Number.parseFloat(incomeAmount),
-        description: incomeDescription,
-        type: "income",
-        paymentMethod,
+    setIsAddingIncome(true)
+    try {
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number.parseFloat(incomeAmount),
+          date: incomeDate,
+          paymentMethod,
+          description: incomeDescription,
+          studentId,
+          schoolId,
+        }),
       })
-      localStorage.setItem(`robotics-student-payments-${referenceId}`, JSON.stringify(studentPayments))
-    } else if (incomeType === "school" && referenceId) {
-      const schoolPayments = JSON.parse(localStorage.getItem(`robotics-school-payments-${referenceId}`) || "[]")
-      schoolPayments.push({
-        id: Date.now().toString(),
-        date: incomeDate,
-        amount: Number.parseFloat(incomeAmount),
-        description: incomeDescription,
-        type: "income",
-        paymentMethod,
-      })
-      localStorage.setItem(`robotics-school-payments-${referenceId}`, JSON.stringify(schoolPayments))
+
+      if (response.ok) {
+        mutate("/api/payments")
+        // Reset form
+        setIncomeDescription("")
+        setIncomeAmount("")
+        setIncomeDate(new Date().toISOString().split("T")[0])
+        setIncomeType("student")
+        setSelectedStudentId("")
+        setSelectedSchoolId("")
+        setCustomName("")
+        setPaymentMethod("cash")
+        setCardLastDigits("")
+        setBankName("")
+        setBankBranch("")
+        setAccountNumber("")
+      }
+    } catch (error) {
+      console.error("Failed to add income:", error)
     }
-
-    setIncomeDescription("")
-    setIncomeAmount("")
-    setIncomeDate(new Date().toISOString().split("T")[0])
-    setIncomeType("student")
-    setIncomeReference("")
-    setSelectedStudentId("")
-    setSelectedSchoolId("")
-    setCustomName("")
-    setPaymentMethod("cash")
-    setCardLastDigits("")
-    setBankName("")
-    setBankBranch("")
-    setAccountNumber("")
+    setIsAddingIncome(false)
   }
 
-  const deleteExpense = (id: string) => {
-    saveExpenses(expenses.filter((e) => e.id !== id))
+  const deleteExpense = async (id: string) => {
+    try {
+      const response = await fetch(`/api/expenses/${id}`, { method: "DELETE" })
+      if (response.ok) {
+        mutate("/api/expenses")
+      }
+    } catch (error) {
+      console.error("Failed to delete expense:", error)
+    }
   }
 
-  const deleteIncome = (id: string) => {
-    saveIncomes(incomes.filter((i) => i.id !== id))
+  const deleteIncome = async (id: string) => {
+    try {
+      const response = await fetch(`/api/payments/${id}`, { method: "DELETE" })
+      if (response.ok) {
+        mutate("/api/payments")
+      }
+    } catch (error) {
+      console.error("Failed to delete income:", error)
+    }
   }
 
-  const filterByTimePeriod = (items: (Expense | Income)[]) => {
+  const filterByTimePeriod = <T extends { date: string }>(items: T[]): T[] => {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
@@ -268,95 +252,63 @@ export default function CashierPage() {
   }
 
   const filteredExpenses = filterByTimePeriod(expenses)
-  const filteredIncomes = filterByTimePeriod(incomes)
+  const filteredPayments = filterByTimePeriod(payments)
 
-  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0)
-  const totalIncomes = filteredIncomes.reduce((sum, i) => sum + i.amount, 0)
+  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
+  const totalIncomes = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0)
   const balance = totalIncomes - totalExpenses
-
-  const getIncomeTypeLabel = (type: string) => {
-    switch (type) {
-      case "student":
-        return "תלמיד"
-      case "school":
-        return "בית ספר"
-      case "other":
-        return "אחר"
-      default:
-        return type
-    }
-  }
 
   const getTimePeriodLabel = (period: string) => {
     switch (period) {
-      case "day":
-        return "יום"
-      case "week":
-        return "שבוע"
-      case "month":
-        return "חודש"
-      case "quarter":
-        return "רבעון"
-      case "year":
-        return "שנה"
-      default:
-        return period
+      case "day": return "יום"
+      case "week": return "שבוע"
+      case "month": return "חודש"
+      case "quarter": return "רבעון"
+      case "year": return "שנה"
+      default: return period
     }
   }
 
   const getPaymentMethodLabel = (method: string) => {
     switch (method) {
-      case "cash":
-        return "מזומן"
-      case "credit":
-        return "אשראי"
-      case "transfer":
-        return "העברה בנקאית"
-      case "check":
-        return "שיק"
-      case "bit":
-        return "ביט"
-      default:
-        return method
+      case "cash": return "מזומן"
+      case "credit": return "אשראי"
+      case "transfer": return "העברה בנקאית"
+      case "check": return "שיק"
+      case "bit": return "ביט"
+      default: return method
+    }
+  }
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case "rent": return "שכירות"
+      case "salary": return "שכר"
+      case "utilities": return "חשמל ומים"
+      case "equipment": return "ציוד"
+      case "maintenance": return "תחזוקה"
+      case "other": return "אחר"
+      default: return category
     }
   }
 
   const getTotalByPaymentMethod = (method: "cash" | "credit" | "transfer" | "check" | "bit") => {
-    const incomeTotal = filteredIncomes
-      .filter((income) => income.paymentMethod === method)
-      .reduce((sum, i) => sum + i.amount, 0)
+    const incomeTotal = filteredPayments
+      .filter((p) => p.paymentMethod === method)
+      .reduce((sum, p) => sum + Number(p.amount), 0)
     const expenseTotal = filteredExpenses
-      .filter((expense) => expense.paymentMethod === method)
-      .reduce((sum, e) => sum + e.amount, 0)
+      .filter((e) => e.paymentMethod === method)
+      .reduce((sum, e) => sum + Number(e.amount), 0)
     return incomeTotal - expenseTotal
   }
 
-  useEffect(() => {
-    if (incomeType === "student" && selectedStudentId) {
-      const studentPayments = JSON.parse(localStorage.getItem(`robotics-student-payments-${selectedStudentId}`) || "[]")
-      const balance = studentPayments.reduce((sum: number, p: any) => sum + p.amount, 0)
-      setSelectedEntityBalance(balance)
-    } else if (incomeType === "school" && selectedSchoolId) {
-      const schoolPayments = JSON.parse(localStorage.getItem(`robotics-school-payments-${selectedSchoolId}`) || "[]")
-      const balance = schoolPayments.reduce((sum: number, p: any) => sum + p.amount, 0)
-      setSelectedEntityBalance(balance)
-    } else {
-      setSelectedEntityBalance(null)
-    }
-  }, [incomeType, selectedStudentId, selectedSchoolId])
-
-  const israeliBanks = [
-    "בנק לאומי",
-    "בנק הפועלים",
-    "בנק דיסקונט",
-    "בנק מזרחי טפחות",
-    "בנק יהב",
-    "בנק ירושלים",
-    "בנק איגוד",
-    "בנק מסד",
-    "בנק אוצר החייל",
-    "בנק דואר",
-  ]
+  if (expensesLoading || paymentsLoading) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -366,7 +318,7 @@ export default function CashierPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold">הכנסות והוצאות</h1>
-          <p className="text-muted-foreground">ניהול תקציב ומעקב פינסי</p>
+          <p className="text-muted-foreground">ניהול תקציב ומעקב פיננסי</p>
         </div>
         <div className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-muted-foreground" />
@@ -385,6 +337,7 @@ export default function CashierPage() {
         </div>
       </div>
 
+      {/* Summary Cards */}
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         <Card className="border-green-200 bg-green-50">
           <CardHeader className="pb-2">
@@ -429,6 +382,7 @@ export default function CashierPage() {
         </Card>
       </div>
 
+      {/* Payment Method Breakdown */}
       <div className="mb-6 grid gap-3 md:grid-cols-5">
         <Card className="border-purple-200 bg-purple-50">
           <CardHeader className="pb-2">
@@ -450,9 +404,7 @@ export default function CashierPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-indigo-700">
-              ₪{getTotalByPaymentMethod("credit").toLocaleString()}
-            </div>
+            <div className="text-xl font-bold text-indigo-700">₪{getTotalByPaymentMethod("credit").toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -464,9 +416,7 @@ export default function CashierPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-cyan-700">
-              ₪{getTotalByPaymentMethod("transfer").toLocaleString()}
-            </div>
+            <div className="text-xl font-bold text-cyan-700">₪{getTotalByPaymentMethod("transfer").toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -662,8 +612,8 @@ export default function CashierPage() {
                 </div>
               )}
 
-              <Button onClick={addExpense} className="w-full bg-red-600 hover:bg-red-700">
-                <Plus className="mr-2 h-4 w-4" />
+              <Button onClick={addExpense} className="w-full bg-red-600 hover:bg-red-700" disabled={isAddingExpense}>
+                {isAddingExpense ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                 הוסף הוצאה
               </Button>
             </CardContent>
@@ -696,8 +646,8 @@ export default function CashierPage() {
                     {filteredExpenses.map((expense) => (
                       <TableRow key={expense.id}>
                         <TableCell className="font-medium">{expense.description}</TableCell>
-                        <TableCell>{expense.category}</TableCell>
-                        <TableCell className="text-red-600 font-semibold">₪{expense.amount.toLocaleString()}</TableCell>
+                        <TableCell>{getCategoryLabel(expense.category)}</TableCell>
+                        <TableCell className="text-red-600 font-semibold">₪{Number(expense.amount).toLocaleString()}</TableCell>
                         <TableCell>{new Date(expense.date).toLocaleDateString("he-IL")}</TableCell>
                         <TableCell>
                           {expense.isRecurring ? (
@@ -708,19 +658,7 @@ export default function CashierPage() {
                             <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">חד פעמי</span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>{getPaymentMethodLabel(expense.paymentMethod)}</div>
-                            {expense.cardLastDigits && (
-                              <div className="text-xs text-muted-foreground">****{expense.cardLastDigits}</div>
-                            )}
-                            {expense.bankName && (
-                              <div className="text-xs text-muted-foreground">
-                                {expense.bankName} - {expense.bankBranch}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
+                        <TableCell>{getPaymentMethodLabel(expense.paymentMethod)}</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="icon" onClick={() => deleteExpense(expense.id)}>
                             <Trash2 className="h-4 w-4 text-red-600" />
@@ -745,17 +683,6 @@ export default function CashierPage() {
               <CardDescription>רשום הכנסה מתלמיד, בית ספר או מקור אחר</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {selectedEntityBalance !== null && (
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardContent className="py-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-blue-700">יתרת תשלומים</span>
-                      <span className="text-xl font-bold text-blue-700">₪{selectedEntityBalance.toLocaleString()}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="income-type">סוג ההכנסה *</Label>
@@ -794,7 +721,7 @@ export default function CashierPage() {
                         ) : (
                           students.map((student) => (
                             <SelectItem key={student.id} value={student.id}>
-                              {student.name}
+                              {student.firstName} {student.lastName}
                             </SelectItem>
                           ))
                         )}
@@ -909,15 +836,11 @@ export default function CashierPage() {
                         <SelectValue placeholder="בחר בנק" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="הפועלים">הפועלים</SelectItem>
-                        <SelectItem value="לאומי">לאומי</SelectItem>
-                        <SelectItem value="דיסקונט">דיסקונט</SelectItem>
-                        <SelectItem value="מזרחי טפחות">מזרחי טפחות</SelectItem>
-                        <SelectItem value="בינלאומי">בינלאומי</SelectItem>
-                        <SelectItem value="איגוד">איגוד</SelectItem>
-                        <SelectItem value="ירושלים">ירושלים</SelectItem>
-                        <SelectItem value="מרכנתיל">מרכנתיל</SelectItem>
-                        <SelectItem value="דואר">דואר</SelectItem>
+                        {israeliBanks.map((bank) => (
+                          <SelectItem key={bank} value={bank}>
+                            {bank}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -944,8 +867,8 @@ export default function CashierPage() {
                 </div>
               )}
 
-              <Button onClick={addIncome} className="w-full bg-green-600 hover:bg-green-700">
-                <Plus className="mr-2 h-4 w-4" />
+              <Button onClick={addIncome} className="w-full bg-green-600 hover:bg-green-700" disabled={isAddingIncome}>
+                {isAddingIncome ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                 הוסף הכנסה
               </Button>
             </CardContent>
@@ -957,7 +880,7 @@ export default function CashierPage() {
               <CardDescription>הכנסות ב{getTimePeriodLabel(timePeriod)} הנוכחי</CardDescription>
             </CardHeader>
             <CardContent>
-              {filteredIncomes.length === 0 ? (
+              {filteredPayments.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground">
                   לא נרשמו הכנסות ב{getTimePeriodLabel(timePeriod)} הנוכחי
                 </div>
@@ -967,7 +890,6 @@ export default function CashierPage() {
                     <TableRow>
                       <TableHead className="text-right">תיאור</TableHead>
                       <TableHead className="text-right">מקור</TableHead>
-                      <TableHead className="text-right">סוג</TableHead>
                       <TableHead className="text-right">אופן תשלום</TableHead>
                       <TableHead className="text-right">סכום</TableHead>
                       <TableHead className="text-right">תאריך</TableHead>
@@ -975,30 +897,21 @@ export default function CashierPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredIncomes.map((income) => (
-                      <TableRow key={income.id}>
-                        <TableCell className="font-medium">{income.description}</TableCell>
-                        <TableCell>{income.reference}</TableCell>
+                    {filteredPayments.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell className="font-medium">{payment.description || "-"}</TableCell>
                         <TableCell>
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                            {getIncomeTypeLabel(income.type)}
-                          </span>
+                          {payment.student
+                            ? `${payment.student.firstName} ${payment.student.lastName}`
+                            : payment.school
+                            ? payment.school.name
+                            : "-"}
                         </TableCell>
+                        <TableCell>{getPaymentMethodLabel(payment.paymentMethod)}</TableCell>
+                        <TableCell className="text-green-600 font-semibold">₪{Number(payment.amount).toLocaleString()}</TableCell>
+                        <TableCell>{new Date(payment.date).toLocaleDateString("he-IL")}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <CreditCard className="h-3 w-3" />
-                            <span className="text-xs">{getPaymentMethodLabel(income.paymentMethod)}</span>
-                            {income.cardLastDigits && (
-                              <span className="text-xs text-muted-foreground">(**{income.cardLastDigits})</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-green-600 font-semibold">
-                          ₪{income.amount.toLocaleString()}
-                        </TableCell>
-                        <TableCell>{new Date(income.date).toLocaleDateString("he-IL")}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => deleteIncome(income.id)}>
+                          <Button variant="ghost" size="icon" onClick={() => deleteIncome(payment.id)}>
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </TableCell>

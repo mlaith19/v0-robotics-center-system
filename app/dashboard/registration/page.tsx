@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,53 +13,86 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Send, UserPlus, GraduationCap, MoreHorizontal } from "lucide-react"
+import { Send, UserPlus, GraduationCap, MoreHorizontal, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 
 type RegistrationType = "student" | "teacher"
 
-interface Registration {
+interface Student {
   id: string
-  name: string
-  type: RegistrationType
+  firstName: string
+  lastName: string
   phone: string
   email: string
-  status: "ממתין" | "הושלם"
-  sentAt: string
+  createdAt: string
 }
 
+interface Teacher {
+  id: string
+  firstName: string
+  lastName: string
+  phone: string
+  email: string
+  createdAt: string
+}
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
 export default function RegistrationPage() {
-  const [registrations, setRegistrations] = useState<Registration[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [centerSettings, setCenterSettings] = useState<any>(null)
   const { toast } = useToast()
   const router = useRouter()
 
+  // Fetch students and teachers from API
+  const { data: students = [], isLoading: studentsLoading } = useSWR<Student[]>("/api/students", fetcher)
+  const { data: teachers = [], isLoading: teachersLoading } = useSWR<Teacher[]>("/api/teachers", fetcher)
+
   useEffect(() => {
-    const loadRegistrations = () => {
-      const stored = localStorage.getItem("robotics-registrations")
-      if (stored) {
-        setRegistrations(JSON.parse(stored))
+    // Load center settings from API or localStorage for now
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch("/api/settings")
+        if (res.ok) {
+          const data = await res.json()
+          setCenterSettings(data)
+        }
+      } catch {
+        // Fallback to localStorage if API doesn't exist yet
+        const settings = localStorage.getItem("robotics-center-settings")
+        if (settings) {
+          setCenterSettings(JSON.parse(settings))
+        }
       }
     }
-
-    loadRegistrations()
-
-    // רענון הרשימה כל 3 שניות כדי להציג רישומים חדשים
-    const interval = setInterval(loadRegistrations, 3000)
-    return () => clearInterval(interval)
+    fetchSettings()
   }, [])
 
+  // Combine students and teachers into registrations list
+  const registrations = [
+    ...students.map((s) => ({
+      id: s.id,
+      name: `${s.firstName} ${s.lastName}`,
+      type: "student" as RegistrationType,
+      phone: s.phone || "",
+      email: s.email || "",
+      status: "הושלם" as const,
+      createdAt: s.createdAt,
+    })),
+    ...teachers.map((t) => ({
+      id: t.id,
+      name: `${t.firstName} ${t.lastName}`,
+      type: "teacher" as RegistrationType,
+      phone: t.phone || "",
+      email: t.email || "",
+      status: "הושלם" as const,
+      createdAt: t.createdAt,
+    })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
   const sendRegistrationForm = (type: RegistrationType) => {
-    // קריאת הגדרות המרכז
-    const settings = localStorage.getItem("robotics-center-settings")
-
-    let whatsappNumber = ""
-
-    if (settings) {
-      const parsed = JSON.parse(settings)
-      whatsappNumber = parsed.whatsapp || ""
-    }
+    let whatsappNumber = centerSettings?.whatsapp || ""
 
     if (!whatsappNumber) {
       toast({
@@ -69,21 +103,20 @@ export default function RegistrationPage() {
       return
     }
 
-    // יצירת קישור לטופס
+    // Create form link
     const formUrl = `${window.location.origin}/dashboard/${type === "student" ? "students" : "teachers"}/new`
 
-    // הסרת תווים מיוחדים ממספר הטלפון
+    // Clean phone number
     const cleanPhone = whatsappNumber.replace(/[^0-9]/g, "")
 
-    // הודעה לשליחה
+    // Message to send
     const message =
       type === "student"
         ? `שלום, נשלח אליך טופס רישום לתלמיד חדש במרכז הרובוטיקה. אנא מלא את הפרטים בקישור הבא: ${formUrl}`
         : `שלום, נשלח אליך טופס רישום למורה חדש במרכז הרובוטיקה. אנא מלא את הפרטים בקישור הבא: ${formUrl}`
 
-    // פתיחת WhatsApp עם ההודעה
+    // Open WhatsApp
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
-
     window.open(whatsappUrl, "_blank")
 
     setDialogOpen(false)
@@ -94,12 +127,20 @@ export default function RegistrationPage() {
     })
   }
 
-  const handleViewDetails = (registration: Registration) => {
+  const handleViewDetails = (registration: { id: string; type: RegistrationType }) => {
     if (registration.type === "student") {
       router.push(`/dashboard/students/${registration.id}`)
     } else {
       router.push(`/dashboard/teachers/${registration.id}`)
     }
+  }
+
+  if (studentsLoading || teachersLoading) {
+    return (
+      <div className="container mx-auto p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -169,20 +210,20 @@ export default function RegistrationPage() {
                 <TableHead className="text-right">טלפון</TableHead>
                 <TableHead className="text-right">אימייל</TableHead>
                 <TableHead className="text-right">סטטוס</TableHead>
-                <TableHead className="text-right">נשלח בתאריך</TableHead>
-                <TableHead className="text-right">כפתורים</TableHead>
+                <TableHead className="text-right">תאריך רישום</TableHead>
+                <TableHead className="text-right">פעולות</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {registrations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    לא נשלחו טפסי רישום עדיין
+                    לא נרשמו תלמידים או מורים עדיין
                   </TableCell>
                 </TableRow>
               ) : (
                 registrations.map((registration) => (
-                  <TableRow key={registration.id}>
+                  <TableRow key={`${registration.type}-${registration.id}`}>
                     <TableCell className="font-medium">{registration.name}</TableCell>
                     <TableCell>
                       <span
@@ -195,20 +236,18 @@ export default function RegistrationPage() {
                         {registration.type === "student" ? "תלמיד" : "מורה"}
                       </span>
                     </TableCell>
-                    <TableCell>{registration.phone}</TableCell>
-                    <TableCell>{registration.email}</TableCell>
+                    <TableCell>{registration.phone || "-"}</TableCell>
+                    <TableCell>{registration.email || "-"}</TableCell>
                     <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          registration.status === "הושלם"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
+                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
                         {registration.status}
                       </span>
                     </TableCell>
-                    <TableCell>{registration.sentAt}</TableCell>
+                    <TableCell>
+                      {registration.createdAt
+                        ? new Date(registration.createdAt).toLocaleDateString("he-IL")
+                        : "-"}
+                    </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm" onClick={() => handleViewDetails(registration)}>
                         <MoreHorizontal className="h-4 w-4" />
