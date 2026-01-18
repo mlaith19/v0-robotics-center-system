@@ -27,7 +27,7 @@ export async function GET(req: Request) {
 
     query += ` ORDER BY "createdAt" DESC`
 
-    const users = await sql(query, params)
+    const users = await sql.query(query, params)
 
     return NextResponse.json(users)
   } catch (err: any) {
