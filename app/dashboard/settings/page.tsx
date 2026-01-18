@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Building2, Save, Upload, X, Loader2 } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Building2, Save, Upload, X, Loader2, Hash, Settings2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import useSWR from "swr"
 
@@ -19,6 +20,17 @@ interface CenterSettings {
   phone: string
   whatsapp: string
   address: string
+  // Numbers tab fields
+  lesson_price?: number
+  monthly_price?: number
+  registration_fee?: number
+  discount_siblings?: number
+  max_students_per_class?: number
+  // Other tab fields
+  email?: string
+  website?: string
+  working_hours?: string
+  notes?: string
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -32,6 +44,15 @@ export default function SettingsPage() {
     phone: "",
     whatsapp: "",
     address: "",
+    lesson_price: 0,
+    monthly_price: 0,
+    registration_fee: 0,
+    discount_siblings: 0,
+    max_students_per_class: 0,
+    email: "",
+    website: "",
+    working_hours: "",
+    notes: "",
   })
   const [logoPreview, setLogoPreview] = useState<string>("")
   const [isSaving, setIsSaving] = useState(false)
@@ -46,6 +67,15 @@ export default function SettingsPage() {
         phone: settingsData.phone || "",
         whatsapp: settingsData.whatsapp || "",
         address: settingsData.address || "",
+        lesson_price: settingsData.lesson_price || 0,
+        monthly_price: settingsData.monthly_price || 0,
+        registration_fee: settingsData.registration_fee || 0,
+        discount_siblings: settingsData.discount_siblings || 0,
+        max_students_per_class: settingsData.max_students_per_class || 0,
+        email: settingsData.email || "",
+        website: settingsData.website || "",
+        working_hours: settingsData.working_hours || "",
+        notes: settingsData.notes || "",
       })
       if (settingsData.logo) {
         setLogoPreview(settingsData.logo)
@@ -119,113 +149,265 @@ export default function SettingsPage() {
         <p className="text-muted-foreground mt-2">הגדרות מערכת ותצורה</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            פרטי המרכז
-          </CardTitle>
-          <CardDescription>הגדר את פרטי המרכז שלך</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* שם המרכז */}
-          <div className="space-y-2">
-            <Label htmlFor="centerName">שם המרכז *</Label>
-            <Input
-              id="centerName"
-              placeholder="לדוגמה: מרכז הרובוטיקה"
-              value={settings.center_name}
-              onChange={(e) => setSettings({ ...settings, center_name: e.target.value })}
-            />
-          </div>
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="general" className="gap-2">
+            <Building2 className="h-4 w-4" />
+            כללי
+          </TabsTrigger>
+          <TabsTrigger value="numbers" className="gap-2">
+            <Hash className="h-4 w-4" />
+            מספרים
+          </TabsTrigger>
+          <TabsTrigger value="other" className="gap-2">
+            <Settings2 className="h-4 w-4" />
+            אחר
+          </TabsTrigger>
+        </TabsList>
 
-          {/* לוגו */}
-          <div className="space-y-2">
-            <Label>לוגו המרכז</Label>
-            <div className="flex items-center gap-4">
-              {logoPreview ? (
-                <div className="relative">
-                  <img
-                    src={logoPreview || "/placeholder.svg"}
-                    alt="Logo preview"
-                    className="h-24 w-24 object-contain rounded border"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                    onClick={handleRemoveLogo}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="h-24 w-24 border-2 border-dashed rounded flex items-center justify-center bg-muted">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                </div>
-              )}
-              <div>
-                <Input type="file" accept="image/*" onChange={handleLogoUpload} className="max-w-[250px]" />
-                <p className="text-xs text-muted-foreground mt-1">PNG, JPG עד 2MB</p>
+        {/* טאב כללי */}
+        <TabsContent value="general">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                פרטי המרכז
+              </CardTitle>
+              <CardDescription>הגדר את פרטי המרכז שלך</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* שם המרכז */}
+              <div className="space-y-2">
+                <Label htmlFor="centerName">שם המרכז *</Label>
+                <Input
+                  id="centerName"
+                  placeholder="לדוגמה: מרכז הרובוטיקה"
+                  value={settings.center_name}
+                  onChange={(e) => setSettings({ ...settings, center_name: e.target.value })}
+                />
               </div>
-            </div>
-          </div>
 
-          {/* מספרי טלפון */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">מספר נייד *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="050-1234567"
-                value={settings.phone}
-                onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="whatsapp">מספר WhatsApp</Label>
-              <Input
-                id="whatsapp"
-                type="tel"
-                placeholder="050-1234567"
-                value={settings.whatsapp}
-                onChange={(e) => setSettings({ ...settings, whatsapp: e.target.value })}
-              />
-            </div>
-          </div>
+              {/* לוגו */}
+              <div className="space-y-2">
+                <Label>לוגו המרכז</Label>
+                <div className="flex items-center gap-4">
+                  {logoPreview ? (
+                    <div className="relative">
+                      <img
+                        src={logoPreview || "/placeholder.svg"}
+                        alt="Logo preview"
+                        className="h-24 w-24 object-contain rounded border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                        onClick={handleRemoveLogo}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="h-24 w-24 border-2 border-dashed rounded flex items-center justify-center bg-muted">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <Input type="file" accept="image/*" onChange={handleLogoUpload} className="max-w-[250px]" />
+                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG עד 2MB</p>
+                  </div>
+                </div>
+              </div>
 
-          {/* כתובת */}
-          <div className="space-y-2">
-            <Label htmlFor="address">כתובת המרכז *</Label>
-            <Textarea
-              id="address"
-              placeholder="רחוב 123, עיר, מיקוד"
-              value={settings.address}
-              onChange={(e) => setSettings({ ...settings, address: e.target.value })}
-              rows={3}
-            />
-          </div>
+              {/* מספרי טלפון */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">מספר נייד *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="050-1234567"
+                    value={settings.phone}
+                    onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp">מספר WhatsApp</Label>
+                  <Input
+                    id="whatsapp"
+                    type="tel"
+                    placeholder="050-1234567"
+                    value={settings.whatsapp}
+                    onChange={(e) => setSettings({ ...settings, whatsapp: e.target.value })}
+                  />
+                </div>
+              </div>
 
-          {/* כפתור שמירה */}
-          <div className="flex justify-end pt-4">
-            <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  שומר...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  שמור הגדרות
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              {/* כתובת */}
+              <div className="space-y-2">
+                <Label htmlFor="address">כתובת המרכז *</Label>
+                <Textarea
+                  id="address"
+                  placeholder="רחוב 123, עיר, מיקוד"
+                  value={settings.address}
+                  onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* טאב מספרים */}
+        <TabsContent value="numbers">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Hash className="h-5 w-5 text-primary" />
+                מחירים והגדרות מספריות
+              </CardTitle>
+              <CardDescription>הגדר מחירים והגבלות מספריות</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="lessonPrice">מחיר שיעור בודד (בש"ח)</Label>
+                  <Input
+                    id="lessonPrice"
+                    type="number"
+                    placeholder="0"
+                    value={settings.lesson_price || ""}
+                    onChange={(e) => setSettings({ ...settings, lesson_price: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="monthlyPrice">מחיר חודשי (בש"ח)</Label>
+                  <Input
+                    id="monthlyPrice"
+                    type="number"
+                    placeholder="0"
+                    value={settings.monthly_price || ""}
+                    onChange={(e) => setSettings({ ...settings, monthly_price: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="registrationFee">דמי רישום (בש"ח)</Label>
+                  <Input
+                    id="registrationFee"
+                    type="number"
+                    placeholder="0"
+                    value={settings.registration_fee || ""}
+                    onChange={(e) => setSettings({ ...settings, registration_fee: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="discountSiblings">הנחת אחים (%)</Label>
+                  <Input
+                    id="discountSiblings"
+                    type="number"
+                    placeholder="0"
+                    min="0"
+                    max="100"
+                    value={settings.discount_siblings || ""}
+                    onChange={(e) => setSettings({ ...settings, discount_siblings: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="maxStudents">מספר תלמידים מקסימלי בכיתה</Label>
+                <Input
+                  id="maxStudents"
+                  type="number"
+                  placeholder="0"
+                  value={settings.max_students_per_class || ""}
+                  onChange={(e) => setSettings({ ...settings, max_students_per_class: Number(e.target.value) })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* טאב אחר */}
+        <TabsContent value="other">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-primary" />
+                הגדרות נוספות
+              </CardTitle>
+              <CardDescription>הגדרות נוספות של המרכז</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">כתובת אימייל</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="example@domain.com"
+                    value={settings.email || ""}
+                    onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website">אתר אינטרנט</Label>
+                  <Input
+                    id="website"
+                    type="url"
+                    placeholder="https://www.example.com"
+                    value={settings.website || ""}
+                    onChange={(e) => setSettings({ ...settings, website: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="workingHours">שעות פעילות</Label>
+                <Textarea
+                  id="workingHours"
+                  placeholder="ראשון-חמישי: 08:00-20:00&#10;שישי: 08:00-13:00"
+                  value={settings.working_hours || ""}
+                  onChange={(e) => setSettings({ ...settings, working_hours: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">הערות נוספות</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="הערות כלליות על המרכז..."
+                  value={settings.notes || ""}
+                  onChange={(e) => setSettings({ ...settings, notes: e.target.value })}
+                  rows={4}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* כפתור שמירה - מוצג תמיד */}
+      <div className="flex justify-start">
+        <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              שומר...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              שמור הגדרות
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   )
 }
