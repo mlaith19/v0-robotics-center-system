@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { neon } from "@neondatabase/serverless"
+
+const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET(req: Request) {
   try {
@@ -7,23 +9,25 @@ export async function GET(req: Request) {
     const q = searchParams.get("q") || ""
     const status = searchParams.get("status") || ""
 
-    const users = await prisma.user.findMany({
-      where: {
-        AND: [
-          status ? { status } : {},
-          q
-            ? {
-                OR: [
-                  { name: { contains: q, mode: "insensitive" } },
-                  { email: { contains: q, mode: "insensitive" } },
-                  { phone: { contains: q, mode: "insensitive" } },
-                ],
-              }
-            : {},
-        ],
-      },
-      orderBy: { createdAt: "desc" },
-    })
+    let query = `SELECT * FROM "User" WHERE 1=1`
+    const params: string[] = []
+    let paramIndex = 1
+
+    if (status) {
+      query += ` AND status = $${paramIndex}`
+      params.push(status)
+      paramIndex++
+    }
+
+    if (q) {
+      query += ` AND (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR phone ILIKE $${paramIndex})`
+      params.push(`%${q}%`)
+      paramIndex++
+    }
+
+    query += ` ORDER BY "createdAt" DESC`
+
+    const users = await sql(query, params)
 
     return NextResponse.json(users)
   } catch (err: any) {
@@ -40,20 +44,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "name and email are required" }, { status: 400 })
     }
 
-    const created = await prisma.user.create({
-      data: {
-        name: body.name.trim(),
-        email: body.email.trim(),
-        phone: body.phone?.trim() || null,
-        status: body.status || "active",
-        permissions: body.permissions || [],
-      },
-    })
+    const id = crypto.randomUUID()
+    const now = new Date().toISOString()
 
-    return NextResponse.json(created, { status: 201 })
+    const result = await sql`
+      INSERT INTO "User" (id, name, email, phone, status, permissions, "createdAt", "updatedAt")
+      VALUES (${id}, ${body.name.trim()}, ${body.email.trim()}, ${body.phone?.trim() || null}, ${body.status || "active"}, ${JSON.stringify(body.permissions || [])}, ${now}, ${now})
+      RETURNING *
+    `
+
+    return NextResponse.json(result[0], { status: 201 })
   } catch (err: any) {
     console.error("POST /api/users error:", err)
-    if (err?.code === "P2002") {
+    if (err?.code === "23505") {
       return NextResponse.json({ error: "Email already exists" }, { status: 409 })
     }
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 })

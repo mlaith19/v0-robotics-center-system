@@ -1,44 +1,56 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { neon } from "@neondatabase/serverless"
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+const sql = neon(process.env.DATABASE_URL!)
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const body = await req.json()
-    const { id } = params
+    const { id } = await params
 
-    const updateData: any = {}
+    const updates: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
 
     if (body.phone !== undefined) {
-      updateData.phone = body.phone?.trim() || null
+      updates.push(`phone = $${paramIndex}`)
+      values.push(body.phone?.trim() || null)
+      paramIndex++
     }
 
     if (body.status !== undefined) {
-      updateData.status = body.status || "active"
+      updates.push(`status = $${paramIndex}`)
+      values.push(body.status || "active")
+      paramIndex++
     }
 
     if (body.permissions !== undefined) {
-      updateData.permissions = body.permissions
+      updates.push(`permissions = $${paramIndex}`)
+      values.push(JSON.stringify(body.permissions))
+      paramIndex++
     }
 
-    const updated = await prisma.user.update({
-      where: { id },
-      data: updateData,
-    })
+    updates.push(`"updatedAt" = $${paramIndex}`)
+    values.push(new Date().toISOString())
+    paramIndex++
 
-    return NextResponse.json(updated)
+    values.push(id)
+
+    const query = `UPDATE "User" SET ${updates.join(", ")} WHERE id = $${paramIndex} RETURNING *`
+    const result = await sql(query, values)
+
+    return NextResponse.json(result[0])
   } catch (err: any) {
     console.error("PATCH /api/users/[id] error:", err)
     return NextResponse.json({ error: "Failed to update user" }, { status: 500 })
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
 
-    await prisma.user.delete({
-      where: { id },
-    })
+    await sql`DELETE FROM "User" WHERE id = ${id}`
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
