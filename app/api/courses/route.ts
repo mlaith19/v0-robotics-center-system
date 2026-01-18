@@ -25,13 +25,37 @@ export async function POST(req: Request) {
     const now = new Date().toISOString()
     const description = body.description ? String(body.description).trim() : null
     const level = body.level ? String(body.level).trim() : "beginner"
-    const duration = body.duration ? Number(body.duration) : 60
-    const price = body.price ? Number(body.price) : 0
+    const duration = body.duration ? Number(body.duration) : null
+    const price = body.price ? Number(body.price) : null
     const status = body.status ? String(body.status).trim() : "active"
+    
+    // New fields
+    const courseNumber = body.courseNumber ? String(body.courseNumber).trim() : null
+    const category = body.category ? String(body.category).trim() : null
+    const courseType = body.courseType ? String(body.courseType).trim() : "regular"
+    const location = body.location ? String(body.location).trim() : "center"
+    const startDate = body.startDate || null
+    const endDate = body.endDate || null
+    const startTime = body.startTime || null
+    const endTime = body.endTime || null
+    const daysOfWeek = Array.isArray(body.daysOfWeek) ? body.daysOfWeek : []
+    const teacherIds = Array.isArray(body.teacherIds) ? body.teacherIds : []
 
     const result = await sql`
-      INSERT INTO "Course" (id, name, description, level, duration, price, status, "createdAt", "updatedAt")
-      VALUES (${id}, ${name}, ${description}, ${level}, ${duration}, ${price}, ${status}, ${now}, ${now})
+      INSERT INTO "Course" (
+        id, name, description, level, duration, price, status, 
+        "courseNumber", category, "courseType", location,
+        "startDate", "endDate", "startTime", "endTime",
+        "daysOfWeek", "teacherIds",
+        "createdAt", "updatedAt"
+      )
+      VALUES (
+        ${id}, ${name}, ${description}, ${level}, ${duration}, ${price}, ${status},
+        ${courseNumber}, ${category}, ${courseType}, ${location},
+        ${startDate}, ${endDate}, ${startTime}, ${endTime},
+        ${daysOfWeek}, ${teacherIds},
+        ${now}, ${now}
+      )
       RETURNING *
     `
 

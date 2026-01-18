@@ -38,9 +38,21 @@ export async function PUT(req: Request, { params }: Ctx) {
 
   const description = cleanStr(body.description)
   const level = cleanStr(body.level) || "beginner"
-  const duration = body.duration ? Number(body.duration) : 60
-  const price = body.price ? Number(body.price) : 0
+  const duration = body.duration ? Number(body.duration) : null
+  const price = body.price ? Number(body.price) : null
   const status = cleanStr(body.status) || "active"
+  
+  // New fields
+  const courseNumber = cleanStr(body.courseNumber)
+  const category = cleanStr(body.category)
+  const courseType = cleanStr(body.courseType) || "regular"
+  const location = cleanStr(body.location) || "center"
+  const startDate = body.startDate || null
+  const endDate = body.endDate || null
+  const startTime = body.startTime || null
+  const endTime = body.endTime || null
+  const daysOfWeek = Array.isArray(body.daysOfWeek) ? body.daysOfWeek : []
+  const teacherIds = Array.isArray(body.teacherIds) ? body.teacherIds : []
 
   try {
     const now = new Date().toISOString()
@@ -52,6 +64,16 @@ export async function PUT(req: Request, { params }: Ctx) {
           duration = ${duration},
           price = ${price},
           status = ${status},
+          "courseNumber" = ${courseNumber},
+          category = ${category},
+          "courseType" = ${courseType},
+          location = ${location},
+          "startDate" = ${startDate},
+          "endDate" = ${endDate},
+          "startTime" = ${startTime},
+          "endTime" = ${endTime},
+          "daysOfWeek" = ${daysOfWeek},
+          "teacherIds" = ${teacherIds},
           "updatedAt" = ${now}
       WHERE id = ${id}
       RETURNING *

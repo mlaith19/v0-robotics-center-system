@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,21 +9,75 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowRight, BookOpen, Save } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ArrowRight, BookOpen, Save, Calendar, DollarSign, Users, MessageSquare } from "lucide-react"
+
+interface Teacher {
+  id: string
+  name: string
+}
+
+const DAYS_OF_WEEK = [
+  { value: "sunday", label: "ראשון" },
+  { value: "monday", label: "שני" },
+  { value: "tuesday", label: "שלישי" },
+  { value: "wednesday", label: "רביעי" },
+  { value: "thursday", label: "חמישי" },
+  { value: "friday", label: "שישי" },
+  { value: "saturday", label: "שבת" },
+]
 
 export default function NewCoursePage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [teachers, setTeachers] = useState<Teacher[]>([])
   
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     level: "beginner",
-    duration: 60,
-    price: 0,
-    status: "active"
+    duration: "",
+    price: "",
+    status: "active",
+    courseNumber: "",
+    category: "",
+    courseType: "regular",
+    location: "center",
+    startDate: "",
+    endDate: "",
+    startTime: "",
+    endTime: "",
+    daysOfWeek: [] as string[],
+    teacherIds: [] as string[],
   })
+
+  useEffect(() => {
+    fetch("/api/teachers")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setTeachers(data)
+      })
+      .catch(console.error)
+  }, [])
+
+  function toggleDay(day: string) {
+    setFormData(prev => ({
+      ...prev,
+      daysOfWeek: prev.daysOfWeek.includes(day)
+        ? prev.daysOfWeek.filter(d => d !== day)
+        : [...prev.daysOfWeek, day]
+    }))
+  }
+
+  function toggleTeacher(teacherId: string) {
+    setFormData(prev => ({
+      ...prev,
+      teacherIds: prev.teacherIds.includes(teacherId)
+        ? prev.teacherIds.filter(id => id !== teacherId)
+        : [...prev.teacherIds, teacherId]
+    }))
+  }
 
   async function save() {
     if (!formData.name.trim()) {
@@ -37,7 +91,11 @@ export default function NewCoursePage() {
       const res = await fetch("/api/courses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          duration: formData.duration ? Number(formData.duration) : null,
+          price: formData.price ? Number(formData.price) : null,
+        }),
       })
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
@@ -52,7 +110,7 @@ export default function NewCoursePage() {
   }
 
   return (
-    <div dir="rtl" className="container mx-auto max-w-3xl p-6 space-y-6">
+    <div dir="rtl" className="container mx-auto max-w-4xl p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/dashboard/courses">
           <Button variant="ghost" size="icon">
@@ -61,7 +119,7 @@ export default function NewCoursePage() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold">קורס חדש</h1>
-          <p className="text-muted-foreground mt-1">הוסף קורס חדש למערכת</p>
+          <p className="text-muted-foreground mt-1">הוסף קורס חדש למערכת הרובוטיקה</p>
         </div>
       </div>
 
@@ -71,50 +129,122 @@ export default function NewCoursePage() {
         </Card>
       )}
 
-      <Card>
+      {/* סטטוס הקורס */}
+      <Card className="border-blue-200 bg-blue-50/50">
         <CardHeader className="text-right">
           <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
-            <BookOpen className="h-5 w-5 text-primary" />
-            פרטי הקורס
+            <MessageSquare className="h-5 w-5 text-blue-600" />
+            סטטוס הקורס
           </CardTitle>
-          <CardDescription className="text-right">הזן את פרטי הקורס החדש</CardDescription>
+          <CardDescription className="text-right">בחר את סטטוס הקורס והגדרות בסיסיות</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* שם קורס */}
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-right block">שם הקורס *</Label>
-            <Input 
-              id="name"
-              value={formData.name} 
-              onChange={(e) => setFormData({...formData, name: e.target.value})} 
-              placeholder="לדוגמה: רובוטיקה מתחילים"
-              className="text-right"
-              dir="rtl"
-            />
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="text-right block">סטטוס</Label>
+              <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                <SelectTrigger className="text-right" dir="rtl">
+                  <SelectValue placeholder="בחר סטטוס" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">פעיל</SelectItem>
+                  <SelectItem value="inactive">לא פעיל</SelectItem>
+                  <SelectItem value="draft">טיוטה</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-right block">סוג קורס</Label>
+              <Select value={formData.courseType} onValueChange={(value) => setFormData({...formData, courseType: value})}>
+                <SelectTrigger className="text-right" dir="rtl">
+                  <SelectValue placeholder="בחר סוג" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="regular">קורס רגיל</SelectItem>
+                  <SelectItem value="workshop">סדנה</SelectItem>
+                  <SelectItem value="camp">קייטנה</SelectItem>
+                  <SelectItem value="private">שיעור פרטי</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-right block">מיקום</Label>
+              <Select value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
+                <SelectTrigger className="text-right" dir="rtl">
+                  <SelectValue placeholder="בחר מיקום" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="center">במרכז</SelectItem>
+                  <SelectItem value="school">בבית ספר</SelectItem>
+                  <SelectItem value="online">אונליין</SelectItem>
+                  <SelectItem value="other">אחר</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* תיאור */}
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-right block">תיאור הקורס</Label>
-            <Textarea 
-              id="description"
-              value={formData.description} 
-              onChange={(e) => setFormData({...formData, description: e.target.value})} 
-              placeholder="תיאור קצר של הקורס, מה ילמדו התלמידים..."
-              rows={4}
-              className="text-right"
-              dir="rtl"
-            />
-          </div>
-
-          {/* רמה ומשך */}
+      {/* מידע כללי */}
+      <Card className="border-green-200 bg-green-50/50">
+        <CardHeader className="text-right">
+          <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
+            <BookOpen className="h-5 w-5 text-green-600" />
+            מידע כללי
+          </CardTitle>
+          <CardDescription className="text-right">פרטי הקורס הבסיסיים</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="level" className="text-right block">רמת הקורס</Label>
-              <Select 
-                value={formData.level} 
-                onValueChange={(value) => setFormData({...formData, level: value})}
-              >
+              <Label className="text-right block">מס' קורס</Label>
+              <Input 
+                value={formData.courseNumber} 
+                onChange={(e) => setFormData({...formData, courseNumber: e.target.value})} 
+                placeholder="לדוגמה: ROB-001"
+                className="text-right"
+                dir="rtl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-right block">קטגוריה</Label>
+              <Input 
+                value={formData.category} 
+                onChange={(e) => setFormData({...formData, category: e.target.value})} 
+                placeholder="לדוגמה: רובוטיקה"
+                className="text-right"
+                dir="rtl"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-right block">שם הקורס *</Label>
+            <Input 
+              value={formData.name} 
+              onChange={(e) => setFormData({...formData, name: e.target.value})} 
+              placeholder="לדוגמה: רובוטיקה מתקדמת"
+              className="text-right"
+              dir="rtl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-right block">תיאור *</Label>
+            <Textarea 
+              value={formData.description} 
+              onChange={(e) => setFormData({...formData, description: e.target.value})} 
+              placeholder="תאר את תוכן הקורס, היעדים והנושאים שילמדו..."
+              rows={3}
+              className="text-right"
+              dir="rtl"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-right block">רמה</Label>
+              <Select value={formData.level} onValueChange={(value) => setFormData({...formData, level: value})}>
                 <SelectTrigger className="text-right" dir="rtl">
                   <SelectValue placeholder="בחר רמה" />
                 </SelectTrigger>
@@ -126,63 +256,159 @@ export default function NewCoursePage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="duration" className="text-right block">משך שיעור (דקות)</Label>
+              <Label className="text-right block">משך הקורס</Label>
               <Input 
-                id="duration"
-                type="number"
                 value={formData.duration} 
-                onChange={(e) => setFormData({...formData, duration: Number(e.target.value)})} 
-                placeholder="60"
+                onChange={(e) => setFormData({...formData, duration: e.target.value})} 
+                placeholder="לדוגמה: 8 שבועות"
                 className="text-right"
                 dir="rtl"
               />
             </div>
-          </div>
-
-          {/* מחיר וסטטוס */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="price" className="text-right block">מחיר (בש"ח)</Label>
-              <Input 
-                id="price"
-                type="number"
-                value={formData.price} 
-                onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} 
-                placeholder="0"
-                className="text-right"
-                dir="rtl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status" className="text-right block">סטטוס</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value) => setFormData({...formData, status: value})}
-              >
-                <SelectTrigger className="text-right" dir="rtl">
-                  <SelectValue placeholder="בחר סטטוס" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">פעיל</SelectItem>
-                  <SelectItem value="inactive">לא פעיל</SelectItem>
-                  <SelectItem value="draft">טיוטה</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* כפתורים */}
-          <div className="flex gap-2 justify-start pt-4 border-t">
-            <Button onClick={save} disabled={!formData.name.trim() || saving} className="gap-2">
-              <Save className="h-4 w-4" />
-              {saving ? "שומר..." : "שמור קורס"}
-            </Button>
-            <Button variant="outline" onClick={() => router.back()}>
-              ביטול
-            </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* מורים */}
+      <Card className="border-purple-200 bg-purple-50/50">
+        <CardHeader className="text-right">
+          <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
+            <Users className="h-5 w-5 text-purple-600" />
+            מורים
+          </CardTitle>
+          <CardDescription className="text-right">בחר את המורים שילמדו בקורס</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {teachers.map((teacher) => (
+              <div
+                key={teacher.id}
+                className={`flex items-center justify-end gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  formData.teacherIds.includes(teacher.id)
+                    ? "bg-purple-100 border-purple-300"
+                    : "bg-white border-gray-200 hover:bg-gray-50"
+                }`}
+                onClick={() => toggleTeacher(teacher.id)}
+              >
+                <span className="text-sm">{teacher.name}</span>
+                <Checkbox checked={formData.teacherIds.includes(teacher.id)} />
+              </div>
+            ))}
+            {teachers.length === 0 && (
+              <p className="text-muted-foreground col-span-full text-center py-4">לא נמצאו מורים במערכת</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* תאריכים וזמנים */}
+      <Card className="border-orange-200 bg-orange-50/50">
+        <CardHeader className="text-right">
+          <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
+            <Calendar className="h-5 w-5 text-orange-600" />
+            תאריכים וזמנים
+          </CardTitle>
+          <CardDescription className="text-right">הגדר את לוח הזמנים של הקורס</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-right block">תאריך התחלה *</Label>
+              <Input 
+                type="date"
+                value={formData.startDate} 
+                onChange={(e) => setFormData({...formData, startDate: e.target.value})} 
+                className="text-right"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-right block">תאריך סיום *</Label>
+              <Input 
+                type="date"
+                value={formData.endDate} 
+                onChange={(e) => setFormData({...formData, endDate: e.target.value})} 
+                className="text-right"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-right block">שעה התחלה *</Label>
+              <Input 
+                type="time"
+                value={formData.startTime} 
+                onChange={(e) => setFormData({...formData, startTime: e.target.value})} 
+                className="text-right"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-right block">שעה סיום *</Label>
+              <Input 
+                type="time"
+                value={formData.endTime} 
+                onChange={(e) => setFormData({...formData, endTime: e.target.value})} 
+                className="text-right"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-right block">ימי שבוע *</Label>
+            <div className="grid grid-cols-4 gap-3">
+              {DAYS_OF_WEEK.map((day) => (
+                <div
+                  key={day.value}
+                  className={`flex items-center justify-end gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    formData.daysOfWeek.includes(day.value)
+                      ? "bg-orange-100 border-orange-300"
+                      : "bg-white border-gray-200 hover:bg-gray-50"
+                  }`}
+                  onClick={() => toggleDay(day.value)}
+                >
+                  <span className="text-sm">{day.label}</span>
+                  <Checkbox checked={formData.daysOfWeek.includes(day.value)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* תמחור */}
+      <Card className="border-emerald-200 bg-emerald-50/50">
+        <CardHeader className="text-right">
+          <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
+            <DollarSign className="h-5 w-5 text-emerald-600" />
+            תמחור
+          </CardTitle>
+          <CardDescription className="text-right">הגדר את מחיר הקורס</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label className="text-right block">מחיר הקורס (ש"ח) *</Label>
+            <Input 
+              type="number"
+              value={formData.price} 
+              onChange={(e) => setFormData({...formData, price: e.target.value})} 
+              placeholder="לדוגמה: 2500"
+              className="text-right"
+              dir="rtl"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* כפתורים */}
+      <div className="flex gap-3 justify-start">
+        <Button onClick={save} disabled={!formData.name.trim() || saving} className="gap-2 bg-primary">
+          <Save className="h-4 w-4" />
+          {saving ? "שומר..." : "הוסף קורס חדש"}
+        </Button>
+        <Button variant="outline" onClick={() => router.back()} className="bg-transparent">
+          ביטול
+        </Button>
+      </div>
     </div>
   )
 }
