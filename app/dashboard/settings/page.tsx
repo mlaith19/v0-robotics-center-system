@@ -149,17 +149,17 @@ export default function SettingsPage() {
         <p className="text-muted-foreground mt-2">הגדרות מערכת ותצורה</p>
       </div>
 
-      <Tabs defaultValue="general" className="w-full">
+      <Tabs defaultValue="general" className="w-full" dir="rtl">
         <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="general" className="gap-2">
+          <TabsTrigger value="general" className="flex flex-row-reverse gap-2">
             <Building2 className="h-4 w-4" />
             כללי
           </TabsTrigger>
-          <TabsTrigger value="numbers" className="gap-2">
+          <TabsTrigger value="numbers" className="flex flex-row-reverse gap-2">
             <Hash className="h-4 w-4" />
             מספרים
           </TabsTrigger>
-          <TabsTrigger value="other" className="gap-2">
+          <TabsTrigger value="other" className="flex flex-row-reverse gap-2">
             <Settings2 className="h-4 w-4" />
             אחר
           </TabsTrigger>
@@ -178,12 +178,14 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               {/* שם המרכז */}
               <div className="space-y-2">
-                <Label htmlFor="centerName">שם המרכז *</Label>
+                <Label htmlFor="centerName" className="text-right block">שם המרכז *</Label>
                 <Input
                   id="centerName"
                   placeholder="לדוגמה: מרכז הרובוטיקה"
                   value={settings.center_name}
                   onChange={(e) => setSettings({ ...settings, center_name: e.target.value })}
+                  className="text-right"
+                  dir="rtl"
                 />
               </div>
 
@@ -223,36 +225,42 @@ export default function SettingsPage() {
               {/* מספרי טלפון */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">מספר נייד *</Label>
+                  <Label htmlFor="phone" className="text-right block">מספר נייד *</Label>
                   <Input
                     id="phone"
                     type="tel"
                     placeholder="050-1234567"
                     value={settings.phone}
                     onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp">מספר WhatsApp</Label>
+                  <Label htmlFor="whatsapp" className="text-right block">מספר WhatsApp</Label>
                   <Input
                     id="whatsapp"
                     type="tel"
                     placeholder="050-1234567"
                     value={settings.whatsapp}
                     onChange={(e) => setSettings({ ...settings, whatsapp: e.target.value })}
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
               </div>
 
               {/* כתובת */}
               <div className="space-y-2">
-                <Label htmlFor="address">כתובת המרכז *</Label>
+                <Label htmlFor="address" className="text-right block">כתובת המרכז *</Label>
                 <Textarea
                   id="address"
                   placeholder="רחוב 123, עיר, מיקוד"
                   value={settings.address}
                   onChange={(e) => setSettings({ ...settings, address: e.target.value })}
                   rows={3}
+                  className="text-right"
+                  dir="rtl"
                 />
               </div>
             </CardContent>
@@ -272,40 +280,46 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="lessonPrice">מחיר שיעור בודד (בש"ח)</Label>
+                  <Label htmlFor="lessonPrice" className="text-right block">מחיר שיעור בודד (בש"ח)</Label>
                   <Input
                     id="lessonPrice"
                     type="number"
                     placeholder="0"
                     value={settings.lesson_price || ""}
                     onChange={(e) => setSettings({ ...settings, lesson_price: Number(e.target.value) })}
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="monthlyPrice">מחיר חודשי (בש"ח)</Label>
+                  <Label htmlFor="monthlyPrice" className="text-right block">מחיר חודשי (בש"ח)</Label>
                   <Input
                     id="monthlyPrice"
                     type="number"
                     placeholder="0"
                     value={settings.monthly_price || ""}
                     onChange={(e) => setSettings({ ...settings, monthly_price: Number(e.target.value) })}
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="registrationFee">דמי רישום (בש"ח)</Label>
+                  <Label htmlFor="registrationFee" className="text-right block">דמי רישום (בש"ח)</Label>
                   <Input
                     id="registrationFee"
                     type="number"
                     placeholder="0"
                     value={settings.registration_fee || ""}
                     onChange={(e) => setSettings({ ...settings, registration_fee: Number(e.target.value) })}
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="discountSiblings">הנחת אחים (%)</Label>
+                  <Label htmlFor="discountSiblings" className="text-right block">הנחת אחים (%)</Label>
                   <Input
                     id="discountSiblings"
                     type="number"
@@ -314,18 +328,22 @@ export default function SettingsPage() {
                     max="100"
                     value={settings.discount_siblings || ""}
                     onChange={(e) => setSettings({ ...settings, discount_siblings: Number(e.target.value) })}
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="maxStudents">מספר תלמידים מקסימלי בכיתה</Label>
+                <Label htmlFor="maxStudents" className="text-right block">מספר תלמידים מקסימלי בכיתה</Label>
                 <Input
                   id="maxStudents"
                   type="number"
                   placeholder="0"
                   value={settings.max_students_per_class || ""}
                   onChange={(e) => setSettings({ ...settings, max_students_per_class: Number(e.target.value) })}
+                  className="text-right"
+                  dir="rtl"
                 />
               </div>
             </CardContent>
@@ -345,46 +363,54 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">כתובת אימייל</Label>
+                  <Label htmlFor="email" className="text-right block">כתובת אימייל</Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder="example@domain.com"
                     value={settings.email || ""}
                     onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="website">אתר אינטרנט</Label>
+                  <Label htmlFor="website" className="text-right block">אתר אינטרנט</Label>
                   <Input
                     id="website"
                     type="url"
                     placeholder="https://www.example.com"
                     value={settings.website || ""}
                     onChange={(e) => setSettings({ ...settings, website: e.target.value })}
+                    className="text-left"
+                    dir="ltr"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="workingHours">שעות פעילות</Label>
+                <Label htmlFor="workingHours" className="text-right block">שעות פעילות</Label>
                 <Textarea
                   id="workingHours"
                   placeholder="ראשון-חמישי: 08:00-20:00&#10;שישי: 08:00-13:00"
                   value={settings.working_hours || ""}
                   onChange={(e) => setSettings({ ...settings, working_hours: e.target.value })}
                   rows={3}
+                  className="text-right"
+                  dir="rtl"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">הערות נוספות</Label>
+                <Label htmlFor="notes" className="text-right block">הערות נוספות</Label>
                 <Textarea
                   id="notes"
                   placeholder="הערות כלליות על המרכז..."
                   value={settings.notes || ""}
                   onChange={(e) => setSettings({ ...settings, notes: e.target.value })}
                   rows={4}
+                  className="text-right"
+                  dir="rtl"
                 />
               </div>
             </CardContent>
