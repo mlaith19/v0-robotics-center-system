@@ -1,34 +1,41 @@
-import { prisma } from "@/lib/prisma"
-import { Prisma } from "@prisma/client"
+import { neon } from "@neondatabase/serverless"
 
-function cleanStr(v: any): string | null {
-  if (v === null || v === undefined) return null
-  const s = String(v).trim()
-  return s.length ? s : null
-}
+const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
-  const courses = await prisma.course.findMany({
-    orderBy: { createdAt: "desc" },
-  })
-  return Response.json(courses)
+  try {
+    const courses = await sql`SELECT * FROM "Course" ORDER BY "createdAt" DESC`
+    return Response.json(courses)
+  } catch (err) {
+    console.error("GET /api/courses error:", err)
+    return Response.json({ error: "Failed to load courses" }, { status: 500 })
+  }
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const name = cleanStr(body.name)
-    if (!name) return Response.json({ error: "name is required" }, { status: 400 })
+    const name = body.name ? String(body.name).trim() : null
 
-    const course = await prisma.course.create({ data: { name } })
-    return Response.json(course, { status: 201 })
+    if (!name) {
+      return Response.json({ error: "name is required" }, { status: 400 })
+    }
+
+    const id = crypto.randomUUID()
+    const now = new Date().toISOString()
+
+    const result = await sql`
+      INSERT INTO "Course" (id, name, "createdAt", "updatedAt")
+      VALUES (${id}, ${name}, ${now}, ${now})
+      RETURNING *
+    `
+
+    return Response.json(result[0], { status: 201 })
   } catch (err: any) {
     console.error("POST /api/courses error:", err)
-
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      if (err.code === "P2002") {
-        return Response.json({ error: "Duplicate unique field" }, { status: 409 })
-      }
+    
+    if (err.code === "23505") {
+      return Response.json({ error: "Duplicate unique field" }, { status: 409 })
     }
 
     return Response.json({ error: "Failed to create course" }, { status: 500 })

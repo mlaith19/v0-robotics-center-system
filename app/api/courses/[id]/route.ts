@@ -1,10 +1,8 @@
-import { prisma } from "@/lib/prisma"
-import { Prisma } from "@prisma/client"
+import { neon } from "@neondatabase/serverless"
 
-type Params = { id: string }
-async function unwrapParams(params: any): Promise<Params> {
-  return await Promise.resolve(params)
-}
+const sql = neon(process.env.DATABASE_URL!)
+
+type Ctx = { params: Promise<{ id: string }> }
 
 function cleanStr(v: any): string | null {
   if (v === null || v === undefined) return null
@@ -12,36 +10,59 @@ function cleanStr(v: any): string | null {
   return s.length ? s : null
 }
 
-export async function GET(_: Request, ctx: { params: Params | Promise<Params> }) {
-  const { id } = await unwrapParams(ctx.params)
-  const course = await prisma.course.findUnique({ where: { id } })
-  return Response.json(course)
+export async function GET(_: Request, { params }: Ctx) {
+  const { id } = await params
+  
+  try {
+    const result = await sql`SELECT * FROM "Course" WHERE id = ${id}`
+    
+    if (result.length === 0) {
+      return Response.json({ error: "Course not found" }, { status: 404 })
+    }
+
+    return Response.json(result[0])
+  } catch (err) {
+    console.error("GET /api/courses/[id] error:", err)
+    return Response.json({ error: "Failed to load course" }, { status: 500 })
+  }
 }
 
-export async function PUT(req: Request, ctx: { params: Params | Promise<Params> }) {
-  try {
-    const { id } = await unwrapParams(ctx.params)
-    const body = await req.json()
-    const name = cleanStr(body.name)
-    if (!name) return Response.json({ error: "name is required" }, { status: 400 })
+export async function PUT(req: Request, { params }: Ctx) {
+  const { id } = await params
+  const body = await req.json()
+  const name = cleanStr(body.name)
+  
+  if (!name) {
+    return Response.json({ error: "name is required" }, { status: 400 })
+  }
 
-    const course = await prisma.course.update({
-      where: { id },
-      data: { name },
-    })
-    return Response.json(course)
-  } catch (err: any) {
+  try {
+    const now = new Date().toISOString()
+    const result = await sql`
+      UPDATE "Course"
+      SET name = ${name}, "updatedAt" = ${now}
+      WHERE id = ${id}
+      RETURNING *
+    `
+
+    if (result.length === 0) {
+      return Response.json({ error: "Course not found" }, { status: 404 })
+    }
+
+    return Response.json(result[0])
+  } catch (err) {
     console.error("PUT /api/courses/[id] error:", err)
     return Response.json({ error: "Failed to update course" }, { status: 500 })
   }
 }
 
-export async function DELETE(_: Request, ctx: { params: Params | Promise<Params> }) {
+export async function DELETE(_: Request, { params }: Ctx) {
+  const { id } = await params
+
   try {
-    const { id } = await unwrapParams(ctx.params)
-    await prisma.course.delete({ where: { id } })
+    await sql`DELETE FROM "Course" WHERE id = ${id}`
     return new Response(null, { status: 204 })
-  } catch (err: any) {
+  } catch (err) {
     console.error("DELETE /api/courses/[id] error:", err)
     return Response.json({ error: "Failed to delete course" }, { status: 500 })
   }

@@ -1,5 +1,6 @@
-import { prisma } from "@/lib/prisma"
-import { Prisma } from "@prisma/client"
+import { neon } from "@neondatabase/serverless"
+
+const sql = neon(process.env.DATABASE_URL!)
 
 function cleanStr(v: any): string | null {
   if (v === null || v === undefined) return null
@@ -8,10 +9,13 @@ function cleanStr(v: any): string | null {
 }
 
 export async function GET() {
-  const students = await prisma.student.findMany({
-    orderBy: { createdAt: "desc" },
-  })
-  return Response.json(students)
+  try {
+    const students = await sql`SELECT * FROM "Student" ORDER BY "createdAt" DESC`
+    return Response.json(students)
+  } catch (err) {
+    console.error("GET /api/students error:", err)
+    return Response.json({ error: "Failed to load students" }, { status: 500 })
+  }
 }
 
 export async function POST(req: Request) {
@@ -23,49 +27,49 @@ export async function POST(req: Request) {
       return Response.json({ error: "name is required" }, { status: 400 })
     }
 
+    const id = crypto.randomUUID()
+    const now = new Date().toISOString()
+    
     const emailRaw = cleanStr(body.email)
     const email = emailRaw ? emailRaw.toLowerCase() : null
+    const status = cleanStr(body.status) ?? "מתעניין"
+    const totalSessions = Number.isFinite(Number(body.totalSessions)) ? Number(body.totalSessions) : 12
+    const idNumber = cleanStr(body.idNumber)
+    const birthDate = cleanStr(body.birthDate)
+    const phone = cleanStr(body.phone)
+    const address = cleanStr(body.address)
+    const city = cleanStr(body.city)
+    const father = cleanStr(body.father)
+    const mother = cleanStr(body.mother)
+    const additionalPhone = cleanStr(body.additionalPhone)
+    const healthFund = cleanStr(body.healthFund)
+    const allergies = cleanStr(body.allergies)
+    const courseIds = Array.isArray(body.courseIds) ? JSON.stringify(body.courseIds.map((x: any) => String(x))) : "[]"
+    const courseSessions = body.courseSessions && typeof body.courseSessions === "object" ? JSON.stringify(body.courseSessions) : "{}"
 
-    const data: any = {
-      name,
-      status: cleanStr(body.status) ?? "מתעניין",
-      totalSessions: Number.isFinite(Number(body.totalSessions)) ? Number(body.totalSessions) : 12,
+    const result = await sql`
+      INSERT INTO "Student" (
+        id, name, email, status, "totalSessions", "idNumber", "birthDate", phone, address, city,
+        father, mother, "additionalPhone", "healthFund", allergies, "courseIds", "courseSessions",
+        "createdAt", "updatedAt"
+      )
+      VALUES (
+        ${id}, ${name}, ${email}, ${status}, ${totalSessions}, ${idNumber}, ${birthDate}, ${phone}, ${address}, ${city},
+        ${father}, ${mother}, ${additionalPhone}, ${healthFund}, ${allergies}, ${courseIds}::jsonb, ${courseSessions}::jsonb,
+        ${now}, ${now}
+      )
+      RETURNING *
+    `
 
-      idNumber: cleanStr(body.idNumber),
-      birthDate: cleanStr(body.birthDate),
-      phone: cleanStr(body.phone),
-      address: cleanStr(body.address),
-      city: cleanStr(body.city),
-      father: cleanStr(body.father),
-      mother: cleanStr(body.mother),
-      additionalPhone: cleanStr(body.additionalPhone),
-      healthFund: cleanStr(body.healthFund),
-      allergies: cleanStr(body.allergies),
-
-      // חשוב: תמיד מערך / JSON תקין כדי ש-Prisma לא יקרוס
-      courseIds: Array.isArray(body.courseIds) ? body.courseIds.map((x: any) => String(x)) : [],
-      courseSessions: body.courseSessions && typeof body.courseSessions === "object" ? body.courseSessions : {},
-    }
-
-    // email הוא unique אצלך, אז נשים אותו רק אם באמת קיים
-    if (email) data.email = email
-    else data.email = null
-
-    const student = await prisma.student.create({ data })
-    return Response.json(student, { status: 201 })
+    return Response.json(result[0], { status: 201 })
   } catch (err: any) {
-    // תראה את השגיאה המדויקת בטרמינל
     console.error("POST /api/students error:", err)
 
-    // טיפול בשגיאות Prisma נפוצות
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      // unique constraint
-      if (err.code === "P2002") {
-        return Response.json(
-          { error: "Duplicate unique field (probably email). Try another email." },
-          { status: 409 },
-        )
-      }
+    if (err.code === "23505") {
+      return Response.json(
+        { error: "Duplicate unique field (probably email). Try another email." },
+        { status: 409 }
+      )
     }
 
     return Response.json({ error: "Failed to create student" }, { status: 500 })

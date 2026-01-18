@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { neon } from "@neondatabase/serverless"
+
+const sql = neon(process.env.DATABASE_URL!)
 
 function s(v: any) {
   if (v === undefined || v === null) return null
@@ -9,13 +10,11 @@ function s(v: any) {
 
 export async function GET() {
   try {
-    const schools = await prisma.school.findMany({
-      orderBy: { createdAt: "desc" },
-    })
-    return NextResponse.json(schools)
-  } catch (err: any) {
+    const schools = await sql`SELECT * FROM "School" ORDER BY "createdAt" DESC`
+    return Response.json(schools)
+  } catch (err) {
     console.error("GET /api/schools error:", err)
-    return NextResponse.json({ error: "Failed to load schools" }, { status: 500 })
+    return Response.json({ error: "Failed to load schools" }, { status: 500 })
   }
 }
 
@@ -25,24 +24,27 @@ export async function POST(req: Request) {
 
     const name = s(body?.name)
     if (!name) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 })
+      return Response.json({ error: "Name is required" }, { status: 400 })
     }
 
-    const created = await prisma.school.create({
-      data: {
-        name,
-        city: s(body?.city),
-        contactPerson: s(body?.contactPerson ?? body?.contactName), // ✅ תומך גם אם ה-UI עדיין שולח contactName
-        phone: s(body?.phone),
-        email: s(body?.email),
-        address: s(body?.address),
-        notes: s(body?.notes),
-      },
-    })
+    const id = crypto.randomUUID()
+    const now = new Date().toISOString()
+    const city = s(body?.city)
+    const contactPerson = s(body?.contactPerson ?? body?.contactName)
+    const phone = s(body?.phone)
+    const email = s(body?.email)
+    const address = s(body?.address)
+    const notes = s(body?.notes)
 
-    return NextResponse.json(created, { status: 201 })
-  } catch (err: any) {
+    const result = await sql`
+      INSERT INTO "School" (id, name, city, "contactPerson", phone, email, address, notes, "createdAt", "updatedAt")
+      VALUES (${id}, ${name}, ${city}, ${contactPerson}, ${phone}, ${email}, ${address}, ${notes}, ${now}, ${now})
+      RETURNING *
+    `
+
+    return Response.json(result[0], { status: 201 })
+  } catch (err) {
     console.error("POST /api/schools error:", err)
-    return NextResponse.json({ error: "Failed to create school" }, { status: 500 })
+    return Response.json({ error: "Failed to create school" }, { status: 500 })
   }
 }
