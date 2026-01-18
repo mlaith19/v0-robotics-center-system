@@ -1,92 +1,43 @@
-// app/api/courses/route.ts
-import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { neon } from "@neondatabase/serverless"
+
+const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    const courses = await prisma.course.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        teacherLinks: { include: { teacher: true } },
-      },
-    })
-
-    const shaped = courses.map((c) => ({
-      ...c,
-      teachers: c.teacherLinks.map((l) => l.teacher),
-    }))
-
-    return NextResponse.json(shaped)
-  } catch (e) {
-    console.error("GET /api/courses error:", e)
-    return NextResponse.json({ error: "Failed to load courses" }, { status: 500 })
+    const courses = await sql`SELECT * FROM "Course" ORDER BY "createdAt" DESC`
+    return Response.json(courses)
+  } catch (err) {
+    console.error("GET /api/courses error:", err)
+    return Response.json({ error: "Failed to load courses" }, { status: 500 })
   }
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
+    const name = body.name ? String(body.name).trim() : null
 
-    const title = String(body.title ?? body.name ?? "").trim()
-    if (!title) {
-      return NextResponse.json({ error: "title is required" }, { status: 400 })
+    if (!name) {
+      return Response.json({ error: "name is required" }, { status: 400 })
     }
 
-    // ✅ teachers יכול להגיע כ-[id,id] או כ-[{id:...}, ...]
-    const rawTeacherIds: string[] = Array.isArray(body.teachers)
-      ? body.teachers
-          .map((t: any) => (typeof t === "string" ? t : t?.id))
-          .filter(Boolean)
-          .map((x: any) => String(x))
-      : []
+    const id = crypto.randomUUID()
+    const now = new Date().toISOString()
 
-    // ✅ מסננים רק IDs שבאמת קיימים בטבלת Teacher
-    const existingTeachers = rawTeacherIds.length
-      ? await prisma.teacher.findMany({
-          where: { id: { in: rawTeacherIds } },
-          select: { id: true },
-        })
-      : []
+    const result = await sql`
+      INSERT INTO "Course" (id, name, "createdAt", "updatedAt")
+      VALUES (${id}, ${name}, ${now}, ${now})
+      RETURNING *
+    `
 
-    const existingSet = new Set(existingTeachers.map((t) => t.id))
-    const teacherIds = rawTeacherIds.filter((id) => existingSet.has(id))
+    return Response.json(result[0], { status: 201 })
+  } catch (err: any) {
+    console.error("POST /api/courses error:", err)
+    
+    if (err.code === "23505") {
+      return Response.json({ error: "Duplicate unique field" }, { status: 409 })
+    }
 
-    const course = await prisma.course.create({
-      data: {
-        title,
-        description: body.description ?? null,
-        price: body.price === "" || body.price == null ? null : Number(body.price),
-        isActive: body.isActive ?? true,
-
-        duration: body.duration ?? null,
-        level: body.level ?? null,
-        status: body.status ?? null,
-        startDate: body.startDate ? new Date(body.startDate) : null,
-        endDate: body.endDate ? new Date(body.endDate) : null,
-        startTime: body.startTime ?? null,
-        endTime: body.endTime ?? null,
-        weekdays: Array.isArray(body.weekdays) ? body.weekdays.map((d: any) => String(d)) : [],
-
-        teacherLinks:
-          teacherIds.length > 0
-            ? {
-                create: teacherIds.map((teacherId) => ({
-                  teacher: { connect: { id: teacherId } },
-                })),
-              }
-            : undefined,
-      },
-      include: {
-        teacherLinks: { include: { teacher: true } },
-      },
-    })
-
-    return NextResponse.json({
-      ...course,
-      teachers: course.teacherLinks.map((l) => l.teacher),
-    })
-  } catch (e: any) {
-    console.error("POST /api/courses error:", e)
-    return NextResponse.json({ error: e?.message || "Failed to create course" }, { status: 500 })
+    return Response.json({ error: "Failed to create course" }, { status: 500 })
   }
 }

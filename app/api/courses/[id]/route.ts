@@ -1,111 +1,69 @@
-// app/api/courses/[id]/route.ts
-import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { neon } from "@neondatabase/serverless"
 
-type Ctx = { params: { id: string } }
+const sql = neon(process.env.DATABASE_URL!)
 
-export async function GET(_req: Request, { params }: Ctx) {
+type Ctx = { params: Promise<{ id: string }> }
+
+function cleanStr(v: any): string | null {
+  if (v === null || v === undefined) return null
+  const s = String(v).trim()
+  return s.length ? s : null
+}
+
+export async function GET(_: Request, { params }: Ctx) {
+  const { id } = await params
+  
   try {
-    const course = await prisma.course.findUnique({
-      where: { id: params.id },
-      include: {
-        teacherLinks: { include: { teacher: true } },
-      },
-    })
-
-    if (!course) {
-      return NextResponse.json({ error: "Course not found" }, { status: 404 })
+    const result = await sql`SELECT * FROM "Course" WHERE id = ${id}`
+    
+    if (result.length === 0) {
+      return Response.json({ error: "Course not found" }, { status: 404 })
     }
 
-    return NextResponse.json({
-      ...course,
-      teachers: course.teacherLinks.map((l) => l.teacher),
-    })
-  } catch (e) {
-    console.error("GET /api/courses/[id] error:", e)
-    return NextResponse.json({ error: "Failed to load course" }, { status: 500 })
+    return Response.json(result[0])
+  } catch (err) {
+    console.error("GET /api/courses/[id] error:", err)
+    return Response.json({ error: "Failed to load course" }, { status: 500 })
   }
 }
 
-export async function PATCH(req: Request, { params }: Ctx) {
+export async function PUT(req: Request, { params }: Ctx) {
+  const { id } = await params
+  const body = await req.json()
+  const name = cleanStr(body.name)
+  
+  if (!name) {
+    return Response.json({ error: "name is required" }, { status: 400 })
+  }
+
   try {
-    const id = params.id
-    const body = await req.json()
+    const now = new Date().toISOString()
+    const result = await sql`
+      UPDATE "Course"
+      SET name = ${name}, "updatedAt" = ${now}
+      WHERE id = ${id}
+      RETURNING *
+    `
 
-    const title = String(body.title ?? body.name ?? "").trim()
+    if (result.length === 0) {
+      return Response.json({ error: "Course not found" }, { status: 404 })
+    }
 
-    // חשוב: teachers יכול להגיע כ-[{id:...}] או כ-[id,id]
-    const teacherIds: string[] = Array.isArray(body.teachers)
-      ? body.teachers
-          .map((t: any) => (typeof t === "string" ? t : t?.id))
-          .filter(Boolean)
-          .map((x: any) => String(x))
-      : []
-
-    // ✅ מוודאים שקיימים באמת מורים כאלה ב-DB (כדי לא לקבל שגיאת connect)
-    const existingTeachers = teacherIds.length
-      ? await prisma.teacher.findMany({
-          where: { id: { in: teacherIds } },
-          select: { id: true },
-        })
-      : []
-
-    const existingTeacherIds = new Set(existingTeachers.map((t) => t.id))
-    const validTeacherIds = teacherIds.filter((tid) => existingTeacherIds.has(tid))
-
-    const course = await prisma.course.update({
-      where: { id },
-      data: {
-        ...(title ? { title } : {}),
-        description: body.description ?? undefined,
-        price: body.price === "" || body.price == null ? null : Number(body.price),
-        isActive: typeof body.isActive === "boolean" ? body.isActive : undefined,
-
-        duration: body.duration ?? undefined,
-        level: body.level ?? undefined,
-        status: body.status ?? undefined,
-        startDate: body.startDate ? new Date(body.startDate) : undefined,
-        endDate: body.endDate ? new Date(body.endDate) : undefined,
-        startTime: body.startTime ?? undefined,
-        endTime: body.endTime ?? undefined,
-        weekdays: Array.isArray(body.weekdays) ? body.weekdays.map((d: any) => String(d)) : undefined,
-
-        // ✅ Reset links ואז create מחדש (הכי יציב)
-        teacherLinks: {
-          deleteMany: {}, // מוחק את כל הקישורים של הקורס
-          create: validTeacherIds.map((teacherId) => ({
-            teacher: { connect: { id: teacherId } },
-          })),
-        },
-      },
-      include: {
-        teacherLinks: { include: { teacher: true } },
-      },
-    })
-
-    return NextResponse.json({
-      ...course,
-      teachers: course.teacherLinks.map((l) => l.teacher),
-    })
-  } catch (e: any) {
-    console.error("PATCH /api/courses/[id] error:", e)
-    return NextResponse.json({ error: e?.message || "Failed to update course" }, { status: 500 })
+    return Response.json(result[0])
+  } catch (err) {
+    console.error("PUT /api/courses/[id] error:", err)
+    return Response.json({ error: "Failed to update course" }, { status: 500 })
   }
 }
 
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(_: Request, { params }: Ctx) {
+  const { id } = await params
+
   try {
-    const id = params.id
-
-    // קודם מוחקים קישורים כדי להיות נקי
-    await prisma.courseTeacher.deleteMany({ where: { courseId: id } })
-    await prisma.enrollment.deleteMany({ where: { courseId: id } })
-
-    await prisma.course.delete({ where: { id } })
-
-    return NextResponse.json({ ok: true })
-  } catch (e) {
-    console.error("DELETE /api/courses/[id] error:", e)
-    return NextResponse.json({ error: "Failed to delete course" }, { status: 500 })
+    await sql`DELETE FROM "Course" WHERE id = ${id}`
+    return new Response(null, { status: 204 })
+  } catch (err) {
+    console.error("DELETE /api/courses/[id] error:", err)
+    return Response.json({ error: "Failed to delete course" }, { status: 500 })
   }
 }

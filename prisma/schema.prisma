@@ -7,93 +7,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Student {
-  id     String  @id @default(cuid())
-  name   String
-  email  String? @unique
-  phone  String?
-  status String  @default("מתעניין")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  enrollments Enrollment[]
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  name        String
+  email       String?  @unique
+  phone       String?
+  status      String   @default("active")
+  roleId      String?
+  role        Role?    @relation(fields: [roleId], references: [id])
+  permissions Json?    @default("[]")
+  createdAt   DateTime @default(now())
 }
 
-model Teacher {
-  id    String  @id @default(cuid())
-  name  String
-  email String? @unique
-  phone String?
-
-  // ✅ שדות מה-VO (לפי התמונות)
-  status      String  @default("פעיל")
-  idNumber    String?
-  birthDate   DateTime?
-  city        String?
-  specialties String?
-  notes       String?
-
-  // ✅ תעריפים (לפי התמונות)
-  rateCenter   Int?
-  rateTravel   Int?
-  rateExternal Int?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  courseLinks CourseTeacher[]
+model Role {
+  id              String           @id @default(cuid())
+  key             String           @unique
+  name            String
+  description     String?
+  rolePermissions RolePermission[]
+  users           User[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
-model Course {
-  id          String  @id @default(cuid())
-  title       String
+model Permission {
+  id          String           @id
+  name        String
   description String?
-  price       Int?
-  isActive    Boolean @default(true)
-
-  duration  String?
-  level     String?
-  status    String?
-  startDate DateTime?
-  endDate   DateTime?
-  startTime String?
-  endTime   String?
-  weekdays  String[] @default([])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  enrollments  Enrollment[]
-  teacherLinks CourseTeacher[]
+  roles       RolePermission[]
 }
 
-model Enrollment {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
+model RolePermission {
+  roleId       String
+  permissionId String
 
-  studentId String
-  courseId  String
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  @@unique([studentId, courseId])
-  @@index([courseId])
-  @@index([studentId])
-}
-
-model CourseTeacher {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-
-  courseId  String
-  teacherId String
-
-  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-
-  @@unique([courseId, teacherId])
-  @@index([courseId])
-  @@index([teacherId])
+  @@id([roleId, permissionId])
 }

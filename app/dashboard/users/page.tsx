@@ -1,374 +1,296 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   ArrowRight,
   UserPlus,
-  Shield,
   Edit,
   Trash2,
-  Users,
-  GraduationCap,
+  Power,
+  Lock,
   BookOpen,
+  GraduationCap,
   School,
-  Rocket,
-  DollarSign,
+  User as UserIcon,
   FileText,
+  Rocket,
+  BarChart,
+  DollarSign,
   Calendar,
-  SettingsIcon,
+  ClipboardCheck,
+  Settings,
+  Users,
 } from "lucide-react"
-import { useRouter } from "next/navigation"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-
-type UserRole = "תלמיד" | "מורה" | "מזכירה" | "חשבונאות" | "אחר" | "סופר אדמין"
-
-type Permission = {
-  id: string
-  name: string
-  description: string
-}
-
-type PermissionCategory = {
-  id: string
-  name: string
-  icon: any
-  permissions: Permission[]
-  color: string
-}
+import { Checkbox } from "@/components/ui/checkbox"
+import { PERMISSION_CATEGORIES, type PermissionCategory } from "@/lib/permissions"
 
 type User = {
   id: string
   name: string
   email: string
-  role: UserRole
-  permissions: string[]
+  phone?: string | null
+  status: "active" | "disabled"
+  permissions?: string[]
   createdAt: string
 }
 
-const permissionCategories: PermissionCategory[] = [
-  {
-    id: "courses",
-    name: "קורסים",
-    icon: BookOpen,
-    color: "bg-blue-50 border-blue-200",
-    permissions: [
-      { id: "courses-view", name: "צפייה בקורסים", description: "צפייה ברשימת קורסים" },
-      { id: "courses-edit", name: "עריכת קורסים", description: "יצירה ועריכת קורסים" },
-      { id: "courses-delete", name: "מחיקת קורסים", description: "מחיקת קורסים" },
-    ],
-  },
-  {
-    id: "students",
-    name: "תלמידים",
-    icon: GraduationCap,
-    color: "bg-purple-50 border-purple-200",
-    permissions: [
-      { id: "students-view", name: "צפייה בתלמידים", description: "צפייה ברשימת תלמידים" },
-      { id: "students-edit", name: "עריכת תלמידים", description: "יצירה ועריכת תלמידים" },
-      { id: "students-delete", name: "מחיקת תלמידים", description: "מחיקת תלמידים" },
-    ],
-  },
-  {
-    id: "teachers",
-    name: "מורים",
-    icon: Users,
-    color: "bg-green-50 border-green-200",
-    permissions: [
-      { id: "teachers-view", name: "צפייה במורים", description: "צפייה ברשימת מורים" },
-      { id: "teachers-edit", name: "עריכת מורים", description: "יצירה ועריכת מורים" },
-      { id: "teachers-delete", name: "מחיקת מורים", description: "מחיקת מורים" },
-    ],
-  },
-  {
-    id: "schools",
-    name: "בתי ספר",
-    icon: School,
-    color: "bg-orange-50 border-orange-200",
-    permissions: [
-      { id: "schools-view", name: "צפייה בבתי ספר", description: "צפייה ברשימת בתי ספר" },
-      { id: "schools-edit", name: "עריכת בתי ספר", description: "יצירה ועריכת בתי ספר" },
-      { id: "schools-delete", name: "מחיקת בתי ספר", description: "מחיקת בתי ספר" },
-    ],
-  },
-  {
-    id: "gafan",
-    name: 'תוכניות גפ"ן',
-    icon: Rocket,
-    color: "bg-pink-50 border-pink-200",
-    permissions: [
-      { id: "gafan-view", name: 'צפייה בתוכניות גפ"ן', description: 'צפייה ברשימת תוכניות גפ"ן' },
-      { id: "gafan-edit", name: 'עריכת תוכניות גפ"ן', description: 'יצירה ועריכת תוכניות גפ"ן' },
-      { id: "gafan-delete", name: 'מחיקת תוכניות גפ"ן', description: 'מחיקת תוכניות גפ"ן' },
-    ],
-  },
-  {
-    id: "registration",
-    name: "רישום",
-    icon: FileText,
-    color: "bg-cyan-50 border-cyan-200",
-    permissions: [
-      { id: "registration-view", name: "צפייה ברישומים", description: "צפייה ברשימת רישומים" },
-      { id: "registration-send", name: "שליחת טופס רישום", description: "שליחת טפסי רישום" },
-    ],
-  },
-  {
-    id: "cashier",
-    name: "קופה",
-    icon: DollarSign,
-    color: "bg-emerald-50 border-emerald-200",
-    permissions: [
-      { id: "cashier-view", name: "צפייה בקופה", description: "צפייה בהכנסות והוצאות" },
-      { id: "cashier-income", name: "הוספת הכנסה", description: "רישום הכנסות" },
-      { id: "cashier-expense", name: "הוספת הוצאה", description: "רישום הוצאות" },
-      { id: "cashier-delete", name: "מחיקת תנועות", description: "מחיקת הכנסות והוצאות" },
-    ],
-  },
-  {
-    id: "reports",
-    name: "דוחות",
-    icon: FileText,
-    color: "bg-amber-50 border-amber-200",
-    permissions: [
-      { id: "reports-view", name: "צפייה בדוחות", description: "צפייה בדוחות" },
-      { id: "reports-export", name: "ייצוא דוחות", description: "ייצוא דוחות לקבצים" },
-    ],
-  },
-  {
-    id: "attendance",
-    name: "נוכחות",
-    icon: Calendar,
-    color: "bg-indigo-50 border-indigo-200",
-    permissions: [
-      { id: "attendance-view", name: "צפייה בנוכחות", description: "צפייה בנוכחות" },
-      { id: "attendance-edit", name: "עריכת נוכחות", description: "עדכון נוכחות תלמידים ומורים" },
-    ],
-  },
-  {
-    id: "schedule",
-    name: "לוח זמנים",
-    icon: Calendar,
-    color: "bg-teal-50 border-teal-200",
-    permissions: [
-      { id: "schedule-view", name: "צפייה בלוח זמנים", description: "צפייה בלוח הזמנים" },
-      { id: "schedule-edit", name: "עריכת לוח זמנים", description: "עדכון לוח הזמנים" },
-    ],
-  },
-  {
-    id: "users",
-    name: "משתמשים",
-    icon: Users,
-    color: "bg-violet-50 border-violet-200",
-    permissions: [
-      { id: "users-view", name: "צפייה במשתמשים", description: "צפייה ברשימת משתמשים" },
-      { id: "users-edit", name: "עריכת משתמשים", description: "יצירה ועריכת משתמשים" },
-      { id: "users-delete", name: "מחיקת משתמשים", description: "מחיקת משתמשים" },
-    ],
-  },
-  {
-    id: "settings",
-    name: "הגדרות",
-    icon: SettingsIcon,
-    color: "bg-slate-50 border-slate-200",
-    permissions: [
-      { id: "dashboard", name: "דף הבית", description: "גישה לדף הבית" },
-      { id: "settings-view", name: "צפייה בהגדרות", description: "צפייה בהגדרות המערכת" },
-      { id: "settings-edit", name: "עריכת הגדרות", description: "עדכון הגדרות המערכת" },
-    ],
-  },
-]
+const categoryIcons: Record<string, any> = {
+  courses: BookOpen,
+  students: GraduationCap,
+  schools: School,
+  teachers: UserIcon,
+  registration: FileText,
+  gafan: Rocket,
+  reports: BarChart,
+  cashier: DollarSign,
+  schedule: Calendar,
+  attendance: ClipboardCheck,
+  settings: Settings,
+  users: Users,
+}
 
-const allPermissions = permissionCategories.flatMap((cat) => cat.permissions)
-
-const roleDefaultPermissions: Record<UserRole, string[]> = {
-  "סופר אדמין": allPermissions.map((p) => p.id),
-  מזכירה: [
-    "dashboard",
-    "courses-view",
-    "students-view",
-    "students-edit",
-    "teachers-view",
-    "schools-view",
-    "registration-view",
-    "registration-send",
-    "attendance-view",
-    "attendance-edit",
-    "schedule-view",
-  ],
-  חשבונאות: [
-    "dashboard",
-    "cashier-view",
-    "cashier-income",
-    "cashier-expense",
-    "reports-view",
-    "reports-export",
-    "students-view",
-    "schools-view",
-  ],
-  מורה: ["dashboard", "courses-view", "students-view", "attendance-view", "attendance-edit", "schedule-view"],
-  תלמיד: ["dashboard", "courses-view", "schedule-view"],
-  אחר: ["dashboard"],
+const colorClasses: Record<string, string> = {
+  blue: "bg-blue-50 border-blue-200",
+  pink: "bg-pink-50 border-pink-200",
+  orange: "bg-orange-50 border-orange-200",
+  green: "bg-green-50 border-green-200",
+  cyan: "bg-cyan-50 border-cyan-200",
+  rose: "bg-rose-50 border-rose-200",
+  yellow: "bg-yellow-50 border-yellow-200",
+  emerald: "bg-emerald-50 border-emerald-200",
+  sky: "bg-sky-50 border-sky-200",
+  purple: "bg-purple-50 border-purple-200",
+  slate: "bg-slate-50 border-slate-200",
+  indigo: "bg-indigo-50 border-indigo-200",
 }
 
 export default function UsersPage() {
   const router = useRouter()
+
   const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [q, setQ] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"__all__" | "active" | "disabled">("__all__")
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
+  const [passwordInput, setPasswordInput] = useState("")
+  const [pendingAction, setPendingAction] = useState<{ type: "edit" | "toggle" | "delete"; user: User } | null>(null)
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "" as UserRole,
-    permissions: [] as string[],
+    phone: "",
   })
 
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
+
+  const isAdminUser = (u: User) => u.email === "admin@test.com"
+
+  async function loadUsers() {
+    const params = new URLSearchParams()
+    if (q.trim()) params.set("q", q.trim())
+    if (statusFilter !== "__all__") params.set("status", statusFilter)
+
+    const res = await fetch(`/api/users?${params.toString()}`, { cache: "no-store" })
+    if (!res.ok) throw new Error("Failed to load users")
+    const data = (await res.json()) as User[]
+    setUsers(data)
+  }
+
   useEffect(() => {
-    loadUsers()
+    ;(async () => {
+      try {
+        setLoading(true)
+        await loadUsers()
+      } catch (e) {
+        console.error(e)
+        alert("שגיאה בטעינת משתמשים")
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [])
 
-  const loadUsers = () => {
-    const stored = localStorage.getItem("robotics-users")
-    if (stored) {
-      setUsers(JSON.parse(stored))
-    }
-  }
+  useEffect(() => {
+    if (loading) return
+    const t = setTimeout(() => {
+      loadUsers().catch((e) => console.error(e))
+    }, 350)
+    return () => clearTimeout(t)
+  }, [q, statusFilter])
 
-  const handleRoleChange = (role: UserRole) => {
-    setFormData({
-      ...formData,
-      role,
-      permissions: roleDefaultPermissions[role] || [],
-    })
-  }
-
-  const handlePermissionToggle = (permissionId: string) => {
-    const newPermissions = formData.permissions.includes(permissionId)
-      ? formData.permissions.filter((p) => p !== permissionId)
-      : [...formData.permissions, permissionId]
-
-    setFormData({ ...formData, permissions: newPermissions })
-  }
-
-  const isCategoryFullySelected = (categoryId: string) => {
-    const category = permissionCategories.find((c) => c.id === categoryId)
-    if (!category) return false
-    return category.permissions.every((p) => formData.permissions.includes(p.id))
-  }
-
-  const toggleCategoryPermissions = (categoryId: string) => {
-    const category = permissionCategories.find((c) => c.id === categoryId)
-    if (!category) return
-
-    const categoryPermissionIds = category.permissions.map((p) => p.id)
-    const allSelected = categoryPermissionIds.every((id) => formData.permissions.includes(id))
-
-    if (allSelected) {
-      // Remove all category permissions
-      setFormData({
-        ...formData,
-        permissions: formData.permissions.filter((id) => !categoryPermissionIds.includes(id)),
-      })
-    } else {
-      // Add all category permissions
-      const newPermissions = [...new Set([...formData.permissions, ...categoryPermissionIds])]
-      setFormData({ ...formData, permissions: newPermissions })
-    }
-  }
-
-  const handleSubmit = () => {
-    if (!formData.name || !formData.email || !formData.role) {
-      alert("יש למלא את כל השדות הנדרשים")
-      return
-    }
-
-    const newUser: User = {
-      id: editingUser?.id || `user-${Date.now()}`,
-      name: formData.name,
-      email: formData.email,
-      role: formData.role,
-      permissions: formData.permissions,
-      createdAt: editingUser?.createdAt || new Date().toISOString(),
-    }
-
-    let updatedUsers
-    if (editingUser) {
-      updatedUsers = users.map((u) => (u.id === editingUser.id ? newUser : u))
-    } else {
-      updatedUsers = [...users, newUser]
-    }
-
-    localStorage.setItem("robotics-users", JSON.stringify(updatedUsers))
-    setUsers(updatedUsers)
-    resetForm()
-    setIsDialogOpen(false)
-  }
-
-  const handleEdit = (user: User) => {
-    setEditingUser(user)
-    setFormData({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      permissions: user.permissions,
-    })
-    setIsDialogOpen(true)
-  }
-
-  const handleDelete = (userId: string) => {
-    if (confirm("האם אתה בטוח שברצונך למחוק משתמש זה?")) {
-      const updatedUsers = users.filter((u) => u.id !== userId)
-      localStorage.setItem("robotics-users", JSON.stringify(updatedUsers))
-      setUsers(updatedUsers)
-    }
-  }
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      email: "",
-      role: "" as UserRole,
-      permissions: [],
-    })
+  function resetForm() {
+    setFormData({ name: "", email: "", phone: "" })
+    setSelectedPermissions([])
     setEditingUser(null)
   }
 
-  const getRoleBadgeColor = (role: UserRole) => {
-    switch (role) {
-      case "סופר אדמין":
-        return "bg-purple-500 text-white"
-      case "מזכירה":
-        return "bg-blue-500 text-white"
-      case "חשבונאות":
-        return "bg-green-500 text-white"
-      case "מורה":
-        return "bg-orange-500 text-white"
-      case "תלמיד":
-        return "bg-cyan-500 text-white"
-      default:
-        return "bg-gray-500 text-white"
+  function openCreate() {
+    resetForm()
+    setIsDialogOpen(true)
+  }
+
+  function openEdit(user: User) {
+    setEditingUser(user)
+    setFormData({
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+    })
+    setSelectedPermissions(user.permissions || [])
+    setIsDialogOpen(true)
+  }
+
+  async function createUser() {
+    const name = formData.name.trim()
+    const email = formData.email.trim()
+    if (!name || !email) {
+      alert("יש למלא שם ואימייל")
+      return
+    }
+
+    const res = await fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        email,
+        phone: formData.phone.trim() || null,
+        permissions: selectedPermissions,
+        status: "active",
+      }),
+    })
+
+    if (res.status === 409) {
+      alert("האימייל כבר קיים")
+      return
+    }
+    if (!res.ok) {
+      alert("שגיאה ביצירת משתמש")
+      return
+    }
+
+    setIsDialogOpen(false)
+    resetForm()
+    await loadUsers()
+  }
+
+  async function updateUser(id: string) {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: formData.phone.trim() || null,
+        permissions: selectedPermissions,
+      }),
+    })
+
+    if (!res.ok) {
+      alert("שגיאה בעדכון משתמש")
+      return
+    }
+
+    setIsDialogOpen(false)
+    resetForm()
+    await loadUsers()
+  }
+
+  async function toggleUser(user: User) {
+    const nextStatus = user.status === "active" ? "disabled" : "active"
+
+    const res = await fetch(`/api/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: nextStatus }),
+    })
+
+    if (!res.ok) {
+      alert("שגיאה בעדכון סטטוס משתמש")
+      return
+    }
+    await loadUsers()
+  }
+
+  async function deleteUser(user: User) {
+    const res = await fetch(`/api/users/${user.id}`, {
+      method: "DELETE",
+    })
+
+    if (!res.ok) {
+      alert("שגיאה במחיקת משתמש")
+      return
+    }
+    await loadUsers()
+  }
+
+  function requireAdminPassword(action: { type: "edit" | "toggle" | "delete"; user: User }) {
+    setPendingAction(action)
+    setIsPasswordDialogOpen(true)
+  }
+
+  function verifySuperAdminPassword() {
+    if (passwordInput === "admin123") {
+      setIsPasswordDialogOpen(false)
+      setPasswordInput("")
+
+      if (pendingAction) {
+        if (pendingAction.type === "edit") openEdit(pendingAction.user)
+        if (pendingAction.type === "toggle") toggleUser(pendingAction.user).catch(console.error)
+        if (pendingAction.type === "delete") deleteUser(pendingAction.user).catch(console.error)
+      }
+      setPendingAction(null)
+    } else {
+      alert("סיסמה שגויה")
+      setPasswordInput("")
     }
   }
 
+  function togglePermission(permissionId: string) {
+    setSelectedPermissions((prev) =>
+      prev.includes(permissionId) ? prev.filter((p) => p !== permissionId) : [...prev, permissionId]
+    )
+  }
+
+  function toggleCategoryAll(category: PermissionCategory) {
+    const categoryPermissionIds = category.permissions.map((p) => p.id)
+    const allSelected = categoryPermissionIds.every((id) => selectedPermissions.includes(id))
+
+    if (allSelected) {
+      setSelectedPermissions((prev) => prev.filter((p) => !categoryPermissionIds.includes(p)))
+    } else {
+      setSelectedPermissions((prev) => [...new Set([...prev, ...categoryPermissionIds])])
+    }
+  }
+
+  const filteredCount = useMemo(() => users.length, [users])
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex items-center justify-between">
           <div>
             <button
               onClick={() => router.push("/dashboard")}
@@ -378,178 +300,133 @@ export default function UsersPage() {
               חזרה
             </button>
             <h1 className="text-3xl font-bold text-gray-900">משתמשים</h1>
-            <p className="text-gray-600">ניהול משתמשים והרשאות במערכת</p>
+            <p className="text-gray-600">ניהול משתמשים והרשאות (DB)</p>
           </div>
 
-          <Dialog
-            open={isDialogOpen}
-            onOpenChange={(open) => {
-              setIsDialogOpen(open)
-              if (!open) resetForm()
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                הוסף משתמש
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingUser ? "עריכת משתמש" : "משתמש חדש"}</DialogTitle>
-                <DialogDescription>הגדר את פרטי המשתמש והרשאותיו במערכת</DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-6">
-                {/* Basic Info */}
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">שם מלא *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="הזן שם מלא..."
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">אימייל *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="example@email.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Role */}
-                <div className="space-y-2">
-                  <Label htmlFor="role">תפקיד *</Label>
-                  <Select value={formData.role} onValueChange={handleRoleChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="בחר תפקיד..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="סופר אדמין">סופר אדמין</SelectItem>
-                      <SelectItem value="מזכירה">מזכירה</SelectItem>
-                      <SelectItem value="חשבונאות">חשבונאות</SelectItem>
-                      <SelectItem value="מורה">מורה</SelectItem>
-                      <SelectItem value="תלמיד">תלמיד</SelectItem>
-                      <SelectItem value="אחר">אחר</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Permissions by Category */}
-                {formData.role && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-blue-600" />
-                      <Label className="text-base font-semibold">הרשאות</Label>
-                      <Badge variant="secondary" className="mr-auto">
-                        {formData.permissions.length} הרשאות נבחרו
-                      </Badge>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {permissionCategories.map((category) => {
-                        const Icon = category.icon
-                        const isFullySelected = isCategoryFullySelected(category.id)
-
-                        return (
-                          <Card key={category.id} className={`border-2 ${category.color}`}>
-                            <CardHeader className="pb-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Icon className="h-5 w-5" />
-                                  <CardTitle className="text-base">{category.name}</CardTitle>
-                                </div>
-                                <Button
-                                  variant={isFullySelected ? "secondary" : "outline"}
-                                  size="sm"
-                                  onClick={() => toggleCategoryPermissions(category.id)}
-                                  className="h-7 text-xs"
-                                >
-                                  {isFullySelected ? "בטל הכל" : "בחר הכל"}
-                                </Button>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                              {category.permissions.map((permission) => (
-                                <div key={permission.id} className="flex items-start space-x-3 space-x-reverse">
-                                  <Checkbox
-                                    id={permission.id}
-                                    checked={formData.permissions.includes(permission.id)}
-                                    onCheckedChange={() => handlePermissionToggle(permission.id)}
-                                  />
-                                  <div className="flex-1">
-                                    <Label htmlFor={permission.id} className="cursor-pointer text-sm font-medium">
-                                      {permission.name}
-                                    </Label>
-                                    <p className="text-xs text-gray-500">{permission.description}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </CardContent>
-                          </Card>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <Button onClick={handleSubmit} className="w-full">
-                  {editingUser ? "עדכן משתמש" : "הוסף משתמש"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button className="gap-2" onClick={openCreate}>
+            <UserPlus className="h-4 w-4" />
+            הוסף משתמש
+          </Button>
         </div>
 
-        {/* Users Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">סינון וחיפוש</CardTitle>
+            <CardDescription>חיפוש לפי שם/אימייל/טלפון וסינון לפי סטטוס</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 md:flex-row md:items-end">
+            <div className="flex-1 space-y-2">
+              <Label>חיפוש</Label>
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חפש משתמש..." />
+            </div>
+
+            <div className="w-full md:w-64 space-y-2">
+              <Label>סטטוס</Label>
+              <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="הכל" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">הכל</SelectItem>
+                  <SelectItem value="active">פעיל</SelectItem>
+                  <SelectItem value="disabled">מושבת</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="text-sm text-gray-600 pt-2 md:pt-0">
+              {loading ? "טוען..." : `${filteredCount} משתמשים`}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>רשימת משתמשים</CardTitle>
-            <CardDescription>כל המשתמשים הרשומים במערכת</CardDescription>
+            <CardDescription>עריכה: טלפון + הרשאות | פעולה: השבת/הפעל/מחק</CardDescription>
           </CardHeader>
           <CardContent>
-            {users.length === 0 ? (
-              <div className="py-12 text-center text-gray-500">לא נרשמו משתמשים עדיין</div>
+            {loading ? (
+              <div className="py-10 text-center text-gray-500">טוען...</div>
+            ) : users.length === 0 ? (
+              <div className="py-10 text-center text-gray-500">אין משתמשים</div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>שם</TableHead>
                     <TableHead>אימייל</TableHead>
-                    <TableHead>תפקיד</TableHead>
+                    <TableHead>טלפון</TableHead>
                     <TableHead>הרשאות</TableHead>
-                    <TableHead>תאריך יצירה</TableHead>
+                    <TableHead>סטטוס</TableHead>
+                    <TableHead>נוצר</TableHead>
                     <TableHead>פעולות</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
+                  {users.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {isAdminUser(u) && <Lock className="h-4 w-4 text-purple-600" />}
+                          {u.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>{u.email}</TableCell>
+                      <TableCell>{u.phone || "—"}</TableCell>
                       <TableCell>
-                        <Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge>
+                        <Badge variant="outline">{u.permissions?.length || 0} הרשאות</Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-gray-600">{user.permissions.length} הרשאות</span>
+                        <Badge
+                          className={u.status === "active" ? "bg-emerald-600 text-white" : "bg-gray-400 text-white"}
+                        >
+                          {u.status === "active" ? "פעיל" : "מושבת"}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
-                        {new Date(user.createdAt).toLocaleDateString("he-IL")}
+                        {new Date(u.createdAt).toLocaleDateString("he-IL")}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(user)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={isAdminUser(u) ? "דורש אימות" : "ערוך"}
+                            onClick={() =>
+                              isAdminUser(u) ? requireAdminPassword({ type: "edit", user: u }) : openEdit(u)
+                            }
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(user.id)}>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={u.status === "active" ? "השבת" : "הפעל"}
+                            onClick={() =>
+                              isAdminUser(u)
+                                ? requireAdminPassword({ type: "toggle", user: u })
+                                : toggleUser(u).catch(console.error)
+                            }
+                          >
+                            {u.status === "active" ? (
+                              <Power className="h-4 w-4 text-orange-600" />
+                            ) : (
+                              <Power className="h-4 w-4 text-emerald-600" />
+                            )}
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="מחק"
+                            onClick={() =>
+                              isAdminUser(u)
+                                ? requireAdminPassword({ type: "delete", user: u })
+                                : deleteUser(u).catch(console.error)
+                            }
+                          >
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>
@@ -561,6 +438,156 @@ export default function UsersPage() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open)
+            if (!open) resetForm()
+          }}
+        >
+          <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto" dir="rtl">
+            <DialogHeader>
+              <DialogTitle>{editingUser ? "עריכת משתמש" : "משתמש חדש"}</DialogTitle>
+              <DialogDescription>
+                {editingUser ? "הגדר את פרטי המשתמש והרשאותיו במערכת" : "יצירת משתמש חדש (שם + אימייל חובה)"}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>שם מלא *</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+                    disabled={!!editingUser}
+                    placeholder="הזן שם מלא"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>אימייל *</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
+                    disabled={!!editingUser}
+                    placeholder="example@email.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>טלפון</Label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))}
+                    placeholder="מספר טלפון"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-lg font-semibold">הרשאות</Label>
+                  <Badge variant="outline">{selectedPermissions.length} הרשאות נבחרו</Badge>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {PERMISSION_CATEGORIES.map((category) => {
+                    const Icon = categoryIcons[category.id]
+                    const allSelected = category.permissions.every((p) => selectedPermissions.includes(p.id))
+
+                    return (
+                      <Card
+                        key={category.id}
+                        className={`${colorClasses[category.color] || "bg-gray-50 border-gray-200"} border-2`}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Icon className="h-5 w-5" />
+                              <CardTitle className="text-sm">{category.name}</CardTitle>
+                            </div>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs cursor-pointer"
+                              onClick={() => toggleCategoryAll(category)}
+                            >
+                              {allSelected ? "ביטול" : "הכל"}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {category.permissions.map((perm) => (
+                            <div key={perm.id} className="flex items-start gap-2">
+                              <Checkbox
+                                id={perm.id}
+                                checked={selectedPermissions.includes(perm.id)}
+                                onCheckedChange={() => togglePermission(perm.id)}
+                              />
+                              <div className="grid gap-1 leading-none">
+                                <label htmlFor={perm.id} className="text-sm font-medium leading-none cursor-pointer">
+                                  {perm.name}
+                                </label>
+                                <p className="text-xs text-muted-foreground">{perm.description}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => (editingUser ? updateUser(editingUser.id) : createUser())}
+              >
+                {editingUser ? "שמור שינויים" : "צור משתמש"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-purple-600" />
+                אימות סיסמה
+              </AlertDialogTitle>
+              <AlertDialogDescription>פעולה על ADMIN מוגנת. הזן סיסמה כדי להמשיך.</AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <div className="space-y-2 py-2">
+              <Label>סיסמת ADMIN</Label>
+              <Input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="admin123"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") verifySuperAdminPassword()
+                }}
+              />
+            </div>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => {
+                  setPasswordInput("")
+                  setPendingAction(null)
+                }}
+              >
+                ביטול
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={verifySuperAdminPassword}>אמת</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
