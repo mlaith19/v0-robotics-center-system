@@ -1,47 +1,36 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowRight, Rocket, Building2, User, DollarSign, BookOpen, Users, TrendingUp, Edit } from "lucide-react"
+import { ArrowRight, Rocket, Building2, User, DollarSign, BookOpen, Users, TrendingUp, Edit, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
+import useSWR from "swr"
 
-interface GafanProgram {
-  id: number
-  programNumber: string
-  name: string
-  validYear: string
-  companyName: string
-  companyId: string
-  companyAddress: string
-  bankName?: string
-  bankCode?: string
-  branchNumber?: string
-  accountNumber?: string
-  operatorName: string
-  priceMin: string
-  priceMax?: string
-  status: string
-  notes?: string
-  coursesCount?: number
-  studentsCount?: number
-  createdDate?: string
-}
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function GafanProgramViewPage() {
   const params = useParams()
-  const [program, setProgram] = useState<GafanProgram | null>(null)
+  const { data: program, error, isLoading } = useSWR(`/api/gafan/${params.id}`, fetcher)
 
-  useEffect(() => {
-    const programs = JSON.parse(localStorage.getItem("robotics-gafan-programs") || "[]")
-    const found = programs.find((p: GafanProgram) => p.id === Number(params.id))
-    setProgram(found || null)
-  }, [params.id])
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
-  if (!program) {
-    return <div className="p-8 text-center text-muted-foreground">טוען...</div>
+  if (error || !program) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-destructive">שגיאה בטעינת הנתונים או שהתוכנית לא נמצאה</p>
+        <Link href="/dashboard/gafan">
+          <Button className="mt-4">חזרה לרשימה</Button>
+        </Link>
+      </div>
+    )
   }
 
   return (
@@ -114,7 +103,7 @@ export default function GafanProgramViewPage() {
                       </div>
                       <div className="flex-1">
                         <h2 className="text-2xl font-bold text-foreground mb-1">{program.name}</h2>
-                        <p className="text-muted-foreground">מס׳ תוכנית: {program.programNumber}</p>
+                        <p className="text-muted-foreground">מס׳ תוכנית: {program.program_number}</p>
                       </div>
                       <span
                         className={`px-4 py-2 rounded-full text-sm font-medium ${
@@ -144,11 +133,13 @@ export default function GafanProgramViewPage() {
                     <div className="grid grid-cols-2 gap-6">
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">תוקף לשנה</p>
-                        <p className="font-medium">{program.validYear}</p>
+                        <p className="font-medium">{program.valid_year}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">תאריך יצירה</p>
-                        <p className="font-medium">{program.createdDate || "לא זמין"}</p>
+                        <p className="font-medium">
+                          {program.created_at ? new Date(program.created_at).toLocaleDateString("he-IL") : "לא זמין"}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -167,37 +158,37 @@ export default function GafanProgramViewPage() {
                     <div className="grid grid-cols-2 gap-6">
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">שם חברה</p>
-                        <p className="font-medium">{program.companyName}</p>
+                        <p className="font-medium">{program.company_name}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">ח"פ חברה</p>
-                        <p className="font-medium">{program.companyId}</p>
+                        <p className="font-medium">{program.company_id}</p>
                       </div>
                       <div className="col-span-2">
                         <p className="text-sm text-muted-foreground mb-1">כתובת</p>
-                        <p className="font-medium">{program.companyAddress}</p>
+                        <p className="font-medium">{program.company_address}</p>
                       </div>
                     </div>
 
-                    {program.bankName && (
+                    {program.bank_name && (
                       <div className="pt-6 border-t space-y-4">
                         <h4 className="font-semibold text-sm text-muted-foreground">פרטי חשבון בנק</h4>
                         <div className="grid grid-cols-2 gap-6">
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">בנק</p>
-                            <p className="font-medium">{program.bankName}</p>
+                            <p className="font-medium">{program.bank_name}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">קוד בנק</p>
-                            <p className="font-medium">{program.bankCode || "לא צוין"}</p>
+                            <p className="font-medium">{program.bank_code || "לא צוין"}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">סניף</p>
-                            <p className="font-medium">{program.branchNumber || "לא צוין"}</p>
+                            <p className="font-medium">{program.branch_number || "לא צוין"}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">מס׳ חשבון</p>
-                            <p className="font-medium">{program.accountNumber || "לא צוין"}</p>
+                            <p className="font-medium">{program.account_number || "לא צוין"}</p>
                           </div>
                         </div>
                       </div>
@@ -215,7 +206,7 @@ export default function GafanProgramViewPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-6">
-                    <p className="font-medium">{program.operatorName}</p>
+                    <p className="font-medium">{program.operator_name}</p>
                   </CardContent>
                 </Card>
 
@@ -230,11 +221,11 @@ export default function GafanProgramViewPage() {
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="flex items-center gap-2">
-                      <p className="text-2xl font-bold text-primary">₪{program.priceMin}</p>
-                      {program.priceMax && (
+                      <p className="text-2xl font-bold text-primary">₪{program.price_min}</p>
+                      {program.price_max && (
                         <>
                           <span className="text-muted-foreground">-</span>
-                          <p className="text-2xl font-bold text-primary">₪{program.priceMax}</p>
+                          <p className="text-2xl font-bold text-primary">₪{program.price_max}</p>
                         </>
                       )}
                     </div>
@@ -257,7 +248,7 @@ export default function GafanProgramViewPage() {
                 <div className="text-center py-12">
                   <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">קורסים משויכים</h3>
-                  <p className="text-muted-foreground mb-4">{program.coursesCount || 0} קורסים משויכים לתוכנית זו</p>
+                  <p className="text-muted-foreground mb-4">0 קורסים משויכים לתוכנית זו</p>
                 </div>
               </TabsContent>
 
@@ -265,7 +256,7 @@ export default function GafanProgramViewPage() {
                 <div className="text-center py-12">
                   <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">תלמידים משויכים</h3>
-                  <p className="text-muted-foreground mb-4">{program.studentsCount || 0} תלמידים רשומים לתוכנית זו</p>
+                  <p className="text-muted-foreground mb-4">0 תלמידים רשומים לתוכנית זו</p>
                 </div>
               </TabsContent>
 

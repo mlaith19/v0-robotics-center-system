@@ -9,14 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowRight, Save, Rocket, Building2, User, DollarSign, Landmark } from "lucide-react"
+import { ArrowRight, Save, Rocket, Building2, User, DollarSign, Landmark, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 export default function NewGafanProgramPage() {
-  console.log("[v0] NewGafanProgramPage component mounted")
-
   const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     programNumber: "",
     name: "",
@@ -35,8 +34,6 @@ export default function NewGafanProgramPage() {
     notes: "",
   })
 
-  console.log("[v0] NewGafanProgramPage state initialized")
-
   const israeliBanks = [
     { name: "בנק לאומי", code: "10" },
     { name: "בנק הפועלים", code: "12" },
@@ -49,22 +46,45 @@ export default function NewGafanProgramPage() {
     { name: "בנק אוצר החייל", code: "14" },
   ]
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
 
-    const programs = JSON.parse(localStorage.getItem("robotics-gafan-programs") || "[]")
-    const newProgram = {
-      ...formData,
-      id: Date.now(),
-      createdDate: new Date().toLocaleDateString("he-IL"),
-      coursesCount: 0,
-      studentsCount: 0,
+    try {
+      const response = await fetch("/api/gafan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          program_number: formData.programNumber,
+          name: formData.name,
+          valid_year: formData.validYear,
+          company_name: formData.companyName,
+          company_id: formData.companyId,
+          company_address: formData.companyAddress,
+          bank_name: formData.bankName || null,
+          bank_code: formData.bankCode || null,
+          branch_number: formData.branchNumber || null,
+          account_number: formData.accountNumber || null,
+          operator_name: formData.operatorName,
+          price_min: Number(formData.priceMin),
+          price_max: formData.priceMax ? Number(formData.priceMax) : null,
+          status: formData.status,
+          notes: formData.notes || null,
+        }),
+      })
+
+      if (response.ok) {
+        router.push("/dashboard/gafan")
+      } else {
+        console.error("Failed to create gafan program")
+      }
+    } catch (error) {
+      console.error("Error creating gafan program:", error)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    programs.push(newProgram)
-    localStorage.setItem("robotics-gafan-programs", JSON.stringify(programs))
-
-    router.push("/dashboard/gafan")
   }
 
   const handleBankChange = (bankName: string) => {
@@ -246,7 +266,7 @@ export default function NewGafanProgramPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="bankName" className="text-base">
-                  בנק *
+                  בנק
                 </Label>
                 <Select value={formData.bankName} onValueChange={handleBankChange}>
                   <SelectTrigger id="bankName" className="h-11 bg-white">
@@ -277,7 +297,7 @@ export default function NewGafanProgramPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="branchNumber" className="text-base">
-                  סניף *
+                  סניף
                 </Label>
                 <Input
                   id="branchNumber"
@@ -285,13 +305,12 @@ export default function NewGafanProgramPage() {
                   onChange={(e) => setFormData({ ...formData, branchNumber: e.target.value })}
                   placeholder="מספר סניף"
                   className="h-11 bg-white"
-                  required
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="accountNumber" className="text-base">
-                  מס' חשבון *
+                  מס' חשבון
                 </Label>
                 <Input
                   id="accountNumber"
@@ -299,7 +318,6 @@ export default function NewGafanProgramPage() {
                   onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
                   placeholder="מספר חשבון"
                   className="h-11 bg-white"
-                  required
                 />
               </div>
             </div>
@@ -399,8 +417,8 @@ export default function NewGafanProgramPage() {
         </Card>
 
         <div className="flex gap-3 pt-2">
-          <Button type="submit" size="lg" className="gap-2 h-12 px-8">
-            <Save className="h-5 w-5" />
+          <Button type="submit" size="lg" className="gap-2 h-12 px-8" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
             הוסף תוכנית גפ"ן
           </Button>
           <Link href="/dashboard/gafan">

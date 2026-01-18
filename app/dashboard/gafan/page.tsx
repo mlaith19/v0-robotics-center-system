@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
-import { Plus, Mail, Phone, LayoutGrid, List, MapPin, Eye, Edit, Users, Trash2 } from "lucide-react"
+import { Plus, Mail, Phone, LayoutGrid, List, MapPin, Eye, Edit, Users, Trash2, Loader2 } from "lucide-react"
+import useSWR, { mutate } from "swr"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,73 +22,66 @@ import { hasPermission } from "@/lib/permissions"
 interface GafanProgram {
   id: number
   name: string
-  institutionCode: string
-  city: string
-  address: string
-  schoolPhone: string
-  phone: string
-  email: string
-  contactPerson: string
-  type: string
+  program_number: string
+  valid_year: string
+  company_name: string
+  company_id: string
+  company_address: string
+  bank_name: string | null
+  bank_code: string | null
+  branch_number: string | null
+  account_number: string | null
+  operator_name: string
+  price_min: number
+  price_max: number | null
   status: string
-  startDate: string
-  bankName?: string
-  bankCode?: string
-  bankBranch?: string
-  bankAccount?: string
-  notes?: string
-  coursesCount?: number
-  studentsCount?: number
+  notes: string | null
+  school_id: number | null
+  created_at: string
 }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
 export default function GafanProgramsPage() {
-  const [programs, setPrograms] = useState<GafanProgram[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("robotics-gafan-programs")
-      if (saved) {
-        return JSON.parse(saved)
-      }
-    }
-    return [
-      {
-        id: 1,
-        name: 'תוכנית גפ"ן - רובוטיקה מתקדמת',
-        institutionCode: "567890",
-        city: "תל אביב",
-        address: "רחוב ויצמן 30",
-        schoolPhone: "03-6667777",
-        phone: "050-9876543",
-        email: "gafan-robotics@example.com",
-        contactPerson: "מיכל אברהם",
-        type: 'תוכנית גפ"ן',
-        status: "פעיל",
-        startDate: "01/09/2023",
-        notes: "תוכנית מיוחדת לחינוך מדעי וטכנולוגי",
-        coursesCount: 4,
-        studentsCount: 60,
-      },
-    ]
-  })
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("robotics-gafan-programs", JSON.stringify(programs))
-    }
-  }, [programs])
-
+  const { data: programs = [], error, isLoading } = useSWR<GafanProgram[]>("/api/gafan", fetcher)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [canDelete, setCanDelete] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   useEffect(() => {
     setCanDelete(hasPermission("gafan-delete"))
   }, [])
 
-  const handleDelete = (programId: number, programName: string) => {
-    const updatedPrograms = programs.filter((p) => p.id !== programId)
-    setPrograms(updatedPrograms)
-    if (typeof window !== "undefined") {
-      localStorage.setItem("robotics-gafan-programs", JSON.stringify(updatedPrograms))
+  const handleDelete = async (programId: number) => {
+    setDeletingId(programId)
+    try {
+      const response = await fetch(`/api/gafan/${programId}`, {
+        method: "DELETE",
+      })
+      if (response.ok) {
+        mutate("/api/gafan")
+      }
+    } catch (error) {
+      console.error("Error deleting program:", error)
+    } finally {
+      setDeletingId(null)
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-destructive">שגיאה בטעינת הנתונים</p>
+      </div>
+    )
   }
 
   return (
@@ -125,7 +119,17 @@ export default function GafanProgramsPage() {
         </div>
       </div>
 
-      {viewMode === "grid" && (
+      {programs.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">אין תוכניות גפ"ן במערכת</p>
+          <Button asChild>
+            <Link href="/dashboard/gafan/new">
+              <Plus className="h-4 w-4 ml-2" />
+              הוסף תוכנית גפ"ן ראשונה
+            </Link>
+          </Button>
+        </div>
+      ) : viewMode === "grid" ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {programs.map((program) => (
             <Card key={program.id} className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -133,7 +137,7 @@ export default function GafanProgramsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg text-foreground mb-1">{program.name}</h3>
-                    <p className="text-sm text-muted-foreground">{program.type}</p>
+                    <p className="text-sm text-muted-foreground">מס׳ תוכנית: {program.program_number}</p>
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap mr-2 ${
@@ -151,33 +155,23 @@ export default function GafanProgramsPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">
-                      {program.city} - {program.address}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span>{program.phone}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span className="truncate">{program.email}</span>
+                    <span className="truncate">{program.company_address || "לא צוינה כתובת"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span>איש קשר: {program.contactPerson}</span>
+                    <span>מפעיל: {program.operator_name}</span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="text-center p-2 bg-muted rounded-lg">
-                      <div className="font-semibold text-foreground">{program.coursesCount || 0}</div>
-                      <div className="text-muted-foreground">קורסים</div>
+                      <div className="font-semibold text-foreground">₪{program.price_min}</div>
+                      <div className="text-muted-foreground">מחיר מינימום</div>
                     </div>
                     <div className="text-center p-2 bg-muted rounded-lg">
-                      <div className="font-semibold text-foreground">{program.studentsCount || 0}</div>
-                      <div className="text-muted-foreground">תלמידים</div>
+                      <div className="font-semibold text-foreground">{program.valid_year}</div>
+                      <div className="text-muted-foreground">תוקף לשנה</div>
                     </div>
                   </div>
                 </div>
@@ -202,8 +196,13 @@ export default function GafanProgramsPage() {
                           variant="outline"
                           size="sm"
                           className="gap-2 bg-transparent text-destructive hover:text-destructive"
+                          disabled={deletingId === program.id}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {deletingId === program.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
@@ -218,7 +217,7 @@ export default function GafanProgramsPage() {
                         <AlertDialogFooter>
                           <AlertDialogCancel>ביטול</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => handleDelete(program.id, program.name)}
+                            onClick={() => handleDelete(program.id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
                             מחק
@@ -232,9 +231,7 @@ export default function GafanProgramsPage() {
             </Card>
           ))}
         </div>
-      )}
-
-      {viewMode === "list" && (
+      ) : (
         <div className="border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -244,22 +241,19 @@ export default function GafanProgramsPage() {
                     שם התוכנית
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    קוד מוסד
+                    מס׳ תוכנית
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    עיר
+                    חברה
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    איש קשר
+                    מפעיל
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    טלפון
+                    מחיר
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    קורסים
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    תלמידים
+                    תוקף
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     סטטוס
@@ -276,22 +270,19 @@ export default function GafanProgramsPage() {
                       <div className="text-sm font-medium text-foreground">{program.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{program.institutionCode}</div>
+                      <div className="text-sm text-muted-foreground">{program.program_number}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{program.city}</div>
+                      <div className="text-sm text-muted-foreground">{program.company_name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{program.contactPerson}</div>
+                      <div className="text-sm text-muted-foreground">{program.operator_name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{program.phone}</div>
+                      <div className="text-sm text-center font-semibold text-primary">₪{program.price_min}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-center font-semibold text-primary">{program.coursesCount || 0}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-center font-semibold text-primary">{program.studentsCount || 0}</div>
+                      <div className="text-sm text-muted-foreground">{program.valid_year}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -327,8 +318,13 @@ export default function GafanProgramsPage() {
                                 variant="ghost"
                                 size="sm"
                                 className="gap-2 text-destructive hover:text-destructive"
+                                disabled={deletingId === program.id}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                {deletingId === program.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                                 מחק
                               </Button>
                             </AlertDialogTrigger>
@@ -344,7 +340,7 @@ export default function GafanProgramsPage() {
                               <AlertDialogFooter>
                                 <AlertDialogCancel>ביטול</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => handleDelete(program.id, program.name)}
+                                  onClick={() => handleDelete(program.id)}
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
                                   מחק
