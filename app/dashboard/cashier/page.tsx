@@ -152,36 +152,68 @@ export default function CashierPage() {
   }
 
   const addIncome = async () => {
-    if (!incomeDescription || !incomeAmount) return
-
-    let studentId = null
-    let schoolId = null
-
-    if (incomeType === "student" && selectedStudentId) {
-      studentId = selectedStudentId
-    } else if (incomeType === "school" && selectedSchoolId) {
-      schoolId = selectedSchoolId
-    } else if (incomeType === "other" && !customName) {
+    console.log("[v0] addIncome called", { incomeDescription, incomeAmount, incomeType, customName, selectedStudentId, selectedSchoolId, paymentMethod })
+    
+    if (!incomeDescription || !incomeAmount) {
+      console.log("[v0] Missing description or amount")
       return
     }
 
-    if (paymentMethod === "credit" && !cardLastDigits) return
-    if ((paymentMethod === "transfer" || paymentMethod === "check") && (!bankName || !bankBranch || !accountNumber)) return
+    let studentId = null
+    let schoolId = null
+    let sourceName = null
+
+    if (incomeType === "student") {
+      if (!selectedStudentId) {
+        console.log("[v0] Student type but no student selected")
+        return
+      }
+      studentId = selectedStudentId
+    } else if (incomeType === "school") {
+      if (!selectedSchoolId) {
+        console.log("[v0] School type but no school selected")
+        return
+      }
+      schoolId = selectedSchoolId
+    } else if (incomeType === "other") {
+      if (!customName) {
+        console.log("[v0] Other type but no custom name")
+        return
+      }
+      sourceName = customName
+    }
+
+    if (paymentMethod === "credit" && !cardLastDigits) {
+      console.log("[v0] Credit but no card digits")
+      return
+    }
+    if ((paymentMethod === "transfer" || paymentMethod === "check") && (!bankName || !bankBranch || !accountNumber)) {
+      console.log("[v0] Transfer/check but missing bank details")
+      return
+    }
 
     setIsAddingIncome(true)
     try {
+      const body = {
+        amount: Number.parseFloat(incomeAmount),
+        date: incomeDate,
+        paymentMethod,
+        description: incomeDescription,
+        studentId,
+        schoolId,
+        sourceName,
+      }
+      console.log("[v0] Sending to API:", body)
+      
       const response = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: Number.parseFloat(incomeAmount),
-          date: incomeDate,
-          paymentMethod,
-          description: incomeDescription,
-          studentId,
-          schoolId,
-        }),
+        body: JSON.stringify(body),
       })
+
+      console.log("[v0] Response status:", response.status)
+      const data = await response.json()
+      console.log("[v0] Response data:", data)
 
       if (response.ok) {
         mutate("/api/payments")
@@ -200,7 +232,7 @@ export default function CashierPage() {
         setAccountNumber("")
       }
     } catch (error) {
-      console.error("Failed to add income:", error)
+      console.error("[v0] Failed to add income:", error)
     }
     setIsAddingIncome(false)
   }
