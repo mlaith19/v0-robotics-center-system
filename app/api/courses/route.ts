@@ -23,10 +23,15 @@ export async function POST(req: Request) {
 
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
+    const description = body.description ? String(body.description).trim() : null
+    const level = body.level ? String(body.level).trim() : "beginner"
+    const duration = body.duration ? Number(body.duration) : 60
+    const price = body.price ? Number(body.price) : 0
+    const status = body.status ? String(body.status).trim() : "active"
 
     const result = await sql`
-      INSERT INTO "Course" (id, name, "createdAt", "updatedAt")
-      VALUES (${id}, ${name}, ${now}, ${now})
+      INSERT INTO "Course" (id, name, description, level, duration, price, status, "createdAt", "updatedAt")
+      VALUES (${id}, ${name}, ${description}, ${level}, ${duration}, ${price}, ${status}, ${now}, ${now})
       RETURNING *
     `
 

@@ -36,11 +36,23 @@ export async function PUT(req: Request, { params }: Ctx) {
     return Response.json({ error: "name is required" }, { status: 400 })
   }
 
+  const description = cleanStr(body.description)
+  const level = cleanStr(body.level) || "beginner"
+  const duration = body.duration ? Number(body.duration) : 60
+  const price = body.price ? Number(body.price) : 0
+  const status = cleanStr(body.status) || "active"
+
   try {
     const now = new Date().toISOString()
     const result = await sql`
       UPDATE "Course"
-      SET name = ${name}, "updatedAt" = ${now}
+      SET name = ${name}, 
+          description = ${description},
+          level = ${level},
+          duration = ${duration},
+          price = ${price},
+          status = ${status},
+          "updatedAt" = ${now}
       WHERE id = ${id}
       RETURNING *
     `
