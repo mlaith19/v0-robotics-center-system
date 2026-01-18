@@ -50,7 +50,7 @@ export default function RegistrationPage() {
   const { data: teachers = [], isLoading: teachersLoading } = useSWR<Teacher[]>("/api/teachers", fetcher)
 
   useEffect(() => {
-    // Load center settings from API or localStorage for now
+    // Load center settings from API
     const fetchSettings = async () => {
       try {
         const res = await fetch("/api/settings")
@@ -58,12 +58,8 @@ export default function RegistrationPage() {
           const data = await res.json()
           setCenterSettings(data)
         }
-      } catch {
-        // Fallback to localStorage if API doesn't exist yet
-        const settings = localStorage.getItem("robotics-center-settings")
-        if (settings) {
-          setCenterSettings(JSON.parse(settings))
-        }
+      } catch (err) {
+        console.error("Failed to fetch settings:", err)
       }
     }
     fetchSettings()
