@@ -42,17 +42,18 @@ export default function LoginPage() {
 
       // Store user session in cookie and redirect
       const userSession = {
-        id: data.user.id,
-        username: data.user.username,
-        full_name: data.user.full_name,
-        role: data.user.role,
-        permissions: data.user.permissions,
-        loginTime: new Date().toISOString(),
+        id: data.id,
+        username: data.username,
+        full_name: data.fullName,
+        role: data.role,
+        roleKey: data.roleKey,
+        permissions: data.permissions,
+        loginTime: data.loginTime,
       }
       document.cookie = `robotics-session=${encodeURIComponent(JSON.stringify(userSession))}; path=/; max-age=86400`
 
       // Redirect based on role
-      if (data.user.role === "סופר אדמין") {
+      if (data.roleKey === "super_admin" || data.role === "סופר אדמין") {
         router.push("/dashboard/users")
       } else {
         router.push("/dashboard")
