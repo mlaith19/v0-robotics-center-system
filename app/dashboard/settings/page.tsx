@@ -150,16 +150,16 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="w-full" dir="rtl">
-        <TabsList className="grid w-full grid-cols-3 mb-6" dir="rtl">
-          <TabsTrigger value="general" className="flex items-center justify-center gap-2">
+        <TabsList className="w-full grid grid-cols-3 mb-6">
+          <TabsTrigger value="general" className="flex flex-row-reverse items-center justify-center gap-2">
             <Building2 className="h-4 w-4" />
             <span>כללי</span>
           </TabsTrigger>
-          <TabsTrigger value="numbers" className="flex items-center justify-center gap-2">
+          <TabsTrigger value="numbers" className="flex flex-row-reverse items-center justify-center gap-2">
             <Hash className="h-4 w-4" />
             <span>מספרים</span>
           </TabsTrigger>
-          <TabsTrigger value="other" className="flex items-center justify-center gap-2">
+          <TabsTrigger value="other" className="flex flex-row-reverse items-center justify-center gap-2">
             <Settings2 className="h-4 w-4" />
             <span>אחר</span>
           </TabsTrigger>
@@ -168,12 +168,12 @@ export default function SettingsPage() {
         {/* טאב כללי */}
         <TabsContent value="general">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="text-right">
+              <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
                 <Building2 className="h-5 w-5 text-primary" />
                 פרטי המרכז
               </CardTitle>
-              <CardDescription>הגדר את פרטי המרכז שלך</CardDescription>
+              <CardDescription className="text-right">הגדר את פרטי המרכז שלך</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* שם המרכז */}
@@ -270,12 +270,12 @@ export default function SettingsPage() {
         {/* טאב מספרים */}
         <TabsContent value="numbers">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="text-right">
+              <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
                 <Hash className="h-5 w-5 text-primary" />
                 מחירים והגדרות מספריות
               </CardTitle>
-              <CardDescription>הגדר מחירים והגבלות מספריות</CardDescription>
+              <CardDescription className="text-right">הגדר מחירים והגבלות מספריות</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -353,12 +353,12 @@ export default function SettingsPage() {
         {/* טאב אחר */}
         <TabsContent value="other">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="text-right">
+              <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
                 <Settings2 className="h-5 w-5 text-primary" />
                 הגדרות נוספות
               </CardTitle>
-              <CardDescription>הגדרות נוספות של המרכז</CardDescription>
+              <CardDescription className="text-right">הגדרות נוספות של המרכז</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
