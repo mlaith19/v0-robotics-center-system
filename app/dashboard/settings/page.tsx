@@ -150,18 +150,18 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="w-full" dir="rtl">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="general" className="flex flex-row-reverse gap-2">
+        <TabsList className="grid w-full grid-cols-3 mb-6" dir="rtl">
+          <TabsTrigger value="general" className="flex items-center justify-center gap-2">
             <Building2 className="h-4 w-4" />
-            כללי
+            <span>כללי</span>
           </TabsTrigger>
-          <TabsTrigger value="numbers" className="flex flex-row-reverse gap-2">
+          <TabsTrigger value="numbers" className="flex items-center justify-center gap-2">
             <Hash className="h-4 w-4" />
-            מספרים
+            <span>מספרים</span>
           </TabsTrigger>
-          <TabsTrigger value="other" className="flex flex-row-reverse gap-2">
+          <TabsTrigger value="other" className="flex items-center justify-center gap-2">
             <Settings2 className="h-4 w-4" />
-            אחר
+            <span>אחר</span>
           </TabsTrigger>
         </TabsList>
 
@@ -382,8 +382,8 @@ export default function SettingsPage() {
                     placeholder="https://www.example.com"
                     value={settings.website || ""}
                     onChange={(e) => setSettings({ ...settings, website: e.target.value })}
-                    className="text-left"
-                    dir="ltr"
+                    className="text-right"
+                    dir="rtl"
                   />
                 </div>
               </div>

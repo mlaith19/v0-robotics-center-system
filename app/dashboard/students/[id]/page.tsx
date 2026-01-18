@@ -1,15 +1,23 @@
-import { prisma } from "@/lib/prisma"
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowRight, User, Mail, Phone, Edit, ChevronLeft } from "lucide-react"
+import { ArrowRight, User, Mail, Phone, Edit, ChevronLeft, Loader2 } from "lucide-react"
 import { StudentTabs } from "@/components/student/student-tabs"
 
-type Params = { id: string }
-
-// ✅ Next 16 לפעמים נותן params בתור Promise – זה פותר לך את השגיאה
-async function unwrapParams(params: any): Promise<Params> {
-  return await Promise.resolve(params)
+interface Student {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  status: string
+  createdAt: string
+  enrollments: any[]
+  payments: any[]
+  attendances: any[]
 }
 
 function safeText(v: any) {
@@ -17,17 +25,52 @@ function safeText(v: any) {
   return String(v)
 }
 
-export default async function StudentViewPage({ params }: { params: Params | Promise<Params> }) {
-  const { id } = await unwrapParams(params)
+export default function StudentViewPage() {
+  const params = useParams()
+  const id = params.id as string
+  const [student, setStudent] = useState<Student | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const student = await prisma.student.findUnique({
-    where: { id },
-    include: {
-      enrollments: { include: { course: true }, orderBy: { joinedAt: "desc" } },
-      payments: { orderBy: { paidAt: "desc" } },
-      attendances: { include: { course: true }, orderBy: { date: "desc" } },
-    },
-  })
+  useEffect(() => {
+    const fetchStudent = async () => {
+      try {
+        const res = await fetch(`/api/students/${id}`)
+        if (res.ok) {
+          const data = await res.json()
+          // Fetch related data
+          const [enrollmentsRes, paymentsRes, attendanceRes] = await Promise.all([
+            fetch(`/api/enrollments?studentId=${id}`),
+            fetch(`/api/payments?studentId=${id}`),
+            fetch(`/api/attendance?studentId=${id}`)
+          ])
+          
+          const enrollments = enrollmentsRes.ok ? await enrollmentsRes.json() : []
+          const payments = paymentsRes.ok ? await paymentsRes.json() : []
+          const attendances = attendanceRes.ok ? await attendanceRes.json() : []
+          
+          setStudent({
+            ...data,
+            enrollments: Array.isArray(enrollments) ? enrollments : [],
+            payments: Array.isArray(payments) ? payments : [],
+            attendances: Array.isArray(attendances) ? attendances : []
+          })
+        }
+      } catch (err) {
+        console.error("Failed to fetch student:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStudent()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (!student) {
     return <div className="text-center py-10">לא נמצא תלמיד</div>
@@ -101,16 +144,15 @@ export default async function StudentViewPage({ params }: { params: Params | Pro
             <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
               <p className="text-sm text-muted-foreground">נוצר בתאריך</p>
               <p className="text-foreground font-medium text-lg">
-                {new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(student.createdAt)}
+                {new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(new Date(student.createdAt))}
               </p>
             </div>
           </div>
 
-          {/* ✅ הטאבים מחוברים ל-DB */}
           <StudentTabs
-            enrollments={student.enrollments as any}
-            payments={student.payments as any}
-            attendances={student.attendances as any}
+            enrollments={student.enrollments}
+            payments={student.payments}
+            attendances={student.attendances}
           />
         </Card>
       </div>

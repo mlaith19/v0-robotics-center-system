@@ -1,12 +1,23 @@
-import { prisma } from "@/lib/prisma"
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowRight, Pencil, Mail, Phone, MapPin, User2 } from "lucide-react"
+import { ArrowRight, Pencil, Mail, Phone, MapPin, User2, Loader2 } from "lucide-react"
 
-type Params = { id: string }
-async function unwrapParams(params: any): Promise<Params> {
-  return await Promise.resolve(params)
+interface School {
+  id: string
+  name: string
+  city: string | null
+  address: string | null
+  contactName: string | null
+  phone: string | null
+  email: string | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 function safe(v: any) {
@@ -14,11 +25,40 @@ function safe(v: any) {
   return String(v)
 }
 
-export default async function SchoolViewPage({ params }: { params: Params | Promise<Params> }) {
-  const { id } = await unwrapParams(params)
+export default function SchoolViewPage() {
+  const params = useParams()
+  const id = params.id as string
+  const [school, setSchool] = useState<School | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const school = await prisma.school.findUnique({ where: { id } })
-  if (!school) return <div className="p-6">לא נמצא בית ספר</div>
+  useEffect(() => {
+    const fetchSchool = async () => {
+      try {
+        const res = await fetch(`/api/schools/${id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setSchool(data)
+        }
+      } catch (err) {
+        console.error("Failed to fetch school:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSchool()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!school) {
+    return <div className="p-6 text-center">לא נמצא בית ספר</div>
+  }
 
   return (
     <div dir="rtl" className="container mx-auto max-w-4xl p-6 space-y-6">
@@ -87,11 +127,11 @@ export default async function SchoolViewPage({ params }: { params: Params | Prom
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <div className="text-muted-foreground">נוצר</div>
-            <div>{new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(school.createdAt)}</div>
+            <div>{new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(new Date(school.createdAt))}</div>
           </div>
           <div>
             <div className="text-muted-foreground">עודכן</div>
-            <div>{new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(school.updatedAt)}</div>
+            <div>{new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(new Date(school.updatedAt))}</div>
           </div>
         </div>
       </Card>
