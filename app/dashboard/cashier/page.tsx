@@ -259,13 +259,16 @@ export default function CashierPage() {
     }
   }
 
-  const filterByTimePeriod = <T extends { date: string }>(items: T[]): T[] => {
+  const filterByTimePeriod = <T extends { date?: string; paymentDate?: string }>(items: T[]): T[] => {
     if (!Array.isArray(items)) return []
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
     return items.filter((item) => {
-      const itemDate = new Date(item.date)
+      // Support both 'date' (expenses) and 'paymentDate' (payments)
+      const dateValue = (item as { date?: string }).date || (item as { paymentDate?: string }).paymentDate
+      if (!dateValue) return true
+      const itemDate = new Date(dateValue)
 
       switch (timePeriod) {
         case "day":
