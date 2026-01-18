@@ -85,10 +85,12 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { studentId, amount, paymentDate, paymentType, description } = body
+    const { studentId, amount, date, paymentMethod, description } = body
 
-    if (!amount || !paymentDate || !paymentType) {
-      return Response.json({ error: "amount, paymentDate, and paymentType are required" }, { status: 400 })
+    console.log("[v0] POST /api/payments body:", body)
+
+    if (!amount || !date) {
+      return Response.json({ error: "amount and date are required" }, { status: 400 })
     }
 
     const id = crypto.randomUUID()
@@ -96,10 +98,11 @@ export async function POST(req: Request) {
 
     const result = await sql`
       INSERT INTO "Payment" (id, "studentId", amount, "paymentDate", "paymentType", description, "createdAt")
-      VALUES (${id}, ${studentId || null}, ${amount}, ${paymentDate}, ${paymentType}, ${description || null}, ${now})
+      VALUES (${id}, ${studentId || null}, ${amount}, ${date}, ${paymentMethod || 'cash'}, ${description || null}, ${now})
       RETURNING *
     `
 
+    console.log("[v0] Payment created:", result[0])
     return Response.json(result[0], { status: 201 })
   } catch (err) {
     console.error("POST /api/payments error:", err)
