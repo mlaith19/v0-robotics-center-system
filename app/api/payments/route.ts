@@ -9,31 +9,72 @@ export async function GET(req: Request) {
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
 
-    let query = `
-      SELECT p.*, s.name as "studentName"
-      FROM "Payment" p
-      LEFT JOIN "Student" s ON p."studentId" = s.id
-      WHERE 1=1
-    `
-    const params: any[] = []
-    let paramIndex = 1
-
-    if (studentId) {
-      query += ` AND p."studentId" = $${paramIndex++}`
-      params.push(studentId)
+    let result
+    if (studentId && startDate && endDate) {
+      result = await sql`
+        SELECT p.*, s.name as "studentName"
+        FROM "Payment" p
+        LEFT JOIN "Student" s ON p."studentId" = s.id
+        WHERE p."studentId" = ${studentId} AND p."paymentDate" >= ${startDate} AND p."paymentDate" <= ${endDate}
+        ORDER BY p."paymentDate" DESC
+      `
+    } else if (studentId && startDate) {
+      result = await sql`
+        SELECT p.*, s.name as "studentName"
+        FROM "Payment" p
+        LEFT JOIN "Student" s ON p."studentId" = s.id
+        WHERE p."studentId" = ${studentId} AND p."paymentDate" >= ${startDate}
+        ORDER BY p."paymentDate" DESC
+      `
+    } else if (studentId && endDate) {
+      result = await sql`
+        SELECT p.*, s.name as "studentName"
+        FROM "Payment" p
+        LEFT JOIN "Student" s ON p."studentId" = s.id
+        WHERE p."studentId" = ${studentId} AND p."paymentDate" <= ${endDate}
+        ORDER BY p."paymentDate" DESC
+      `
+    } else if (startDate && endDate) {
+      result = await sql`
+        SELECT p.*, s.name as "studentName"
+        FROM "Payment" p
+        LEFT JOIN "Student" s ON p."studentId" = s.id
+        WHERE p."paymentDate" >= ${startDate} AND p."paymentDate" <= ${endDate}
+        ORDER BY p."paymentDate" DESC
+      `
+    } else if (studentId) {
+      result = await sql`
+        SELECT p.*, s.name as "studentName"
+        FROM "Payment" p
+        LEFT JOIN "Student" s ON p."studentId" = s.id
+        WHERE p."studentId" = ${studentId}
+        ORDER BY p."paymentDate" DESC
+      `
+    } else if (startDate) {
+      result = await sql`
+        SELECT p.*, s.name as "studentName"
+        FROM "Payment" p
+        LEFT JOIN "Student" s ON p."studentId" = s.id
+        WHERE p."paymentDate" >= ${startDate}
+        ORDER BY p."paymentDate" DESC
+      `
+    } else if (endDate) {
+      result = await sql`
+        SELECT p.*, s.name as "studentName"
+        FROM "Payment" p
+        LEFT JOIN "Student" s ON p."studentId" = s.id
+        WHERE p."paymentDate" <= ${endDate}
+        ORDER BY p."paymentDate" DESC
+      `
+    } else {
+      result = await sql`
+        SELECT p.*, s.name as "studentName"
+        FROM "Payment" p
+        LEFT JOIN "Student" s ON p."studentId" = s.id
+        ORDER BY p."paymentDate" DESC
+      `
     }
-    if (startDate) {
-      query += ` AND p."paymentDate" >= $${paramIndex++}`
-      params.push(startDate)
-    }
-    if (endDate) {
-      query += ` AND p."paymentDate" <= $${paramIndex++}`
-      params.push(endDate)
-    }
 
-    query += ` ORDER BY p."paymentDate" DESC`
-
-    const result = await sql(query, params)
     return Response.json(result)
   } catch (err) {
     console.error("GET /api/payments error:", err)
