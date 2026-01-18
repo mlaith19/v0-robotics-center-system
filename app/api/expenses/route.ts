@@ -9,26 +9,26 @@ export async function GET(req: Request) {
     const endDate = searchParams.get("endDate")
     const category = searchParams.get("category")
 
-    let query = `SELECT * FROM "Expense" WHERE 1=1`
-    const params: any[] = []
-    let paramIndex = 1
-
-    if (startDate) {
-      query += ` AND date >= $${paramIndex++}`
-      params.push(startDate)
+    // Build query using tagged template literals
+    let result
+    if (startDate && endDate && category) {
+      result = await sql`SELECT * FROM "Expense" WHERE date >= ${startDate} AND date <= ${endDate} AND category = ${category} ORDER BY date DESC`
+    } else if (startDate && endDate) {
+      result = await sql`SELECT * FROM "Expense" WHERE date >= ${startDate} AND date <= ${endDate} ORDER BY date DESC`
+    } else if (startDate && category) {
+      result = await sql`SELECT * FROM "Expense" WHERE date >= ${startDate} AND category = ${category} ORDER BY date DESC`
+    } else if (endDate && category) {
+      result = await sql`SELECT * FROM "Expense" WHERE date <= ${endDate} AND category = ${category} ORDER BY date DESC`
+    } else if (startDate) {
+      result = await sql`SELECT * FROM "Expense" WHERE date >= ${startDate} ORDER BY date DESC`
+    } else if (endDate) {
+      result = await sql`SELECT * FROM "Expense" WHERE date <= ${endDate} ORDER BY date DESC`
+    } else if (category) {
+      result = await sql`SELECT * FROM "Expense" WHERE category = ${category} ORDER BY date DESC`
+    } else {
+      result = await sql`SELECT * FROM "Expense" ORDER BY date DESC`
     }
-    if (endDate) {
-      query += ` AND date <= $${paramIndex++}`
-      params.push(endDate)
-    }
-    if (category) {
-      query += ` AND category = $${paramIndex++}`
-      params.push(category)
-    }
 
-    query += ` ORDER BY date DESC`
-
-    const result = await sql(query, params)
     return Response.json(result)
   } catch (err) {
     console.error("GET /api/expenses error:", err)
