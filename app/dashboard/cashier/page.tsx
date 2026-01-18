@@ -64,6 +64,7 @@ export default function CashierPage() {
   const [expenseAmount, setExpenseAmount] = useState("")
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split("T")[0])
   const [expenseCategory, setExpenseCategory] = useState("")
+  const [customExpenseCategory, setCustomExpenseCategory] = useState("")
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurringDay, setRecurringDay] = useState("1")
   const [expensePaymentMethod, setExpensePaymentMethod] = useState<"cash" | "credit" | "transfer" | "check" | "bit">("cash")
@@ -107,11 +108,13 @@ export default function CashierPage() {
 
   const addExpense = async () => {
     if (!expenseDescription || !expenseAmount || !expenseCategory) return
+    if (expenseCategory === "other" && !customExpenseCategory) return
     if (expensePaymentMethod === "credit" && !expenseCardLastDigits) return
     if ((expensePaymentMethod === "transfer" || expensePaymentMethod === "check") && (!expenseBankName || !expenseBankBranch || !expenseAccountNumber)) return
 
     setIsAddingExpense(true)
     try {
+      const finalCategory = expenseCategory === "other" ? customExpenseCategory : expenseCategory
       const response = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -121,7 +124,7 @@ export default function CashierPage() {
           date: expenseDate,
           isRecurring,
           recurringDay: isRecurring ? Number.parseInt(recurringDay) : null,
-          category: expenseCategory,
+          category: finalCategory,
           paymentMethod: expensePaymentMethod,
         }),
       })
@@ -133,6 +136,7 @@ export default function CashierPage() {
         setExpenseAmount("")
         setExpenseDate(new Date().toISOString().split("T")[0])
         setExpenseCategory("")
+        setCustomExpenseCategory("")
         setIsRecurring(false)
         setRecurringDay("1")
         setExpensePaymentMethod("cash")
@@ -500,6 +504,18 @@ export default function CashierPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {expenseCategory === "other" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-expense-category">שם הקטגוריה *</Label>
+                    <Input
+                      id="custom-expense-category"
+                      placeholder="הזן שם קטגוריה מותאם אישית"
+                      value={customExpenseCategory}
+                      onChange={(e) => setCustomExpenseCategory(e.target.value)}
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="expense-date">תאריך</Label>
