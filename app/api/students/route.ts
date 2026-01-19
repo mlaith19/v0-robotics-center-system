@@ -32,30 +32,26 @@ export async function POST(req: Request) {
     
     const emailRaw = cleanStr(body.email)
     const email = emailRaw ? emailRaw.toLowerCase() : null
-    const status = cleanStr(body.status) ?? "מתעניין"
-    const totalSessions = Number.isFinite(Number(body.totalSessions)) ? Number(body.totalSessions) : 12
-    const idNumber = cleanStr(body.idNumber)
+    const status = cleanStr(body.status) ?? "active"
+    const studentId = cleanStr(body.studentId)
     const birthDate = cleanStr(body.birthDate)
     const phone = cleanStr(body.phone)
     const address = cleanStr(body.address)
     const city = cleanStr(body.city)
-    const father = cleanStr(body.father)
-    const mother = cleanStr(body.mother)
-    const additionalPhone = cleanStr(body.additionalPhone)
-    const healthFund = cleanStr(body.healthFund)
-    const allergies = cleanStr(body.allergies)
-    const courseIds = Array.isArray(body.courseIds) ? JSON.stringify(body.courseIds.map((x: any) => String(x))) : "[]"
-    const courseSessions = body.courseSessions && typeof body.courseSessions === "object" ? JSON.stringify(body.courseSessions) : "{}"
+    const parentName = cleanStr(body.parentName)
+    const parentPhone = cleanStr(body.parentPhone)
+    const schoolId = cleanStr(body.schoolId)
+    const notes = cleanStr(body.notes)
 
     const result = await sql`
       INSERT INTO "Student" (
-        id, name, email, status, "totalSessions", "idNumber", "birthDate", phone, address, city,
-        father, mother, "additionalPhone", "healthFund", allergies, "courseIds", "courseSessions",
+        id, name, email, status, "studentId", "birthDate", phone, address, city,
+        "parentName", "parentPhone", "schoolId", notes,
         "createdAt", "updatedAt"
       )
       VALUES (
-        ${id}, ${name}, ${email}, ${status}, ${totalSessions}, ${idNumber}, ${birthDate}, ${phone}, ${address}, ${city},
-        ${father}, ${mother}, ${additionalPhone}, ${healthFund}, ${allergies}, ${courseIds}::jsonb, ${courseSessions}::jsonb,
+        ${id}, ${name}, ${email}, ${status}, ${studentId}, ${birthDate}, ${phone}, ${address}, ${city},
+        ${parentName}, ${parentPhone}, ${schoolId}, ${notes},
         ${now}, ${now}
       )
       RETURNING *
