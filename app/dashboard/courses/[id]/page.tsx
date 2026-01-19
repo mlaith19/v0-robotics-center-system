@@ -150,68 +150,68 @@ export default function CourseViewPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Course Details Card */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-end gap-2 pb-4">
-                <CardTitle className="text-lg">פרטי הקורס</CardTitle>
+              <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
                 <div className="p-2 bg-blue-100 rounded-lg">
                   <BookOpen className="h-5 w-5 text-blue-600" />
                 </div>
+                <CardTitle className="text-lg">פרטי הקורס</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{levelLabels[course.level || "beginner"] || course.level || "-"}</span>
+                <div className="flex flex-row-reverse justify-between items-center">
                   <span className="text-muted-foreground">רמה:</span>
+                  <span className="font-medium">{levelLabels[course.level || "beginner"] || course.level || "-"}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{course.duration || 0} שבועות</span>
+                <div className="flex flex-row-reverse justify-between items-center">
                   <span className="text-muted-foreground">משך:</span>
+                  <span className="font-medium">{course.duration || 0} שבועות</span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex flex-row-reverse justify-between items-center">
+                  <span className="text-muted-foreground">סטטוס:</span>
                   <Badge className={statusColors[course.status] || "bg-gray-100 text-gray-800"}>
                     {statusLabels[course.status] || course.status}
                   </Badge>
-                  <span className="text-muted-foreground">סטטוס:</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-blue-600 text-xl">₪{course.price || 0}</span>
+                <div className="flex flex-row-reverse justify-between items-center">
                   <span className="text-muted-foreground">מחיר:</span>
+                  <span className="font-medium text-blue-600 text-xl">₪{course.price || 0}</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Dates & Times Card */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-end gap-2 pb-4">
-                <CardTitle className="text-lg">תאריכים ושעות</CardTitle>
+              <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
                 <div className="p-2 bg-gray-100 rounded-lg">
                   <Calendar className="h-5 w-5 text-gray-600" />
                 </div>
+                <CardTitle className="text-lg">תאריכים ושעות</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{course.startDate || "-"}</span>
+                <div className="flex flex-row-reverse justify-between items-center">
                   <span className="text-muted-foreground">תאריך התחלה:</span>
+                  <span className="font-medium">{course.startDate || "-"}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{course.endDate || "-"}</span>
+                <div className="flex flex-row-reverse justify-between items-center">
                   <span className="text-muted-foreground">תאריך סיום:</span>
+                  <span className="font-medium">{course.endDate || "-"}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{course.startTime || "-"}</span>
+                <div className="flex flex-row-reverse justify-between items-center">
                   <span className="text-muted-foreground">שעות התחלה:</span>
+                  <span className="font-medium">{course.startTime || "-"}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{course.endTime || "-"}</span>
+                <div className="flex flex-row-reverse justify-between items-center">
                   <span className="text-muted-foreground">שעות סיום:</span>
+                  <span className="font-medium">{course.endTime || "-"}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-1 flex-wrap">
+                <div className="flex flex-row-reverse justify-between items-center">
+                  <span className="text-muted-foreground">ימי שבוע:</span>
+                  <div className="flex gap-1 flex-wrap flex-row-reverse">
                     {daysOfWeek.length > 0 ? daysOfWeek.map(day => (
                       <Badge key={day} variant="outline" className="text-xs">
                         {dayLabels[day] || day}
                       </Badge>
                     )) : "-"}
                   </div>
-                  <span className="text-muted-foreground">ימי שבוע:</span>
                 </div>
               </CardContent>
             </Card>
@@ -221,14 +221,14 @@ export default function CourseViewPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Teachers Card */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-end gap-2 pb-4">
-                <CardTitle className="text-lg">מורים</CardTitle>
+              <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
                 <div className="p-2 bg-gray-100 rounded-lg">
                   <Users className="h-5 w-5 text-gray-600" />
                 </div>
+                <CardTitle className="text-lg">מורים</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2 flex-wrap justify-end">
+                <div className="flex gap-2 flex-wrap flex-row-reverse justify-start">
                   {courseTeachers.length > 0 ? courseTeachers.map(teacher => (
                     <Badge key={teacher.id} variant="outline" className="text-sm py-2 px-4">
                       {teacher.name}
@@ -242,16 +242,16 @@ export default function CourseViewPage() {
 
             {/* Statistics Card */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-end gap-2 pb-4">
-                <CardTitle className="text-lg">סטטיסטיקות</CardTitle>
+              <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
                 <div className="p-2 bg-gray-100 rounded-lg">
                   <BarChart3 className="h-5 w-5 text-gray-600" />
                 </div>
+                <CardTitle className="text-lg">סטטיסטיקות</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-2xl text-blue-600">0</span>
+                <div className="flex flex-row-reverse justify-between items-center">
                   <span className="text-muted-foreground">סה"כ תלמידים:</span>
+                  <span className="font-bold text-2xl text-blue-600">0</span>
                 </div>
               </CardContent>
             </Card>
