@@ -138,16 +138,16 @@ export default function CourseViewPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="general">כללי</TabsTrigger>
-          <TabsTrigger value="students">ילדים משויכים</TabsTrigger>
+      <Tabs defaultValue="general" className="w-full" dir="rtl">
+        <TabsList className="grid w-full grid-cols-3 mb-6" dir="rtl">
           <TabsTrigger value="payments">עלות ותשלומים</TabsTrigger>
+          <TabsTrigger value="students">ילדים משויכים</TabsTrigger>
+          <TabsTrigger value="general">כללי</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
           {/* First Row - Course Details & Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6" dir="rtl">
             {/* Course Details Card */}
             <Card>
               <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
@@ -217,8 +217,24 @@ export default function CourseViewPage() {
             </Card>
           </div>
 
-          {/* Second Row - Teachers & Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Second Row - Statistics & Teachers */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6" dir="rtl">
+            {/* Statistics Card */}
+            <Card>
+              <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <BarChart3 className="h-5 w-5 text-gray-600" />
+                </div>
+                <CardTitle className="text-lg">סטטיסטיקות</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-row-reverse justify-between items-center">
+                  <span className="text-muted-foreground">סה"כ תלמידים:</span>
+                  <span className="font-bold text-2xl text-blue-600">0</span>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Teachers Card */}
             <Card>
               <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
@@ -236,22 +252,6 @@ export default function CourseViewPage() {
                   )) : (
                     <span className="text-muted-foreground">לא משויכים מורים</span>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Statistics Card */}
-            <Card>
-              <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <BarChart3 className="h-5 w-5 text-gray-600" />
-                </div>
-                <CardTitle className="text-lg">סטטיסטיקות</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-row-reverse justify-between items-center">
-                  <span className="text-muted-foreground">סה"כ תלמידים:</span>
-                  <span className="font-bold text-2xl text-blue-600">0</span>
                 </div>
               </CardContent>
             </Card>
