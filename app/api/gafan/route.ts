@@ -15,21 +15,50 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { name, description, schoolId, startDate, endDate, price, status } = body
+    console.log("[v0] POST /api/gafan body:", body)
+    
+    const {
+      program_number,
+      name,
+      valid_year,
+      company_name,
+      company_id,
+      company_address,
+      bank_name,
+      bank_code,
+      branch_number,
+      account_number,
+      operator_name,
+      price_min,
+      price_max,
+      status,
+      notes,
+    } = body
 
-    if (!name || !schoolId) {
-      return Response.json({ error: "name and schoolId are required" }, { status: 400 })
+    if (!name) {
+      return Response.json({ error: "name is required" }, { status: 400 })
     }
 
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
 
     const result = await sql`
-      INSERT INTO "Gafan" (id, name, description, "schoolId", "startDate", "endDate", price, status, "createdAt", "updatedAt")
-      VALUES (${id}, ${name}, ${description || null}, ${schoolId}, ${startDate || null}, ${endDate || null}, ${price || 0}, ${status || "active"}, ${now}, ${now})
+      INSERT INTO "Gafan" (
+        id, name, "programNumber", "validYear", "companyName", "companyId", 
+        "companyAddress", "bankName", "bankCode", "branchNumber", "accountNumber",
+        "operatorName", "priceMin", "priceMax", status, notes, "createdAt", "updatedAt"
+      )
+      VALUES (
+        ${id}, ${name}, ${program_number || null}, ${valid_year || null}, 
+        ${company_name || null}, ${company_id || null}, ${company_address || null},
+        ${bank_name || null}, ${bank_code || null}, ${branch_number || null}, 
+        ${account_number || null}, ${operator_name || null}, ${price_min || null}, 
+        ${price_max || null}, ${status || "מתעניין"}, ${notes || null}, ${now}, ${now}
+      )
       RETURNING *
     `
 
+    console.log("[v0] Gafan created:", result[0])
     return Response.json(result[0], { status: 201 })
   } catch (err) {
     console.error("POST /api/gafan error:", err)
