@@ -4,9 +4,10 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Pencil, Loader2, BookOpen, Clock, DollarSign, BarChart3 } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArrowRight, Pencil, Loader2, BookOpen, Calendar, Users, BarChart3 } from "lucide-react"
 
 interface Course {
   id: string
@@ -16,8 +17,19 @@ interface Course {
   duration: number | null
   price: number | null
   status: string
+  startDate: string | null
+  endDate: string | null
+  startTime: string | null
+  endTime: string | null
+  daysOfWeek: string[] | null
+  teacherIds: string[] | null
   createdAt: string
   updatedAt: string
+}
+
+interface Teacher {
+  id: string
+  name: string
 }
 
 const levelLabels: Record<string, string> = {
@@ -38,27 +50,45 @@ const statusColors: Record<string, string> = {
   draft: "bg-yellow-100 text-yellow-800"
 }
 
+const dayLabels: Record<string, string> = {
+  sunday: "ראשון",
+  monday: "שני",
+  tuesday: "שלישי",
+  wednesday: "רביעי",
+  thursday: "חמישי",
+  friday: "שישי",
+  saturday: "שבת"
+}
+
 export default function CourseViewPage() {
   const params = useParams()
   const id = params.id as string
   const [course, setCourse] = useState<Course | null>(null)
+  const [teachers, setTeachers] = useState<Teacher[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchCourse = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(`/api/courses/${id}`)
-        if (res.ok) {
-          const data = await res.json()
+        const [courseRes, teachersRes] = await Promise.all([
+          fetch(`/api/courses/${id}`),
+          fetch("/api/teachers")
+        ])
+        if (courseRes.ok) {
+          const data = await courseRes.json()
           setCourse(data)
         }
+        if (teachersRes.ok) {
+          const data = await teachersRes.json()
+          setTeachers(Array.isArray(data) ? data : [])
+        }
       } catch (err) {
-        console.error("Failed to fetch course:", err)
+        console.error("Failed to fetch data:", err)
       } finally {
         setLoading(false)
       }
     }
-    fetchCourse()
+    fetchData()
   }, [id])
 
   if (loading) {
@@ -73,8 +103,15 @@ export default function CourseViewPage() {
     return <div className="p-6 text-center">לא נמצא קורס</div>
   }
 
+  const courseTeachers = teachers.filter(t => 
+    course.teacherIds && course.teacherIds.includes(t.id)
+  )
+
+  const daysOfWeek = Array.isArray(course.daysOfWeek) ? course.daysOfWeek : []
+
   return (
-    <div dir="rtl" className="container mx-auto max-w-3xl p-6 space-y-6">
+    <div dir="rtl" className="container mx-auto max-w-4xl p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/courses">
@@ -83,116 +120,160 @@ export default function CourseViewPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold">{course.name}</h1>
-            <p className="text-muted-foreground mt-1">פרטי קורס</p>
+            <h1 className="text-3xl font-bold">פרטי קורס</h1>
+            <p className="text-muted-foreground mt-1">
+              <Link href="/dashboard/courses" className="hover:underline">קורסים</Link>
+              {" > "}
+              {course.name}
+            </p>
           </div>
         </div>
 
         <Link href={`/dashboard/courses/${course.id}/edit`}>
           <Button className="gap-2">
             <Pencil className="h-4 w-4" />
-            ערוך
+            ערוך קורס
           </Button>
         </Link>
       </div>
 
-      {/* סטטיסטיקות מהירות */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Clock className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">משך שיעור</div>
-              <div className="text-xl font-bold">{course.duration || 0} דקות</div>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <DollarSign className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">מחיר</div>
-              <div className="text-xl font-bold">{course.price || 0} ש"ח</div>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <BarChart3 className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">רמה</div>
-              <div className="text-xl font-bold">{levelLabels[course.level || "beginner"] || course.level}</div>
-            </div>
-          </div>
-        </Card>
-      </div>
+      {/* Tabs */}
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="general">כללי</TabsTrigger>
+          <TabsTrigger value="students">ילדים משויכים</TabsTrigger>
+          <TabsTrigger value="payments">עלות ותשלומים</TabsTrigger>
+        </TabsList>
 
-      {/* פרטי הקורס */}
-      <Card>
-        <CardHeader className="text-right">
-          <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
-            <BookOpen className="h-5 w-5 text-primary" />
-            פרטי הקורס
-          </CardTitle>
-          <CardDescription className="text-right">מידע מלא על הקורס</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">שם הקורס</div>
-              <div className="font-medium">{course.name}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">סטטוס</div>
-              <Badge className={statusColors[course.status] || "bg-gray-100 text-gray-800"}>
-                {statusLabels[course.status] || course.status}
-              </Badge>
-            </div>
-          </div>
+        <TabsContent value="general" className="space-y-6">
+          {/* First Row - Course Details & Dates */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Course Details Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-end gap-2 pb-4">
+                <CardTitle className="text-lg">פרטי הקורס</CardTitle>
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <BookOpen className="h-5 w-5 text-blue-600" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{levelLabels[course.level || "beginner"] || course.level || "-"}</span>
+                  <span className="text-muted-foreground">רמה:</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{course.duration || 0} שבועות</span>
+                  <span className="text-muted-foreground">משך:</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <Badge className={statusColors[course.status] || "bg-gray-100 text-gray-800"}>
+                    {statusLabels[course.status] || course.status}
+                  </Badge>
+                  <span className="text-muted-foreground">סטטוס:</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-blue-600 text-xl">₪{course.price || 0}</span>
+                  <span className="text-muted-foreground">מחיר:</span>
+                </div>
+              </CardContent>
+            </Card>
 
-          {course.description && (
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">תיאור</div>
-              <div className="font-medium whitespace-pre-wrap">{course.description}</div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">רמת הקורס</div>
-              <div className="font-medium">{levelLabels[course.level || "beginner"] || course.level || "-"}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">משך שיעור</div>
-              <div className="font-medium">{course.duration || 0} דקות</div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">מחיר</div>
-              <div className="font-medium">{course.price || 0} ש"ח</div>
-            </div>
+            {/* Dates & Times Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-end gap-2 pb-4">
+                <CardTitle className="text-lg">תאריכים ושעות</CardTitle>
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <Calendar className="h-5 w-5 text-gray-600" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{course.startDate || "-"}</span>
+                  <span className="text-muted-foreground">תאריך התחלה:</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{course.endDate || "-"}</span>
+                  <span className="text-muted-foreground">תאריך סיום:</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{course.startTime || "-"}</span>
+                  <span className="text-muted-foreground">שעות התחלה:</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{course.endTime || "-"}</span>
+                  <span className="text-muted-foreground">שעות סיום:</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-1 flex-wrap">
+                    {daysOfWeek.length > 0 ? daysOfWeek.map(day => (
+                      <Badge key={day} variant="outline" className="text-xs">
+                        {dayLabels[day] || day}
+                      </Badge>
+                    )) : "-"}
+                  </div>
+                  <span className="text-muted-foreground">ימי שבוע:</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="border-t pt-4 grid grid-cols-2 gap-6 text-sm">
-            <div className="space-y-1">
-              <div className="text-muted-foreground">תאריך יצירה</div>
-              <div>{new Intl.DateTimeFormat("he-IL", { dateStyle: "long", timeStyle: "short" }).format(new Date(course.createdAt))}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-muted-foreground">עדכון אחרון</div>
-              <div>{new Intl.DateTimeFormat("he-IL", { dateStyle: "long", timeStyle: "short" }).format(new Date(course.updatedAt))}</div>
-            </div>
+          {/* Second Row - Teachers & Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Teachers Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-end gap-2 pb-4">
+                <CardTitle className="text-lg">מורים</CardTitle>
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <Users className="h-5 w-5 text-gray-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 flex-wrap justify-end">
+                  {courseTeachers.length > 0 ? courseTeachers.map(teacher => (
+                    <Badge key={teacher.id} variant="outline" className="text-sm py-2 px-4">
+                      {teacher.name}
+                    </Badge>
+                  )) : (
+                    <span className="text-muted-foreground">לא משויכים מורים</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Statistics Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-end gap-2 pb-4">
+                <CardTitle className="text-lg">סטטיסטיקות</CardTitle>
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <BarChart3 className="h-5 w-5 text-gray-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-2xl text-blue-600">0</span>
+                  <span className="text-muted-foreground">סה"כ תלמידים:</span>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        <TabsContent value="students">
+          <Card>
+            <CardContent className="p-6 text-center text-muted-foreground">
+              רשימת התלמידים המשויכים לקורס תוצג כאן
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payments">
+          <Card>
+            <CardContent className="p-6 text-center text-muted-foreground">
+              פרטי עלות ותשלומים יוצגו כאן
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
