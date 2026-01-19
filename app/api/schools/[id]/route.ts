@@ -4,7 +4,7 @@ const sql = neon(process.env.DATABASE_URL!)
 
 type Ctx = { params: Promise<{ id: string }> }
 
-function cleanStr(v: any): string | null {
+function cleanStr(v: unknown): string | null {
   if (v === null || v === undefined) return null
   const s = String(v).trim()
   return s.length ? s : null
@@ -40,15 +40,27 @@ export async function PUT(req: Request, { params }: Ctx) {
     const now = new Date().toISOString()
     const city = cleanStr(body.city)
     const address = cleanStr(body.address)
-    const phone = cleanStr(body.phone)
+    const phone = cleanStr(body.contactPhone)
     const email = cleanStr(body.email)
     const contactPerson = cleanStr(body.contactPerson ?? body.contactName)
+    const status = cleanStr(body.status) || "active"
+    const institutionCode = cleanStr(body.institutionCode)
+    const schoolType = cleanStr(body.schoolType)
+    const schoolPhone = cleanStr(body.schoolPhone)
+    const bankName = cleanStr(body.bankName)
+    const bankCode = cleanStr(body.bankCode)
+    const bankBranch = cleanStr(body.bankBranch)
+    const bankAccount = cleanStr(body.bankAccount)
     const notes = cleanStr(body.notes)
 
     const result = await sql`
       UPDATE "School"
       SET name = ${name}, city = ${city}, address = ${address}, phone = ${phone}, 
-          email = ${email}, "contactPerson" = ${contactPerson}, notes = ${notes}, "updatedAt" = ${now}
+          email = ${email}, "contactPerson" = ${contactPerson}, status = ${status},
+          "institutionCode" = ${institutionCode}, "schoolType" = ${schoolType},
+          "schoolPhone" = ${schoolPhone}, "bankName" = ${bankName}, "bankCode" = ${bankCode},
+          "bankBranch" = ${bankBranch}, "bankAccount" = ${bankAccount}, notes = ${notes},
+          "updatedAt" = ${now}
       WHERE id = ${id}
       RETURNING *
     `

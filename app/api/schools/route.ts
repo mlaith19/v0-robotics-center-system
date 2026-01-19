@@ -2,7 +2,7 @@ import { neon } from "@neondatabase/serverless"
 
 const sql = neon(process.env.DATABASE_URL!)
 
-function s(v: any) {
+function s(v: unknown) {
   if (v === undefined || v === null) return null
   const t = String(v).trim()
   return t.length ? t : null
@@ -31,14 +31,30 @@ export async function POST(req: Request) {
     const now = new Date().toISOString()
     const city = s(body?.city)
     const contactPerson = s(body?.contactPerson ?? body?.contactName)
-    const phone = s(body?.phone)
+    const phone = s(body?.contactPhone)
     const email = s(body?.email)
     const address = s(body?.address)
     const status = s(body?.status) || "active"
+    const institutionCode = s(body?.institutionCode)
+    const schoolType = s(body?.schoolType)
+    const schoolPhone = s(body?.schoolPhone)
+    const bankName = s(body?.bankName)
+    const bankCode = s(body?.bankCode)
+    const bankBranch = s(body?.bankBranch)
+    const bankAccount = s(body?.bankAccount)
+    const notes = s(body?.notes)
 
     const result = await sql`
-      INSERT INTO "School" (id, name, city, "contactPerson", phone, email, address, status, "createdAt", "updatedAt")
-      VALUES (${id}, ${name}, ${city}, ${contactPerson}, ${phone}, ${email}, ${address}, ${status}, ${now}, ${now})
+      INSERT INTO "School" (
+        id, name, city, "contactPerson", phone, email, address, status, 
+        "institutionCode", "schoolType", "schoolPhone", "bankName", "bankCode", 
+        "bankBranch", "bankAccount", notes, "createdAt", "updatedAt"
+      )
+      VALUES (
+        ${id}, ${name}, ${city}, ${contactPerson}, ${phone}, ${email}, ${address}, ${status},
+        ${institutionCode}, ${schoolType}, ${schoolPhone}, ${bankName}, ${bankCode},
+        ${bankBranch}, ${bankAccount}, ${notes}, ${now}, ${now}
+      )
       RETURNING *
     `
 
