@@ -28,7 +28,8 @@ const DAYS_OF_WEEK = [
 ]
 
 export default function EditCoursePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+  const resolvedParams = use(params)
+  const id = resolvedParams.id
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
