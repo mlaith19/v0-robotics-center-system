@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     
     const emailRaw = cleanStr(body.email)
     const email = emailRaw ? emailRaw.toLowerCase() : null
-    const status = cleanStr(body.status) ?? "active"
+    const status = cleanStr(body.status) ?? "מתעניין"
     const studentId = cleanStr(body.studentId)
     const birthDate = cleanStr(body.birthDate)
     const phone = cleanStr(body.phone)
