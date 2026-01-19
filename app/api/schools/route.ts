@@ -34,11 +34,11 @@ export async function POST(req: Request) {
     const phone = s(body?.phone)
     const email = s(body?.email)
     const address = s(body?.address)
-    const notes = s(body?.notes)
+    const status = s(body?.status) || "active"
 
     const result = await sql`
-      INSERT INTO "School" (id, name, city, "contactPerson", phone, email, address, notes, "createdAt", "updatedAt")
-      VALUES (${id}, ${name}, ${city}, ${contactPerson}, ${phone}, ${email}, ${address}, ${notes}, ${now}, ${now})
+      INSERT INTO "School" (id, name, city, "contactPerson", phone, email, address, status, "createdAt", "updatedAt")
+      VALUES (${id}, ${name}, ${city}, ${contactPerson}, ${phone}, ${email}, ${address}, ${status}, ${now}, ${now})
       RETURNING *
     `
 
