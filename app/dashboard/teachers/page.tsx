@@ -1,43 +1,279 @@
 "use client"
 
-import type React from "react"
-
-import { EntityList } from "@/components/entity/entity-list"
-import { hasPermission } from "@/lib/permissions"
+import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { 
+  Trash2, Pencil, Eye, Plus, RefreshCw, 
+  LayoutGrid, List, User, Mail, Phone, MapPin, GraduationCap, Banknote
+} from "lucide-react"
 
 type Teacher = {
   id: string
   name: string
   email?: string | null
   phone?: string | null
+  idNumber?: string | null
+  birthDate?: string | null
+  city?: string | null
+  specialization?: string | null
+  status?: string | null
+  bio?: string | null
+  centerHourlyRate?: number | null
+  travelRate?: number | null
+  externalCourseRate?: number | null
+  createdAt?: string
 }
 
 export default function TeachersPage() {
-  const canDelete = hasPermission("teachers-delete")
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState<string | null>(null)
+  const [q, setQ] = useState("")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 
-  const props: React.ComponentProps<typeof EntityList<Teacher>> = {
-    title: "מורים",
-    subtitle: "ניהול צוות ההוראה",
-    basePath: "/dashboard/teachers",
-    apiBase: "/api/teachers",
-    canDelete,
-    getTitle: (t) => t.name,
-    getSubtitle: (t) => t.email ?? "—",
-    columns: [
-      {
-        header: "שם",
-        cell: (t) => <div className="font-medium">{t.name}</div>,
-      },
-      {
-        header: "אימייל",
-        cell: (t) => t.email ?? "-",
-      },
-      {
-        header: "טלפון",
-        cell: (t) => t.phone ?? "-",
-      },
-    ],
+  async function load() {
+    setLoading(true)
+    setErr(null)
+    try {
+      const res = await fetch("/api/teachers", { cache: "no-store" })
+      if (!res.ok) throw new Error(`Failed to load teachers (${res.status})`)
+      const data = await res.json()
+      setTeachers(data ?? [])
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to load")
+    } finally {
+      setLoading(false)
+    }
   }
 
-  return <EntityList {...props} />
+  async function remove(id: string) {
+    const ok = confirm("למחוק את המורה?")
+    if (!ok) return
+    const res = await fetch(`/api/teachers/${id}`, { method: "DELETE" })
+    if (!res.ok) {
+      alert(`מחיקה נכשלה (${res.status})`)
+      return
+    }
+    setTeachers((prev) => prev.filter((t) => t.id !== id))
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase()
+    if (!s) return teachers
+    return teachers.filter((t) => 
+      t.name.toLowerCase().includes(s) || 
+      t.email?.toLowerCase().includes(s) ||
+      t.phone?.includes(s) ||
+      t.specialization?.toLowerCase().includes(s) ||
+      t.city?.toLowerCase().includes(s)
+    )
+  }, [q, teachers])
+
+  const getStatusBadge = (status?: string | null) => {
+    switch (status) {
+      case "פעיל":
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">פעיל</Badge>
+      case "חופשה":
+        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100">חופשה</Badge>
+      case "לא פעיל":
+        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">לא פעיל</Badge>
+      default:
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">פעיל</Badge>
+    }
+  }
+
+  return (
+    <div dir="rtl" className="container mx-auto max-w-7xl p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-right">
+          <h1 className="text-3xl font-bold">מורים</h1>
+          <p className="text-muted-foreground mt-1">ניהול צוות ההוראה במרכז</p>
+        </div>
+
+        <div className="flex gap-2 items-center">
+          {/* View Toggle */}
+          <div className="flex border rounded-lg overflow-hidden">
+            <Button 
+              variant={viewMode === "list" ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="rounded-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={viewMode === "grid" ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => setViewMode("grid")}
+              className="rounded-none"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <Link href="/dashboard/teachers/new">
+            <Button className="gap-2 bg-primary">
+              <Plus className="h-4 w-4" />
+              מורה חדש
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Search */}
+      <Card className="p-4">
+        <div className="flex items-center gap-3">
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="חפש לפי שם, אימייל, טלפון, התמחות או עיר..."
+            className="max-w-md text-right"
+            dir="rtl"
+          />
+          <Button variant="outline" onClick={load} className="gap-2 bg-transparent">
+            <RefreshCw className="h-4 w-4" />
+            רענן
+          </Button>
+          <div className="text-sm text-muted-foreground mr-auto">
+            סה״כ: {filtered.length} מורים
+          </div>
+        </div>
+      </Card>
+
+      {/* Content */}
+      {loading ? (
+        <div className="text-muted-foreground text-center py-12">טוען...</div>
+      ) : err ? (
+        <Card className="p-6 border-red-200 bg-red-50">
+          <div className="text-red-700 font-semibold">שגיאה</div>
+          <div className="text-red-700/80 mt-1">{err}</div>
+          <div className="mt-4">
+            <Button variant="outline" onClick={load}>נסה שוב</Button>
+          </div>
+        </Card>
+      ) : filtered.length === 0 ? (
+        <Card className="p-8 text-center text-muted-foreground">
+          <div className="text-lg">אין מורים</div>
+          <Link href="/dashboard/teachers/new">
+            <Button className="mt-4 gap-2">
+              <Plus className="h-4 w-4" />
+              הוסף מורה ראשון
+            </Button>
+          </Link>
+        </Card>
+      ) : (
+        <div className={viewMode === "grid" ? "grid md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-4"}>
+          {filtered.map((t) => (
+            <Card key={t.id} className="p-5 space-y-4 hover:shadow-lg transition-shadow">
+              {/* Header with status and avatar */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <User className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="text-right">
+                    <h3 className="font-bold text-lg">{t.name}</h3>
+                    {t.specialization && (
+                      <p className="text-sm text-muted-foreground">{t.specialization}</p>
+                    )}
+                  </div>
+                </div>
+                {getStatusBadge(t.status)}
+              </div>
+
+              {/* Contact info */}
+              <div className="space-y-2 text-sm">
+                {t.email && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-4 w-4 text-blue-500" />
+                    <span dir="ltr">{t.email}</span>
+                  </div>
+                )}
+
+                {t.phone && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-4 w-4 text-green-500" />
+                    <span dir="ltr">{t.phone}</span>
+                  </div>
+                )}
+
+                {t.city && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4 text-purple-500" />
+                    <span>{t.city}</span>
+                  </div>
+                )}
+
+                {t.specialization && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <GraduationCap className="h-4 w-4 text-orange-500" />
+                    <span>{t.specialization}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Rates */}
+              {(t.centerHourlyRate || t.externalCourseRate) && (
+                <div className="grid grid-cols-2 gap-2">
+                  {t.centerHourlyRate && (
+                    <div className="bg-blue-50 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center gap-1 text-blue-600 text-xs mb-1">
+                        <Banknote className="h-3 w-3" />
+                        <span>מחיר במרכז</span>
+                      </div>
+                      <div className="font-bold text-blue-700">{t.centerHourlyRate}₪</div>
+                    </div>
+                  )}
+                  {t.externalCourseRate && (
+                    <div className="bg-orange-50 rounded-lg p-3 text-center">
+                      <div className="flex items-center justify-center gap-1 text-orange-600 text-xs mb-1">
+                        <Banknote className="h-3 w-3" />
+                        <span>קורס חיצוני</span>
+                      </div>
+                      <div className="font-bold text-orange-700">{t.externalCourseRate}₪</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2 pt-2 border-t">
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 bg-transparent"
+                  onClick={() => remove(t.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                
+                <Link href={`/dashboard/teachers/${t.id}/edit`} className="flex-1">
+                  <Button variant="outline" className="w-full gap-2 bg-transparent">
+                    <Pencil className="h-4 w-4" />
+                    ערוך
+                  </Button>
+                </Link>
+
+                <Link href={`/dashboard/teachers/${t.id}`} className="flex-1">
+                  <Button variant="outline" className="w-full gap-2 bg-transparent">
+                    <Eye className="h-4 w-4" />
+                    צפה
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
