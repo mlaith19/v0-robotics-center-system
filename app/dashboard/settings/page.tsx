@@ -144,9 +144,24 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8" dir="rtl">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">הגדרות</h1>
-        <p className="text-muted-foreground mt-2">הגדרות מערכת ותצורה</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">הגדרות</h1>
+          <p className="text-muted-foreground mt-2">הגדרות מערכת ותצורה</p>
+        </div>
+        <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              שומר...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              שמור הגדרות
+            </>
+          )}
+        </Button>
       </div>
 
       <Tabs defaultValue="general" className="w-full" dir="rtl">
@@ -418,22 +433,6 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* כפתור שמירה - מוצג תמיד */}
-      <div className="flex justify-start">
-        <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
-          {isSaving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              שומר...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              שמור הגדרות
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   )
 }
