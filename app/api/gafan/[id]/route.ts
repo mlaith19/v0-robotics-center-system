@@ -27,45 +27,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params
     const body = await req.json()
-    const {
-      program_number,
-      name,
-      valid_year,
-      company_name,
-      company_id,
-      company_address,
-      bank_name,
-      bank_code,
-      branch_number,
-      account_number,
-      operator_name,
-      price_min,
-      price_max,
-      status,
-      notes,
-    } = body
+    const { name, description, schoolId, startDate, endDate, price, status } = body
 
     const now = new Date().toISOString()
 
     const result = await sql`
       UPDATE "Gafan"
-      SET 
-        name = ${name}, 
-        "programNumber" = ${program_number || null}, 
-        "validYear" = ${valid_year || null}, 
-        "companyName" = ${company_name || null}, 
-        "companyId" = ${company_id || null}, 
-        "companyAddress" = ${company_address || null},
-        "bankName" = ${bank_name || null}, 
-        "bankCode" = ${bank_code || null}, 
-        "branchNumber" = ${branch_number || null}, 
-        "accountNumber" = ${account_number || null},
-        "operatorName" = ${operator_name || null}, 
-        "priceMin" = ${price_min || null}, 
-        "priceMax" = ${price_max || null},
-        status = ${status || "מתעניין"}, 
-        notes = ${notes || null}, 
-        "updatedAt" = ${now}
+      SET name = ${name}, description = ${description || null}, "schoolId" = ${schoolId},
+          "startDate" = ${startDate || null}, "endDate" = ${endDate || null},
+          price = ${price || 0}, status = ${status || "active"}, "updatedAt" = ${now}
       WHERE id = ${id}
       RETURNING *
     `

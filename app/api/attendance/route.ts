@@ -76,6 +76,18 @@ export async function POST(req: Request) {
       return Response.json({ error: "studentId, courseId, date, and status are required" }, { status: 400 })
     }
 
+    // Validate that course exists
+    const courseExists = await sql`SELECT id FROM "Course" WHERE id = ${courseId}`
+    if (courseExists.length === 0) {
+      return Response.json({ error: "Course not found" }, { status: 404 })
+    }
+
+    // Validate that student exists
+    const studentExists = await sql`SELECT id FROM "Student" WHERE id = ${studentId}`
+    if (studentExists.length === 0) {
+      return Response.json({ error: "Student not found" }, { status: 404 })
+    }
+
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
 
