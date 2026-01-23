@@ -159,3 +159,47 @@ export async function POST(req: Request) {
     return Response.json({ error: "Failed to save attendance" }, { status: 500 })
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get("id")
+    const studentId = searchParams.get("studentId")
+    const teacherId = searchParams.get("teacherId")
+    const courseId = searchParams.get("courseId")
+    const date = searchParams.get("date")
+
+    // Delete by ID if provided
+    if (id) {
+      await sql`DELETE FROM "Attendance" WHERE id = ${id}`
+      return Response.json({ success: true })
+    }
+
+    // Delete by studentId, courseId, and date
+    if (studentId && courseId && date) {
+      await sql`
+        DELETE FROM "Attendance" 
+        WHERE "studentId" = ${studentId} 
+          AND "courseId" = ${courseId} 
+          AND "date" = ${date}
+      `
+      return Response.json({ success: true })
+    }
+
+    // Delete by teacherId, courseId, and date
+    if (teacherId && courseId && date) {
+      await sql`
+        DELETE FROM "Attendance" 
+        WHERE "teacherId" = ${teacherId} 
+          AND "courseId" = ${courseId} 
+          AND "date" = ${date}
+      `
+      return Response.json({ success: true })
+    }
+
+    return Response.json({ error: "id or (studentId/teacherId + courseId + date) required" }, { status: 400 })
+  } catch (err) {
+    console.error("DELETE /api/attendance error:", err)
+    return Response.json({ error: "Failed to delete attendance" }, { status: 500 })
+  }
+}

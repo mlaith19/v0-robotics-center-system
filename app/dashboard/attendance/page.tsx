@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { CalendarIcon, Check, X, Thermometer, Plane, ArrowRight, AlertCircle } from "lucide-react"
+import { CalendarIcon, Check, X, Thermometer, Plane, ArrowRight, AlertCircle, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 import { he } from "date-fns/locale"
@@ -51,6 +51,7 @@ export default function AttendancePage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({})
   const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({})
+  const [deletingStatus, setDeletingStatus] = useState<Record<string, boolean>>({})
 
   // Fetch data from API
   const { data: students = [] } = useSWR<Student[]>("/api/students", fetcher)
@@ -167,6 +168,51 @@ export default function AttendancePage() {
       console.error("Failed to save attendance:", error)
     } finally {
       setSavingStatus((prev) => ({ ...prev, [personId]: false }))
+    }
+  }
+
+  const handleDelete = async (personId: string) => {
+    // Determine the correct courseId based on attendance type
+    const courseId = attendanceType === "course" ? selectedId : selectedCourseId
+    
+    if (!courseId) return
+    
+    // Confirm deletion
+    if (!confirm("האם אתה בטוח שברצונך למחוק את הנוכחות?")) return
+    
+    setDeletingStatus((prev) => ({ ...prev, [personId]: true }))
+    
+    try {
+      const isTeacherAttendance = attendanceType === "teacher" || (attendanceType === "course" && participantType === "teacher")
+      
+      const params = new URLSearchParams({
+        courseId,
+        date: dateStr,
+        ...(isTeacherAttendance ? { teacherId: personId } : { studentId: personId }),
+      })
+      
+      const res = await fetch(`/api/attendance?${params}`, {
+        method: "DELETE",
+      })
+
+      if (!res.ok) {
+        throw new Error("Failed to delete attendance")
+      }
+
+      // Remove from local state
+      setAttendanceData((prev) => {
+        const newData = { ...prev }
+        delete newData[personId]
+        return newData
+      })
+
+      // Revalidate attendance data
+      mutate(`/api/attendance?courseId=${courseId}&date=${dateStr}`)
+      mutate(`/api/attendance?courseId=${selectedId}`)
+    } catch (error) {
+      console.error("Failed to delete attendance:", error)
+    } finally {
+      setDeletingStatus((prev) => ({ ...prev, [personId]: false }))
     }
   }
 
@@ -405,6 +451,7 @@ export default function AttendancePage() {
                       <TableHead className="text-right font-semibold">טלפון</TableHead>
                       <TableHead className="text-right font-semibold">תאריך</TableHead>
                       <TableHead className="text-right font-semibold">סטטוס נוכחות</TableHead>
+                      <TableHead className="text-right font-semibold w-16">מחיקה</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -424,6 +471,17 @@ export default function AttendancePage() {
                             {getStatusButton(person.id, "sick", "חולה", Thermometer)}
                             {getStatusButton(person.id, "vacation", "חופש", Plane)}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(person.id)}
+                            disabled={deletingStatus[person.id] || !attendanceData[person.id]}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
