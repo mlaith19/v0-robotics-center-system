@@ -18,8 +18,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Plus, Search, List, LayoutGrid, Eye, Pencil, Trash2, Phone, Mail, User, MapPin, Users } from "lucide-react"
-import Loading from "./loading"
+import { Plus, Search, List, LayoutGrid, Eye, Pencil, Trash2, Phone, Mail, User, MapPin, Users, Loader2 } from "lucide-react"
+import Loading from "@/components/ui/loading" // Import Loading component
 
 interface Student {
   id: string
@@ -104,7 +104,11 @@ export default function StudentsPage() {
   )
 
   if (loading) {
-    return <Loading />
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
