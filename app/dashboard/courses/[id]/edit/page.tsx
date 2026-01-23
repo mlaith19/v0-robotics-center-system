@@ -294,11 +294,12 @@ export default function EditCoursePage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-right block">משך הקורס</Label>
+              <Label className="text-right block">מספר מפגשים</Label>
               <Input 
+                type="number"
                 value={formData.duration} 
                 onChange={(e) => setFormData({...formData, duration: e.target.value})} 
-                placeholder="לדוגמה: 8 שבועות"
+                placeholder="לדוגמה: 12"
                 className="text-right"
                 dir="rtl"
               />

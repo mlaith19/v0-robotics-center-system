@@ -13,6 +13,7 @@ import { BookOpen, Receipt, CalendarCheck, Plus, Loader2 } from "lucide-react"
 type Course = {
   id: string
   name: string
+  duration?: number
 }
 
 type Enrollment = {
@@ -146,16 +147,23 @@ export function StudentTabs({
   }, [payments, enrollments])
 
   const attendanceSummary = useMemo(() => {
-    const total = attendances.length
+    // Count present attendance records
     const present = attendances.filter((a) => a.status === "present" || a.status === "PRESENT").length
-    const percent = total === 0 ? 0 : Math.round((present / total) * 100)
-    // Calculate hours from course duration (in minutes, convert to hours)
-    const hours = attendances.reduce((sum, a) => {
-      const duration = a.courseDuration || 0
-      return sum + (duration / 60)
+    
+    // Calculate total sessions from all enrolled courses
+    const totalSessions = enrollments.reduce((sum, e: any) => {
+      const courseDuration = e.course?.duration || 0
+      return sum + courseDuration
     }, 0)
-    return { total, present, percent, hours: Math.round(hours * 10) / 10 }
-  }, [attendances])
+    
+    // Calculate remaining sessions (total - attended)
+    const remaining = Math.max(0, totalSessions - present)
+    
+    // Calculate attendance percentage
+    const percent = totalSessions === 0 ? 0 : Math.round((present / totalSessions) * 100)
+    
+    return { totalSessions, present, remaining, percent }
+  }, [attendances, enrollments])
 
   const handleAddPayment = async () => {
     if (!paymentAmount || Number(paymentAmount) <= 0) return
@@ -464,19 +472,19 @@ export function StudentTabs({
           <Card className="p-4 bg-blue-50 dark:bg-blue-950/20">
             <div className="flex items-center gap-2 mb-2">
               <CalendarCheck className="h-4 w-4 text-blue-600" />
-              <p className="text-xs text-blue-700 dark:text-blue-400">שיעורים</p>
+              <p className="text-xs text-blue-700 dark:text-blue-400">מפגשים</p>
             </div>
             <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-              {attendanceSummary.present}/{attendanceSummary.total}
+              {attendanceSummary.present}/{attendanceSummary.totalSessions}
             </p>
           </Card>
 
           <Card className="p-4 bg-orange-50 dark:bg-orange-950/20">
             <div className="flex items-center gap-2 mb-2">
               <CalendarCheck className="h-4 w-4 text-orange-600" />
-              <p className="text-xs text-orange-700 dark:text-orange-400">שעות</p>
+              <p className="text-xs text-orange-700 dark:text-orange-400">יתרת מפגשים</p>
             </div>
-            <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">{attendanceSummary.hours}</p>
+            <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">{attendanceSummary.remaining}</p>
           </Card>
         </div>
 
@@ -485,7 +493,6 @@ export function StudentTabs({
 
           {attendances.length > 0 ? (
             attendances.map((a) => {
-              const hours = a.courseDuration ? Math.round((a.courseDuration / 60) * 10) / 10 : 0
               const isPresent = a.status === "present" || a.status === "PRESENT"
               const statusColor = isPresent
                 ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
@@ -501,7 +508,7 @@ export function StudentTabs({
                     <div className="space-y-1">
                       <div className="text-sm font-medium">{formatDateTime(a.date)}</div>
                       <div className="text-sm text-muted-foreground">
-                        קורס: {a.courseName || "—"} · שעות: {hours}
+                        קורס: {a.courseName || "—"}
                       </div>
                       {a.note ? <div className="text-xs text-muted-foreground">הערה: {a.note}</div> : null}
                     </div>
