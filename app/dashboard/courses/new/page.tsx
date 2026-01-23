@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowRight, BookOpen, Save, Calendar, DollarSign, Users, MessageSquare } from "lucide-react"
+import { ArrowRight, BookOpen, Save, Calendar, Users, MessageSquare, DollarSign } from "lucide-react"
 
 interface Teacher {
   id: string
@@ -379,7 +379,7 @@ export default function NewCoursePage() {
       <Card className="border-emerald-200 bg-emerald-50/50">
         <CardHeader className="text-right">
           <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
-            <DollarSign className="h-5 w-5 text-emerald-600" />
+            <span className="text-emerald-600 font-bold text-lg">₪</span>
             תמחור
           </CardTitle>
           <CardDescription className="text-right">הגדר את מחיר הקורס</CardDescription>

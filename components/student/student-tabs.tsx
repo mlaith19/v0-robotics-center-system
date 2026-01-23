@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, DollarSign, Receipt, CalendarCheck } from "lucide-react"
+import { BookOpen, Receipt, CalendarCheck, DollarSign } from "lucide-react"
 
 type Course = {
   id: string
@@ -167,7 +167,7 @@ export function StudentTabs({
         <div className="grid grid-cols-3 gap-4 mb-6">
           <Card className="p-4 bg-green-50 dark:bg-green-950/20">
             <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="h-4 w-4 text-green-600" />
+              <span className="text-green-600 font-bold">₪</span>
               <p className="text-xs text-green-700 dark:text-green-400">שולם</p>
             </div>
             <p className="text-2xl font-bold text-green-700 dark:text-green-400">{paymentsSummary.paid.toLocaleString()} ₪</p>
@@ -183,7 +183,7 @@ export function StudentTabs({
 
           <Card className="p-4 bg-blue-50 dark:bg-blue-950/20">
             <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="h-4 w-4 text-blue-600" />
+              <span className="text-blue-600 font-bold">₪</span>
               <p className="text-xs text-blue-700 dark:text-blue-400">סה"כ</p>
             </div>
             <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{paymentsSummary.total.toLocaleString()} ₪</p>
