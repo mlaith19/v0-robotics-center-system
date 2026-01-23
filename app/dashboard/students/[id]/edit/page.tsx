@@ -108,9 +108,13 @@ export default function EditStudentPage() {
       }
 
       // Sync enrollments - delete all existing and create new ones for selected courses
-      // First get existing enrollments
-      const existingEnrollments = await fetch(`/api/enrollments?studentId=${id}`).then(r => r.json())
+      // First get existing enrollments and available courses
+      const [existingEnrollments, availableCourses] = await Promise.all([
+        fetch(`/api/enrollments?studentId=${id}`).then(r => r.json()),
+        fetch("/api/courses").then(r => r.json())
+      ])
       const existingCourseIds = existingEnrollments.map((e: any) => e.courseId)
+      const validCourseIds = availableCourses.map((c: any) => c.id)
       
       // Delete enrollments for courses no longer selected
       for (const enrollment of existingEnrollments) {
@@ -121,8 +125,11 @@ export default function EditStudentPage() {
         }
       }
       
-      // Create or update enrollments for selected courses
+      // Create or update enrollments for selected courses (only if course exists)
       for (const courseId of student.courseIds) {
+        // Skip if course doesn't exist in database
+        if (!validCourseIds.includes(courseId)) continue
+        
         const sessionsForCourse = student.courseSessions[courseId] || student.totalSessions || 12
         if (!existingCourseIds.includes(courseId)) {
           // Create new enrollment
