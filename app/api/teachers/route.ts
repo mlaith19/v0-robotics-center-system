@@ -4,19 +4,11 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    // Get teachers with their payment balance (how much we owe them)
+    // Get all teachers - balance will be calculated when teacherId column is added to Payment table
     const teachers = await sql`
-      SELECT 
-        t.*,
-        COALESCE(payment_stats."totalPaid", 0) as "totalPaid"
-      FROM "Teacher" t
-      LEFT JOIN (
-        SELECT "teacherId", SUM(amount) as "totalPaid"
-        FROM "Payment"
-        WHERE "teacherId" IS NOT NULL
-        GROUP BY "teacherId"
-      ) payment_stats ON t.id = payment_stats."teacherId"
-      ORDER BY t."createdAt" DESC
+      SELECT *, 0 as "totalPaid"
+      FROM "Teacher"
+      ORDER BY "createdAt" DESC
     `
     return Response.json(teachers)
   } catch (err) {
