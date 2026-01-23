@@ -73,20 +73,19 @@ export default function NewStudentPage() {
         courseSessions[courseId] = newStudent.totalSessions
       })
 
+      // Map form fields to database column names
       const payload = {
-        ...newStudent,
-        idNumber: newStudent.idNumber || null,
-        birthDate: newStudent.birthDate || null,
+        name: newStudent.name,
         email: newStudent.email || null,
         phone: newStudent.phone || null,
         address: newStudent.address || null,
         city: newStudent.city || null,
-        father: newStudent.father || null,
-        mother: newStudent.mother || null,
-        additionalPhone: newStudent.additionalPhone || null,
-        healthFund: newStudent.healthFund || null,
-        allergies: newStudent.allergies || null,
-        courseSessions,
+        status: newStudent.status || "מתעניין",
+        birthDate: newStudent.birthDate || null,
+        studentId: newStudent.idNumber || null, // Map idNumber to studentId
+        parentName: newStudent.father || null, // Map father to parentName  
+        parentPhone: newStudent.additionalPhone || null, // Map additionalPhone to parentPhone
+        notes: newStudent.allergies || null, // Map allergies to notes
       }
 
       const res = await fetch("/api/students", {
@@ -120,9 +119,8 @@ export default function NewStudentPage() {
       
       // Redirect after short delay to show success message
       setTimeout(() => {
-        router.push("/dashboard/students")
-        router.refresh()
-      }, 1500)
+        window.location.href = "/dashboard/students"
+      }, 800)
     } catch (err: any) {
       setSubmitError(err?.message ?? "שגיאה בהוספת תלמיד")
     } finally {

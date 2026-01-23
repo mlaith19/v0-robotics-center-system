@@ -64,26 +64,26 @@ export default function EditStudentPage() {
     courseSessions: {} as Record<string, number>,
   })
 
-  // Update local state when student data is fetched
+  // Update local state when student data is fetched - map DB fields to form fields
   useEffect(() => {
     if (studentData && !studentError) {
       setStudent({
         name: studentData.name || "",
-        idNumber: studentData.idNumber || "",
+        idNumber: studentData.studentId || "", // DB: studentId -> Form: idNumber
         birthDate: studentData.birthDate ? studentData.birthDate.split("T")[0] : "",
         email: studentData.email || "",
         phone: studentData.phone || "",
         address: studentData.address || "",
         city: studentData.city || "",
-        father: studentData.father || "",
-        mother: studentData.mother || "",
-        additionalPhone: studentData.additionalPhone || "",
-        healthFund: studentData.healthFund || "",
-        allergies: studentData.allergies || "",
-        courseIds: studentData.courseIds || [],
+        father: studentData.parentName || "", // DB: parentName -> Form: father
+        mother: "", // Not in DB
+        additionalPhone: studentData.parentPhone || "", // DB: parentPhone -> Form: additionalPhone
+        healthFund: "", // Not in DB
+        allergies: studentData.notes || "", // DB: notes -> Form: allergies
+        courseIds: [], // Managed via enrollments
         status: studentData.status || "פעיל",
-        totalSessions: studentData.totalSessions || 12,
-        courseSessions: studentData.courseSessions || {},
+        totalSessions: 12, // Not in DB
+        courseSessions: {}, // Not in DB
       })
     }
   }, [studentData, studentError])
