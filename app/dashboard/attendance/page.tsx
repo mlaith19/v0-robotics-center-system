@@ -47,6 +47,7 @@ export default function AttendancePage() {
   const [attendanceType, setAttendanceType] = useState<AttendanceType>("course")
   const [selectedId, setSelectedId] = useState<string>("")
   const [selectedCourseId, setSelectedCourseId] = useState<string>("") // For student type - which course
+  const [participantType, setParticipantType] = useState<"student" | "teacher">("student") // For course type - show students or teachers
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({})
   const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({})
@@ -91,9 +92,14 @@ export default function AttendancePage() {
 
   const getTableData = () => {
     if (attendanceType === "course") {
-      // Get students enrolled in selected course
-      const enrolledStudentIds = enrollments.map((e: Enrollment) => e.studentId)
-      return students.filter((s: Student) => enrolledStudentIds.includes(s.id))
+      if (participantType === "student") {
+        // Get students enrolled in selected course
+        const enrolledStudentIds = enrollments.map((e: Enrollment) => e.studentId)
+        return students.filter((s: Student) => enrolledStudentIds.includes(s.id))
+      } else {
+        // Show all teachers (or filter by course assignment if available)
+        return teachers
+      }
     } else if (attendanceType === "teacher") {
       return teachers.filter((t: Teacher) => t.id === selectedId)
     } else {
@@ -130,8 +136,10 @@ export default function AttendancePage() {
         status,
       }
       
-      // For teacher attendance, send teacherId. For student/course, send studentId
-      if (attendanceType === "teacher") {
+      // Determine if this is teacher or student attendance
+      const isTeacherAttendance = attendanceType === "teacher" || (attendanceType === "course" && participantType === "teacher")
+      
+      if (isTeacherAttendance) {
         requestBody.teacherId = personId
       } else {
         requestBody.studentId = personId
@@ -242,7 +250,7 @@ export default function AttendancePage() {
             <CardDescription>בחר סוג, פריט ותאריך לניהול נוכחות</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className={`grid gap-3 ${attendanceType === "course" ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
+            <div className="grid gap-3 md:grid-cols-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">סוג</label>
                 <Select
@@ -308,6 +316,28 @@ export default function AttendancePage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {attendanceType === "course" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">סוג משתתף</label>
+                  <Select
+                    value={participantType}
+                    onValueChange={(value: "student" | "teacher") => {
+                      setParticipantType(value)
+                      setAttendanceData({})
+                    }}
+                    disabled={!selectedId}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="בחר סוג משתתף" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="student">תלמידים</SelectItem>
+                      <SelectItem value="teacher">מורים</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {(attendanceType === "student" || attendanceType === "teacher") && (
                 <div className="space-y-2">
@@ -427,13 +457,27 @@ export default function AttendancePage() {
                   <TableHeader className="sticky top-0 bg-white">
                     <TableRow className="bg-muted/50">
                       <TableHead className="text-right font-semibold">תאריך</TableHead>
-                      <TableHead className="text-right font-semibold">שם תלמיד</TableHead>
+                      <TableHead className="text-right font-semibold">סוג</TableHead>
+                      <TableHead className="text-right font-semibold">שם</TableHead>
                       <TableHead className="text-right font-semibold">סטטוס</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {attendanceHistory.map((record: any) => {
-                      const student = students.find((s) => s.id === record.studentId)
+                    {attendanceHistory
+                      .filter((record: any) => {
+                        // Filter by participant type
+                        if (participantType === "teacher") {
+                          return !!record.teacherId
+                        } else {
+                          return !!record.studentId
+                        }
+                      })
+                      .map((record: any) => {
+                      const isTeacher = !!record.teacherId
+                      const student = record.studentId ? students.find((s) => s.id === record.studentId) : null
+                      const teacher = record.teacherId ? teachers.find((t) => t.id === record.teacherId) : null
+                      const personName = isTeacher ? (teacher?.name || "לא ידוע") : (student?.name || "לא ידוע")
+                      
                       const statusLabels: Record<string, { label: string; color: string }> = {
                         present: { label: "נוכח", color: "bg-green-100 text-green-700" },
                         absent: { label: "לא נוכח", color: "bg-red-100 text-red-700" },
@@ -447,7 +491,12 @@ export default function AttendancePage() {
                           <TableCell className="font-medium">
                             {record.date ? format(new Date(record.date), "dd/MM/yyyy") : "-"}
                           </TableCell>
-                          <TableCell>{student?.name || "לא ידוע"}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${isTeacher ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                              {isTeacher ? "מורה" : "תלמיד"}
+                            </span>
+                          </TableCell>
+                          <TableCell>{personName}</TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
                               {statusInfo.label}
