@@ -20,24 +20,24 @@ import {
 import { hasPermission } from "@/lib/permissions"
 
 interface GafanProgram {
-  id: number
+  id: string
   name: string
-  program_number: string
-  valid_year: string
-  company_name: string
-  company_id: string
-  company_address: string
-  bank_name: string | null
-  bank_code: string | null
-  branch_number: string | null
-  account_number: string | null
-  operator_name: string
-  price_min: number
-  price_max: number | null
+  programNumber: string
+  validYear: number
+  companyName: string
+  companyId: string
+  companyAddress: string
+  bankName: string | null
+  bankCode: string | null
+  branchNumber: string | null
+  accountNumber: string | null
+  operatorName: string
+  priceMin: number
+  priceMax: number | null
   status: string
   notes: string | null
-  school_id: number | null
-  created_at: string
+  schoolId: string | null
+  createdAt: string
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -137,7 +137,7 @@ export default function GafanProgramsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg text-foreground mb-1">{program.name}</h3>
-                    <p className="text-sm text-muted-foreground">מס׳ תוכנית: {program.program_number}</p>
+                    <p className="text-sm text-muted-foreground">מס׳ תוכנית: {program.programNumber}</p>
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap mr-2 ${
@@ -155,22 +155,22 @@ export default function GafanProgramsPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{program.company_address || "לא צוינה כתובת"}</span>
+                    <span className="truncate">{program.companyAddress || "לא צוינה כתובת"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span>מפעיל: {program.operator_name}</span>
+                    <span>מפעיל: {program.operatorName}</span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="text-center p-2 bg-muted rounded-lg">
-                      <div className="font-semibold text-foreground">₪{program.price_min}</div>
+                      <div className="font-semibold text-foreground">₪{program.priceMin || 0}</div>
                       <div className="text-muted-foreground">מחיר מינימום</div>
                     </div>
                     <div className="text-center p-2 bg-muted rounded-lg">
-                      <div className="font-semibold text-foreground">{program.valid_year}</div>
+                      <div className="font-semibold text-foreground">{program.validYear || "-"}</div>
                       <div className="text-muted-foreground">תוקף לשנה</div>
                     </div>
                   </div>
@@ -270,19 +270,19 @@ export default function GafanProgramsPage() {
                       <div className="text-sm font-medium text-foreground">{program.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{program.program_number}</div>
+                      <div className="text-sm text-muted-foreground">{program.programNumber}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{program.company_name}</div>
+                      <div className="text-sm text-muted-foreground">{program.companyName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{program.operator_name}</div>
+                      <div className="text-sm text-muted-foreground">{program.operatorName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-center font-semibold text-primary">₪{program.price_min}</div>
+                      <div className="text-sm text-center font-semibold text-primary">₪{program.priceMin || 0}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{program.valid_year}</div>
+                      <div className="text-sm text-muted-foreground">{program.validYear || "-"}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span

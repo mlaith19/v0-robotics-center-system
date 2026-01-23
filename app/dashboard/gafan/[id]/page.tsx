@@ -103,7 +103,7 @@ export default function GafanProgramViewPage() {
                       </div>
                       <div className="flex-1">
                         <h2 className="text-2xl font-bold text-foreground mb-1">{program.name}</h2>
-                        <p className="text-muted-foreground">מס׳ תוכנית: {program.program_number}</p>
+                        <p className="text-muted-foreground">מס׳ תוכנית: {program.programNumber}</p>
                       </div>
                       <span
                         className={`px-4 py-2 rounded-full text-sm font-medium ${
@@ -133,12 +133,12 @@ export default function GafanProgramViewPage() {
                     <div className="grid grid-cols-2 gap-6">
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">תוקף לשנה</p>
-                        <p className="font-medium">{program.valid_year}</p>
+                        <p className="font-medium">{program.validYear}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">תאריך יצירה</p>
                         <p className="font-medium">
-                          {program.created_at ? new Date(program.created_at).toLocaleDateString("he-IL") : "לא זמין"}
+                          {program.createdAt ? new Date(program.createdAt).toLocaleDateString("he-IL") : "לא זמין"}
                         </p>
                       </div>
                     </div>
@@ -158,37 +158,37 @@ export default function GafanProgramViewPage() {
                     <div className="grid grid-cols-2 gap-6">
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">שם חברה</p>
-                        <p className="font-medium">{program.company_name}</p>
+                        <p className="font-medium">{program.companyName}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">ח"פ חברה</p>
-                        <p className="font-medium">{program.company_id}</p>
+                        <p className="font-medium">{program.companyId}</p>
                       </div>
                       <div className="col-span-2">
                         <p className="text-sm text-muted-foreground mb-1">כתובת</p>
-                        <p className="font-medium">{program.company_address}</p>
+                        <p className="font-medium">{program.companyAddress}</p>
                       </div>
                     </div>
 
-                    {program.bank_name && (
+                    {program.bankName && (
                       <div className="pt-6 border-t space-y-4">
                         <h4 className="font-semibold text-sm text-muted-foreground">פרטי חשבון בנק</h4>
                         <div className="grid grid-cols-2 gap-6">
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">בנק</p>
-                            <p className="font-medium">{program.bank_name}</p>
+                            <p className="font-medium">{program.bankName}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">קוד בנק</p>
-                            <p className="font-medium">{program.bank_code || "לא צוין"}</p>
+                            <p className="font-medium">{program.bankCode || "לא צוין"}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">סניף</p>
-                            <p className="font-medium">{program.branch_number || "לא צוין"}</p>
+                            <p className="font-medium">{program.branchNumber || "לא צוין"}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">מס׳ חשבון</p>
-                            <p className="font-medium">{program.account_number || "לא צוין"}</p>
+                            <p className="font-medium">{program.accountNumber || "לא צוין"}</p>
                           </div>
                         </div>
                       </div>
@@ -206,7 +206,7 @@ export default function GafanProgramViewPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-6">
-                    <p className="font-medium">{program.operator_name}</p>
+                    <p className="font-medium">{program.operatorName}</p>
                   </CardContent>
                 </Card>
 
@@ -221,11 +221,11 @@ export default function GafanProgramViewPage() {
                   </CardHeader>
                   <CardContent className="p-6">
                     <div className="flex items-center gap-2">
-                      <p className="text-2xl font-bold text-primary">₪{program.price_min}</p>
-                      {program.price_max && (
+                      <p className="text-2xl font-bold text-primary">₪{program.priceMin || 0}</p>
+                      {program.priceMax && (
                         <>
                           <span className="text-muted-foreground">-</span>
-                          <p className="text-2xl font-bold text-primary">₪{program.price_max}</p>
+                          <p className="text-2xl font-bold text-primary">₪{program.priceMax}</p>
                         </>
                       )}
                     </div>
