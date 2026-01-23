@@ -105,10 +105,13 @@ export default function AttendancePage() {
     const previousStatus = attendanceData[personId]
     
     // Determine the correct courseId based on attendance type
+    // For "course" type: selectedId IS the course
+    // For "student" type: we need selectedCourseId (separate selection)
+    // For "teacher" type: we need selectedCourseId as well
     const courseId = courseIdOverride || (attendanceType === "course" ? selectedId : selectedCourseId)
     
     if (!courseId) {
-      console.error("[v0] No course selected for attendance")
+      // No course selected - silently return (UI should prevent this)
       return
     }
     
