@@ -1,5 +1,17 @@
 "use client"
 
+import { TableCell } from "@/components/ui/table"
+
+import { TableBody } from "@/components/ui/table"
+
+import { TableHead } from "@/components/ui/table"
+
+import { TableRow } from "@/components/ui/table"
+
+import { TableHeader } from "@/components/ui/table"
+
+import { Table } from "@/components/ui/table"
+
 import { useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -469,27 +481,37 @@ export function StudentTabs({
         </div>
 
         <div className="space-y-3">
-          <h4 className="font-semibold text-foreground">היסטוריית תשלומים</h4>
+          <h4 className="font-semibold text-foreground text-lg">היסטוריית תשלומים</h4>
 
           {payments.length > 0 ? (
-            payments.map((p) => (
-              <Card key={p.id} className="p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">{formatDate(p.paymentDate)}</div>
-                    <div className="text-sm text-muted-foreground">שיטה: {paymentMethodHe(p.paymentType)}</div>
-                    {p.description ? <div className="text-xs text-muted-foreground">הערה: {p.description}</div> : null}
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold">{Number(p.amount).toLocaleString()} ₪</span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400">
-                      שולם
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            ))
+            <Card className="overflow-hidden border-2">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-right font-bold text-foreground">תאריך</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">סכום</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">אמצעי תשלום</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">הערה</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">סטטוס</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((p) => (
+                    <TableRow key={p.id} className="hover:bg-muted/30">
+                      <TableCell className="font-medium">{formatDate(p.paymentDate)}</TableCell>
+                      <TableCell className="font-bold text-primary">{Number(p.amount).toLocaleString()} ₪</TableCell>
+                      <TableCell>{paymentMethodHe(p.paymentType)}</TableCell>
+                      <TableCell className="text-muted-foreground">{p.description || "—"}</TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                          שולם
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
           ) : (
             <Card className="p-8 text-center">
               <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
