@@ -28,7 +28,21 @@ type Teacher = {
   externalCourseRate?: number | null
   createdAt?: string
   updatedAt?: string
-  teacherCourses?: { course: { id: string; name: string } }[]
+  teacherCourses?: { 
+    course: { 
+      id: string
+      name: string
+      daysOfWeek?: string[]
+      startTime?: string
+      endTime?: string
+      startDate?: string
+      endDate?: string
+      price?: number
+      status?: string
+      location?: string
+      enrollmentCount?: number
+    } 
+  }[]
   payments?: {
     id: string
     date: string
@@ -84,6 +98,30 @@ export default function TeacherViewPage() {
     "בנק ירושלים",
   ]
 
+  // Course dialog state
+  const [selectedCourse, setSelectedCourse] = useState(null)
+  const [isCourseDialogOpen, setIsCourseDialogOpen] = useState(false)
+
+  const openCourseDialog = (course) => {
+    setSelectedCourse(course)
+    setIsCourseDialogOpen(true)
+  }
+
+  const daysMap: Record<string, string> = {
+    sunday: "ראשון",
+    monday: "שני",
+    tuesday: "שלישי",
+    wednesday: "רביעי",
+    thursday: "חמישי",
+    friday: "שישי",
+    saturday: "שבת"
+  }
+
+  const formatDays = (days?: string[]) => {
+    if (!days || days.length === 0) return "-"
+    return days.map(d => daysMap[d.toLowerCase()] || d).join(", ")
+  }
+
   useEffect(() => {
     if (!id) return
     let cancelled = false
@@ -93,7 +131,7 @@ export default function TeacherViewPage() {
         setLoading(true)
         setError(null)
 
-        // דורש שה-API יחזיר כולל relations (מוסבר למטה אם חסר לך)
+        // Requires the API to return including relations (explained below if missing)
         const res = await fetch(`/api/teachers/${id}?include=1`, { cache: "no-store" })
         if (!res.ok) throw new Error(`Failed to load teacher (${res.status})`)
 
@@ -300,22 +338,49 @@ export default function TeacherViewPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="courses" className="mt-6 space-y-3">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-              <h4 className="font-semibold">קורסים משויכים</h4>
+          <TabsContent value="courses" className="mt-4 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="h-4 w-4 text-blue-600" />
+              <h4 className="font-semibold text-blue-700 dark:text-blue-400">קורסים משויכים ({courses.length})</h4>
             </div>
 
             {courses.length ? (
-              <div className="grid gap-3 md:grid-cols-2">
-                {courses.map((c) => (
-                  <Card key={c.id} className="p-4">
-                    <div className="font-semibold">{c.name}</div>
-                  </Card>
-                ))}
+              <div className="rounded-lg border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 dark:bg-slate-800">
+                    <tr>
+                      <th className="text-right p-3 font-medium">שם הקורס</th>
+                      <th className="text-right p-3 font-medium">ימים</th>
+                      <th className="text-right p-3 font-medium">שעות</th>
+                      <th className="text-right p-3 font-medium">תלמידים</th>
+                      <th className="text-right p-3 font-medium">ת. התחלה</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courses.map((c) => (
+                      <tr 
+                        key={c.id} 
+                        className="border-t hover:bg-blue-50/50 dark:hover:bg-blue-950/20 cursor-pointer transition-colors"
+                        onClick={() => openCourseDialog(c)}
+                      >
+                        <td className="p-3 font-medium text-blue-700 dark:text-blue-400">{c.name}</td>
+                        <td className="p-3 text-muted-foreground">{formatDays(c.daysOfWeek)}</td>
+                        <td className="p-3 text-muted-foreground">{c.startTime && c.endTime ? `${c.startTime}-${c.endTime}` : "-"}</td>
+                        <td className="p-3">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            {c.enrollmentCount || 0}
+                          </span>
+                        </td>
+                        <td className="p-3 text-muted-foreground">{fmtDate(c.startDate)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <Card className="p-6 text-center text-muted-foreground">אין קורסים משויכים למורה</Card>
+              <div className="p-6 text-center text-muted-foreground rounded-lg bg-slate-50 dark:bg-slate-900/50 border">
+                אין קורסים משויכים למורה
+              </div>
             )}
           </TabsContent>
 
@@ -466,7 +531,7 @@ export default function TeacherViewPage() {
 
             <div className="space-y-2">
               <Label htmlFor="payment-method">אמצעי תשלום</Label>
-              <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
+              <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v)}>
                 <SelectTrigger id="payment-method">
                   <SelectValue />
                 </SelectTrigger>
@@ -556,6 +621,76 @@ export default function TeacherViewPage() {
               )}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Course Details Dialog */}
+      <Dialog open={isCourseDialogOpen} onOpenChange={setIsCourseDialogOpen}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-blue-700 dark:text-blue-400">{selectedCourse?.name}</DialogTitle>
+            <DialogDescription>פרטי הקורס</DialogDescription>
+          </DialogHeader>
+          {selectedCourse && (
+            <div className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                  <div className="text-xs text-muted-foreground mb-1">ימים</div>
+                  <div className="font-semibold text-sm">{formatDays(selectedCourse.daysOfWeek)}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                  <div className="text-xs text-muted-foreground mb-1">שעות</div>
+                  <div className="font-semibold text-sm">
+                    {selectedCourse.startTime && selectedCourse.endTime 
+                      ? `${selectedCourse.startTime} - ${selectedCourse.endTime}` 
+                      : "-"}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                  <div className="text-xs text-muted-foreground mb-1">תאריך התחלה</div>
+                  <div className="font-semibold text-sm">{fmtDate(selectedCourse.startDate)}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                  <div className="text-xs text-muted-foreground mb-1">תאריך סיום</div>
+                  <div className="font-semibold text-sm">{fmtDate(selectedCourse.endDate)}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                  <div className="text-xs text-green-600 mb-1">תלמידים רשומים</div>
+                  <div className="font-semibold text-lg text-green-700 dark:text-green-400">{selectedCourse.enrollmentCount || 0}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                  <div className="text-xs text-blue-600 mb-1">מחיר</div>
+                  <div className="font-semibold text-lg text-blue-700 dark:text-blue-400">{selectedCourse.price?.toLocaleString() || 0} ₪</div>
+                </div>
+              </div>
+              
+              {selectedCourse.location && (
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                  <div className="text-xs text-muted-foreground mb-1">מיקום</div>
+                  <div className="font-semibold text-sm">{selectedCourse.location}</div>
+                </div>
+              )}
+              
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 bg-transparent"
+                  onClick={() => setIsCourseDialogOpen(false)}
+                >
+                  סגור
+                </Button>
+                <Button 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => {
+                    setIsCourseDialogOpen(false)
+                    router.push(`/dashboard/courses/${selectedCourse.id}`)
+                  }}
+                >
+                  צפה בקורס
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

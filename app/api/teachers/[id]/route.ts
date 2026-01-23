@@ -15,15 +15,47 @@ export async function GET(req: Request, { params }: Ctx) {
     }
 
     // Get courses where this teacher is assigned (teacherIds contains this teacher's id)
+    // Include enrollment count for each course
     const courses = await sql`
-      SELECT id, name FROM "Course" 
-      WHERE ${id} = ANY("teacherIds")
-      ORDER BY name
+      SELECT 
+        c.id, 
+        c.name, 
+        c."daysOfWeek",
+        c."startTime",
+        c."endTime",
+        c."startDate",
+        c."endDate",
+        c.price,
+        c.status,
+        c.location,
+        COALESCE(enrollment_stats."enrollmentCount", 0) as "enrollmentCount"
+      FROM "Course" c
+      LEFT JOIN (
+        SELECT "courseId", COUNT(*) as "enrollmentCount"
+        FROM "Enrollment"
+        GROUP BY "courseId"
+      ) enrollment_stats ON c.id = enrollment_stats."courseId"
+      WHERE ${id} = ANY(c."teacherIds")
+      ORDER BY c.name
     `
 
     const teacher = {
       ...result[0],
-      teacherCourses: courses.map((c: any) => ({ course: { id: c.id, name: c.name } }))
+      teacherCourses: courses.map((c: any) => ({ 
+        course: { 
+          id: c.id, 
+          name: c.name,
+          daysOfWeek: c.daysOfWeek,
+          startTime: c.startTime,
+          endTime: c.endTime,
+          startDate: c.startDate,
+          endDate: c.endDate,
+          price: c.price,
+          status: c.status,
+          location: c.location,
+          enrollmentCount: c.enrollmentCount
+        } 
+      }))
     }
 
     return Response.json(teacher)
