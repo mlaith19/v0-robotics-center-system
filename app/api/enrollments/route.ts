@@ -57,7 +57,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { studentId, courseId, status } = body
+    const { studentId, courseId, status, sessionsLeft } = body
 
     if (!studentId || !courseId) {
       return Response.json({ error: "studentId and courseId are required" }, { status: 400 })
@@ -76,10 +76,11 @@ export async function POST(req: Request) {
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
     const enrollmentDate = new Date().toISOString().split('T')[0]
+    const sessions = sessionsLeft ?? 12 // Default to 12 if not provided
 
     const result = await sql`
-      INSERT INTO "Enrollment" (id, "studentId", "courseId", "enrollmentDate", status, "createdAt")
-      VALUES (${id}, ${studentId}, ${courseId}, ${enrollmentDate}, ${status || 'active'}, ${now})
+      INSERT INTO "Enrollment" (id, "studentId", "courseId", "enrollmentDate", status, "sessionsLeft", "createdAt")
+      VALUES (${id}, ${studentId}, ${courseId}, ${enrollmentDate}, ${status || 'active'}, ${sessions}, ${now})
       RETURNING *
     `
 

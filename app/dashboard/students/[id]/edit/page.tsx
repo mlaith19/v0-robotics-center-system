@@ -121,18 +121,33 @@ export default function EditStudentPage() {
         }
       }
       
-      // Create enrollments for newly selected courses
+      // Create or update enrollments for selected courses
       for (const courseId of student.courseIds) {
+        const sessionsForCourse = student.courseSessions[courseId] || student.totalSessions || 12
         if (!existingCourseIds.includes(courseId)) {
+          // Create new enrollment
           await fetch("/api/enrollments", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               studentId: id,
               courseId: courseId,
-              status: "active"
+              status: "active",
+              sessionsLeft: sessionsForCourse
             })
           })
+        } else {
+          // Update existing enrollment sessionsLeft if needed
+          const existingEnrollment = existingEnrollments.find((e: any) => e.courseId === courseId)
+          if (existingEnrollment && (existingEnrollment.sessionsLeft === null || existingEnrollment.sessionsLeft === 0)) {
+            await fetch(`/api/enrollments/${existingEnrollment.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                sessionsLeft: sessionsForCourse
+              })
+            })
+          }
         }
       }
 
