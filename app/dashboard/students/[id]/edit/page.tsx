@@ -16,7 +16,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CityCombobox } from "@/components/ui/combobox-city"
 
-import { ArrowRight, User, Award as IdCard, Phone, Users, Heart, BookOpen, X } from "lucide-react"
+import { ArrowRight, User, Award as IdCard, Phone, Users, Heart, BookOpen, X, Loader2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -27,6 +37,9 @@ export default function EditStudentPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [hasChanges, setHasChanges] = useState(false)
 
   // Fetch courses and student from API
   const { data: courses = [] } = useSWR("/api/courses", fetcher)
@@ -77,7 +90,7 @@ export default function EditStudentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!id) return
+    if (!id || isSubmitting || submitSuccess) return
 
     setIsSubmitting(true)
     setSubmitError(null)
@@ -109,13 +122,31 @@ export default function EditStudentPage() {
         throw new Error(err?.error || `Failed to update student (${res.status})`)
       }
 
-      router.push(`/dashboard/students/${id}`)
-      router.refresh()
+      setSubmitSuccess(true)
+      setHasChanges(false)
+      
+      setTimeout(() => {
+        router.push(`/dashboard/students/${id}`)
+        router.refresh()
+      }, 1500)
     } catch (err: any) {
       setSubmitError(err?.message ?? "שגיאה בעדכון תלמיד")
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleCancel = () => {
+    if (hasChanges) {
+      setCancelDialogOpen(true)
+    } else {
+      router.push(id ? `/dashboard/students/${id}` : "/dashboard/students")
+    }
+  }
+
+  const updateStudent = (updates: Partial<typeof student>) => {
+    setStudent(prev => ({ ...prev, ...updates }))
+    setHasChanges(true)
   }
 
   const toggleCourse = (courseId: string) => {
@@ -135,6 +166,7 @@ export default function EditStudentPage() {
         courseSessions: updatedCourseSessions,
       }
     })
+    setHasChanges(true)
   }
 
   if (studentError) {
@@ -161,6 +193,13 @@ export default function EditStudentPage() {
         </div>
       </div>
 
+      {submitSuccess && (
+        <Card className="border-2 border-green-200 bg-green-50 p-4">
+          <div className="font-medium text-green-700">השינויים נשמרו בהצלחה!</div>
+          <div className="text-sm text-green-700/80 mt-1">מעביר לדף התלמיד...</div>
+        </Card>
+      )}
+
       {submitError && (
         <Card className="border-2 border-red-200 bg-red-50 p-4">
           <div className="font-medium text-red-700">שגיאה</div>
@@ -176,7 +215,7 @@ export default function EditStudentPage() {
           <div className="flex-1">
             <h3 className="font-semibold text-lg mb-2">סטטוס התלמיד</h3>
             <p className="text-sm text-muted-foreground mb-3">בחר את סטטוס התלמיד הנוכחי</p>
-            <Select value={student.status} onValueChange={(value) => setStudent({ ...student, status: value })}>
+            <Select value={student.status} onValueChange={(value) => updateStudent({ status: value })}>
               <SelectTrigger className="w-full bg-white">
                 <SelectValue />
               </SelectTrigger>
@@ -210,7 +249,7 @@ export default function EditStudentPage() {
               <Input
                 id="name"
                 value={student.name}
-                onChange={(e) => setStudent({ ...student, name: e.target.value })}
+                onChange={(e) => updateStudent({ name: e.target.value })}
                 placeholder="לדוגמה: יוסי כהן"
                 className="text-base h-12 bg-white"
                 required
@@ -225,7 +264,7 @@ export default function EditStudentPage() {
                 <Input
                   id="idNumber"
                   value={student.idNumber}
-                  onChange={(e) => setStudent({ ...student, idNumber: e.target.value })}
+                  onChange={(e) => updateStudent({ idNumber: e.target.value })}
                   placeholder="123456789"
                   className="text-base h-12 bg-white"
                 />
@@ -239,7 +278,7 @@ export default function EditStudentPage() {
                   id="birthDate"
                   type="date"
                   value={student.birthDate}
-                  onChange={(e) => setStudent({ ...student, birthDate: e.target.value })}
+                  onChange={(e) => updateStudent({ birthDate: e.target.value })}
                   className="text-base h-12 bg-white"
                 />
               </div>
@@ -266,7 +305,7 @@ export default function EditStudentPage() {
                 id="email"
                 type="email"
                 value={student.email}
-                onChange={(e) => setStudent({ ...student, email: e.target.value })}
+                onChange={(e) => updateStudent({ email: e.target.value })}
                 placeholder="student@example.com"
                 className="text-base h-12 bg-white"
               />
@@ -280,7 +319,7 @@ export default function EditStudentPage() {
                 <Input
                   id="phone"
                   value={student.phone}
-                  onChange={(e) => setStudent({ ...student, phone: e.target.value })}
+                  onChange={(e) => updateStudent({ phone: e.target.value })}
                   placeholder="050-1234567"
                   className="text-base h-12 bg-white"
                 />
@@ -293,7 +332,7 @@ export default function EditStudentPage() {
                 <Input
                   id="additionalPhone"
                   value={student.additionalPhone}
-                  onChange={(e) => setStudent({ ...student, additionalPhone: e.target.value })}
+                  onChange={(e) => updateStudent({ additionalPhone: e.target.value })}
                   placeholder="052-9876543"
                   className="text-base h-12 bg-white"
                 />
@@ -306,7 +345,7 @@ export default function EditStudentPage() {
               </Label>
               <CityCombobox
                 value={student.city}
-                onChange={(value) => setStudent({ ...student, city: value })}
+                onChange={(value) => updateStudent({ city: value })}
                 placeholder="בחר עיר"
                 className="bg-white"
               />
@@ -319,7 +358,7 @@ export default function EditStudentPage() {
               <Input
                 id="address"
                 value={student.address}
-                onChange={(e) => setStudent({ ...student, address: e.target.value })}
+                onChange={(e) => updateStudent({ address: e.target.value })}
                 placeholder="רחוב 123"
                 className="text-base h-12 bg-white"
               />
@@ -345,7 +384,7 @@ export default function EditStudentPage() {
               <Input
                 id="father"
                 value={student.father}
-                onChange={(e) => setStudent({ ...student, father: e.target.value })}
+                onChange={(e) => updateStudent({ father: e.target.value })}
                 placeholder="שם האב"
                 className="text-base h-12 bg-white"
               />
@@ -358,7 +397,7 @@ export default function EditStudentPage() {
               <Input
                 id="mother"
                 value={student.mother}
-                onChange={(e) => setStudent({ ...student, mother: e.target.value })}
+                onChange={(e) => updateStudent({ mother: e.target.value })}
                 placeholder="שם האם"
                 className="text-base h-12 bg-white"
               />
@@ -381,7 +420,7 @@ export default function EditStudentPage() {
               <Label htmlFor="healthFund" className="text-base font-medium">
                 קופת חולים
               </Label>
-              <Select value={student.healthFund} onValueChange={(value) => setStudent({ ...student, healthFund: value })}>
+              <Select value={student.healthFund} onValueChange={(value) => updateStudent({ healthFund: value })}>
                 <SelectTrigger id="healthFund" className="h-12 bg-white">
                   <SelectValue placeholder="בחר קופת חולים" />
                 </SelectTrigger>
@@ -401,7 +440,7 @@ export default function EditStudentPage() {
               <Textarea
                 id="allergies"
                 value={student.allergies}
-                onChange={(e) => setStudent({ ...student, allergies: e.target.value })}
+                onChange={(e) => updateStudent({ allergies: e.target.value })}
                 placeholder="פרט כל רגישות או אלרגיה רלוונטית..."
                 rows={4}
                 className="text-base resize-none bg-white"
@@ -430,7 +469,7 @@ export default function EditStudentPage() {
               type="number"
               min="1"
               value={student.totalSessions}
-              onChange={(e) => setStudent({ ...student, totalSessions: Number.parseInt(e.target.value) || 12 })}
+              onChange={(e) => updateStudent({ totalSessions: Number.parseInt(e.target.value) || 12 })}
               className="text-base h-12 bg-white mt-2"
             />
           </div>
@@ -493,17 +532,56 @@ export default function EditStudentPage() {
         </Card>
 
         <div className="flex gap-3 justify-start">
-          <Button type="submit" size="lg" className="h-12 px-8 text-base" disabled={isSubmitting || !student.name || !id}>
-            {isSubmitting ? "שומר..." : "שמור שינויים"}
+          <Button 
+            type="submit" 
+            size="lg" 
+            className="h-12 px-8 text-base" 
+            disabled={isSubmitting || submitSuccess || !student.name || !id}
+          >
+            {submitSuccess ? (
+              "נשמר בהצלחה!"
+            ) : isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                שומר...
+              </>
+            ) : (
+              "שמור שינויים"
+            )}
           </Button>
 
-          <Link href={id ? `/dashboard/students/${id}` : "/dashboard/students"}>
-            <Button type="button" variant="outline" size="lg" className="h-12 px-8 text-base bg-transparent">
-              ביטול
-            </Button>
-          </Link>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="lg" 
+            className="h-12 px-8 text-base bg-transparent"
+            onClick={handleCancel}
+          >
+            ביטול
+          </Button>
         </div>
       </form>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>יש שינויים שלא נשמרו</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם אתה בטוח שברצונך לצאת? כל השינויים שלא נשמרו יאבדו.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>המשך לערוך</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => router.push(id ? `/dashboard/students/${id}` : "/dashboard/students")}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              צא בלי לשמור
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

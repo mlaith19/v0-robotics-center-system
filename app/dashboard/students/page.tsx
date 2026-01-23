@@ -176,22 +176,22 @@ export default function StudentsPage() {
           {filteredStudents.map((student) => (
             <Card key={student.id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-5">
-                {/* Header with Avatar and Status */}
-                <div className="flex items-start justify-between mb-4">
-                  <Badge className={statusColors[student.status || "מתעניין"] || "bg-gray-100 text-gray-800"}>
-                    {statusLabels[student.status || "מתעניין"] || student.status || "מתעניין"}
-                  </Badge>
+                {/* Header with Avatar and Status - RTL */}
+                <div className="flex items-start justify-between mb-4 flex-row-reverse">
                   <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      <User className="h-6 w-6 text-blue-600" />
+                    </div>
                     <div className="text-right">
                       <h3 className="font-semibold text-lg">{student.name}</h3>
                       {student.city && (
                         <p className="text-sm text-muted-foreground">{student.city}</p>
                       )}
                     </div>
-                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                      <User className="h-6 w-6 text-blue-600" />
-                    </div>
                   </div>
+                  <Badge className={statusColors[student.status || "מתעניין"] || "bg-gray-100 text-gray-800"}>
+                    {statusLabels[student.status || "מתעניין"] || student.status || "מתעניין"}
+                  </Badge>
                 </div>
 
                 {/* Contact Info */}
