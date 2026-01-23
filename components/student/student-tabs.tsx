@@ -91,12 +91,11 @@ export function StudentTabs({
 }) {
   const paymentsSummary = useMemo(() => {
     const paid = payments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + p.amount, 0)
-    // Calculate total course costs from enrollments
-    const totalCourseCosts = enrollments.reduce((sum, e) => sum + (e.coursePrice || 0), 0)
-    // Pending = total course costs minus what was paid
-    const pending = Math.max(0, totalCourseCosts - paid)
-    const total = totalCourseCosts
-    return { paid, pending, total }
+    // Calculate total course costs (charges) from enrollments
+    const charges = enrollments.reduce((sum, e) => sum + (e.coursePrice || 0), 0)
+    // Balance = paid - charges (negative means owes money, positive means credit)
+    const balance = paid - charges
+    return { paid, charges, balance }
   }, [payments, enrollments])
 
   const attendanceSummary = useMemo(() => {
@@ -180,17 +179,19 @@ export function StudentTabs({
           <Card className="p-4 bg-orange-50 dark:bg-orange-950/20">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-orange-600 font-bold">₪</span>
-              <p className="text-xs text-orange-700 dark:text-orange-400">ממתין</p>
+              <p className="text-xs text-orange-700 dark:text-orange-400">חיובים</p>
             </div>
-            <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">{paymentsSummary.pending.toLocaleString()} ₪</p>
+            <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">{paymentsSummary.charges.toLocaleString()} ₪</p>
           </Card>
 
-          <Card className="p-4 bg-blue-50 dark:bg-blue-950/20">
+          <Card className={`p-4 ${paymentsSummary.balance >= 0 ? "bg-green-50 dark:bg-green-950/20" : "bg-red-50 dark:bg-red-950/20"}`}>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-blue-600 font-bold">₪</span>
-              <p className="text-xs text-blue-700 dark:text-blue-400">סה"כ</p>
+              <span className={`font-bold ${paymentsSummary.balance >= 0 ? "text-green-600" : "text-red-600"}`}>₪</span>
+              <p className={`text-xs ${paymentsSummary.balance >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>יתרה</p>
             </div>
-            <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{paymentsSummary.total.toLocaleString()} ₪</p>
+            <p className={`text-2xl font-bold ${paymentsSummary.balance >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
+              {paymentsSummary.balance.toLocaleString()} ₪
+            </p>
           </Card>
         </div>
 
