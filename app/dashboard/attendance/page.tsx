@@ -46,6 +46,7 @@ export default function AttendancePage() {
   const router = useRouter()
   const [attendanceType, setAttendanceType] = useState<AttendanceType>("course")
   const [selectedId, setSelectedId] = useState<string>("")
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("") // For student type - which course
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({})
   const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({})
@@ -92,8 +93,16 @@ export default function AttendancePage() {
     }
   }
 
-  const handleStatusChange = async (personId: string, status: AttendanceStatus) => {
+  const handleStatusChange = async (personId: string, status: AttendanceStatus, courseIdOverride?: string) => {
     const previousStatus = attendanceData[personId]
+    
+    // Determine the correct courseId based on attendance type
+    const courseId = courseIdOverride || (attendanceType === "course" ? selectedId : selectedCourseId)
+    
+    if (!courseId) {
+      console.error("[v0] No course selected for attendance")
+      return
+    }
     
     // Optimistic update
     setAttendanceData((prev) => ({
@@ -103,28 +112,24 @@ export default function AttendancePage() {
     setSavingStatus((prev) => ({ ...prev, [personId]: true }))
 
     try {
-      console.log("[v0] Saving attendance:", { personId, courseId: selectedId, date: dateStr, status })
-      
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           studentId: personId,
-          courseId: selectedId,
+          courseId,
           date: dateStr,
           status,
         }),
       })
 
-      const data = await res.json()
-      console.log("[v0] API response:", res.ok, data)
-
       if (!res.ok) {
+        const data = await res.json()
         throw new Error(data.error || "Failed to save attendance")
       }
 
       // Revalidate attendance data
-      mutate(`/api/attendance?courseId=${selectedId}&date=${dateStr}`)
+      mutate(`/api/attendance?courseId=${courseId}&date=${dateStr}`)
     } catch (error) {
       // Revert on error
       setAttendanceData((prev) => ({
@@ -217,7 +222,7 @@ export default function AttendancePage() {
             <CardDescription>בחר סוג, פריט ותאריך לניהול נוכחות</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className={`grid gap-3 ${attendanceType === "student" ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
               <div className="space-y-2">
                 <label className="text-sm font-medium">סוג</label>
                 <Select
@@ -225,6 +230,7 @@ export default function AttendancePage() {
                   onValueChange={(value: AttendanceType) => {
                     setAttendanceType(value)
                     setSelectedId("")
+                    setSelectedCourseId("")
                     setAttendanceData({})
                   }}
                 >
@@ -283,6 +289,31 @@ export default function AttendancePage() {
                 </Select>
               </div>
 
+              {attendanceType === "student" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">קורס</label>
+                  <Select
+                    value={selectedCourseId}
+                    onValueChange={(value) => {
+                      setSelectedCourseId(value)
+                      setAttendanceData({})
+                    }}
+                    disabled={!courses.length || !selectedId}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder={selectedId ? "בחר קורס" : "בחר תלמיד קודם"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map((course: Course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">תאריך</label>
                 <input
@@ -300,7 +331,7 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
 
-        {selectedId && tableData.length > 0 && (
+        {selectedId && tableData.length > 0 && (attendanceType !== "student" || selectedCourseId) && (
           <Card className="border-green-200 bg-green-50/30">
             <CardHeader>
               <CardTitle className="text-lg">
