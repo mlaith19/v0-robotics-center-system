@@ -15,6 +15,8 @@ type Enrollment = {
   sessionsLeft?: number
   status: string
   joinedAt?: string
+  enrollmentDate?: string
+  courseName?: string
   course?: Course | null
 }
 
@@ -139,9 +141,9 @@ export function StudentTabs({
               <Card key={enr.id} className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1 flex-1">
-                    <h5 className="font-semibold text-foreground">{enr.course?.name ?? "קורס לא ידוע"}</h5>
+                    <h5 className="font-semibold text-foreground">{enr.courseName || enr.course?.name || "קורס לא ידוע"}</h5>
                     <div className="text-xs text-muted-foreground">
-                      הצטרף: {formatDate(enr.joinedAt)} · סטטוס: {enr.status}
+                      הצטרף: {formatDate(enr.enrollmentDate || enr.joinedAt)} · סטטוס: {enr.status === "active" ? "פעיל" : enr.status}
                     </div>
                   </div>
 

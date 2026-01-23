@@ -107,6 +107,35 @@ export default function EditStudentPage() {
         throw new Error(err?.error || `Failed to update student (${res.status})`)
       }
 
+      // Sync enrollments - delete all existing and create new ones for selected courses
+      // First get existing enrollments
+      const existingEnrollments = await fetch(`/api/enrollments?studentId=${id}`).then(r => r.json())
+      const existingCourseIds = existingEnrollments.map((e: any) => e.courseId)
+      
+      // Delete enrollments for courses no longer selected
+      for (const enrollment of existingEnrollments) {
+        if (!student.courseIds.includes(enrollment.courseId)) {
+          await fetch(`/api/enrollments?studentId=${id}&courseId=${enrollment.courseId}`, {
+            method: "DELETE"
+          })
+        }
+      }
+      
+      // Create enrollments for newly selected courses
+      for (const courseId of student.courseIds) {
+        if (!existingCourseIds.includes(courseId)) {
+          await fetch("/api/enrollments", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              studentId: id,
+              courseId: courseId,
+              status: "active"
+            })
+          })
+        }
+      }
+
       // Navigate immediately
       window.location.href = "/dashboard/students"
     } catch (err: any) {

@@ -32,6 +32,15 @@ interface Teacher {
   name: string
 }
 
+interface Enrollment {
+  id: string
+  studentId: string
+  courseId: string
+  studentName: string
+  status: string
+  enrollmentDate: string
+}
+
 const levelLabels: Record<string, string> = {
   beginner: "מתחילים",
   intermediate: "מתקדמים",
@@ -65,14 +74,16 @@ export default function CourseViewPage() {
   const id = params.id as string
   const [course, setCourse] = useState<Course | null>(null)
   const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [courseRes, teachersRes] = await Promise.all([
+        const [courseRes, teachersRes, enrollmentsRes] = await Promise.all([
           fetch(`/api/courses/${id}`),
-          fetch("/api/teachers")
+          fetch("/api/teachers"),
+          fetch(`/api/enrollments?courseId=${id}`)
         ])
         if (courseRes.ok) {
           const data = await courseRes.json()
@@ -81,6 +92,10 @@ export default function CourseViewPage() {
         if (teachersRes.ok) {
           const data = await teachersRes.json()
           setTeachers(Array.isArray(data) ? data : [])
+        }
+        if (enrollmentsRes.ok) {
+          const data = await enrollmentsRes.json()
+          setEnrollments(Array.isArray(data) ? data : [])
         }
       } catch (err) {
         console.error("Failed to fetch data:", err)
@@ -230,7 +245,7 @@ export default function CourseViewPage() {
               <CardContent>
                 <div className="flex flex-row-reverse justify-between items-center">
                   <span className="text-muted-foreground">סה"כ תלמידים:</span>
-                  <span className="font-bold text-2xl text-blue-600">0</span>
+                  <span className="font-bold text-2xl text-blue-600">{enrollments.length}</span>
                 </div>
               </CardContent>
             </Card>
@@ -260,8 +275,36 @@ export default function CourseViewPage() {
 
         <TabsContent value="students">
           <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">
-              רשימת התלמידים המשויכים לקורס תוצג כאן
+            <CardHeader>
+              <CardTitle className="text-lg">תלמידים רשומים לקורס ({enrollments.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {enrollments.length > 0 ? (
+                <div className="space-y-3">
+                  {enrollments.map((enrollment) => (
+                    <div key={enrollment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{enrollment.studentName || "תלמיד לא ידוע"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            נרשם: {enrollment.enrollmentDate || "-"}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className={enrollment.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                        {enrollment.status === "active" ? "פעיל" : enrollment.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  אין תלמידים רשומים לקורס זה
+                </p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
