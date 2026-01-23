@@ -73,25 +73,13 @@ export default function NewStudentPage() {
         courseSessions[courseId] = newStudent.totalSessions
       })
 
-      // Map form fields to database column names
-      const payload = {
-        name: newStudent.name,
-        email: newStudent.email || null,
-        phone: newStudent.phone || null,
-        address: newStudent.address || null,
-        city: newStudent.city || null,
-        status: newStudent.status || "מתעניין",
-        birthDate: newStudent.birthDate || null,
-        studentId: newStudent.idNumber || null, // Map idNumber to studentId
-        parentName: newStudent.father || null, // Map father to parentName  
-        parentPhone: newStudent.additionalPhone || null, // Map additionalPhone to parentPhone
-        notes: newStudent.allergies || null, // Map allergies to notes
-      }
-
       const res = await fetch("/api/students", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...newStudent,
+          courseSessions,
+        }),
       })
 
       if (!res.ok) {
@@ -114,13 +102,8 @@ export default function NewStudentPage() {
         })
       }
 
-      // Mark as success to prevent double submission
-      setSubmitSuccess(true)
-      
-      // Redirect after short delay to show success message
-      setTimeout(() => {
-        window.location.href = "/dashboard/students"
-      }, 800)
+      // Navigate immediately
+      window.location.href = "/dashboard/students"
     } catch (err: any) {
       setSubmitError(err?.message ?? "שגיאה בהוספת תלמיד")
     } finally {

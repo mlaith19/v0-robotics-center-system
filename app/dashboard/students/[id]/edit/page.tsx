@@ -64,26 +64,26 @@ export default function EditStudentPage() {
     courseSessions: {} as Record<string, number>,
   })
 
-  // Update local state when student data is fetched - map DB fields to form fields
+  // Update local state when student data is fetched
   useEffect(() => {
     if (studentData && !studentError) {
       setStudent({
         name: studentData.name || "",
-        idNumber: studentData.studentId || "", // DB: studentId -> Form: idNumber
+        idNumber: studentData.idNumber || "",
         birthDate: studentData.birthDate ? studentData.birthDate.split("T")[0] : "",
         email: studentData.email || "",
         phone: studentData.phone || "",
         address: studentData.address || "",
         city: studentData.city || "",
-        father: studentData.parentName || "", // DB: parentName -> Form: father
-        mother: "", // Not in DB
-        additionalPhone: studentData.parentPhone || "", // DB: parentPhone -> Form: additionalPhone
-        healthFund: "", // Not in DB
-        allergies: studentData.notes || "", // DB: notes -> Form: allergies
-        courseIds: [], // Managed via enrollments
+        father: studentData.father || "",
+        mother: studentData.mother || "",
+        additionalPhone: studentData.additionalPhone || "",
+        healthFund: studentData.healthFund || "",
+        allergies: studentData.allergies || "",
+        courseIds: studentData.courseIds || [],
         status: studentData.status || "פעיל",
-        totalSessions: 12, // Not in DB
-        courseSessions: {}, // Not in DB
+        totalSessions: studentData.totalSessions || 12,
+        courseSessions: studentData.courseSessions || {},
       })
     }
   }, [studentData, studentError])
@@ -96,25 +96,10 @@ export default function EditStudentPage() {
     setSubmitError(null)
 
     try {
-      // Map form fields to database column names
-      const payload = {
-        name: student.name || null,
-        email: student.email || null,
-        phone: student.phone || null,
-        address: student.address || null,
-        city: student.city || null,
-        status: student.status || "פעיל",
-        birthDate: student.birthDate || null,
-        studentId: student.idNumber || null, // Map idNumber to studentId
-        parentName: student.father || null, // Map father to parentName
-        parentPhone: student.additionalPhone || null, // Map additionalPhone to parentPhone
-        notes: student.allergies || null, // Map allergies to notes
-      }
-
       const res = await fetch(`/api/students/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(student),
       })
 
       if (!res.ok) {
@@ -122,14 +107,8 @@ export default function EditStudentPage() {
         throw new Error(err?.error || `Failed to update student (${res.status})`)
       }
 
-      setSubmitSuccess(true)
-      setHasChanges(false)
-      setIsSubmitting(false)
-      
-      // Navigate to students list immediately after short feedback
-      setTimeout(() => {
-        window.location.href = "/dashboard/students"
-      }, 800)
+      // Navigate immediately
+      window.location.href = "/dashboard/students"
     } catch (err: any) {
       setSubmitError(err?.message ?? "שגיאה בעדכון תלמיד")
       setIsSubmitting(false)
