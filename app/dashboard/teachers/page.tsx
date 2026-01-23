@@ -25,6 +25,7 @@ type Teacher = {
   centerHourlyRate?: number | null
   travelRate?: number | null
   externalCourseRate?: number | null
+  totalPaid?: number | null
   createdAt?: string
 }
 
@@ -192,17 +193,17 @@ export default function TeachersPage() {
 
               {/* Contact info */}
               <div className="space-y-2 text-sm">
-                {t.email && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-4 w-4 text-blue-500" />
-                    <span dir="ltr">{t.email}</span>
-                  </div>
-                )}
-
                 {t.phone && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Phone className="h-4 w-4 text-green-500" />
                     <span dir="ltr">{t.phone}</span>
+                  </div>
+                )}
+
+                {t.email && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-4 w-4 text-blue-500" />
+                    <span dir="ltr">{t.email}</span>
                   </div>
                 )}
 
@@ -212,38 +213,26 @@ export default function TeachersPage() {
                     <span>{t.city}</span>
                   </div>
                 )}
-
-                {t.specialization && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <GraduationCap className="h-4 w-4 text-orange-500" />
-                    <span>{t.specialization}</span>
-                  </div>
-                )}
               </div>
 
-              {/* Rates */}
-              {(t.centerHourlyRate || t.externalCourseRate) && (
-                <div className="grid grid-cols-2 gap-2">
-                  {t.centerHourlyRate && (
-                    <div className="bg-blue-50 rounded-lg p-3 text-center">
-                      <div className="flex items-center justify-center gap-1 text-blue-600 text-xs mb-1">
-                        <Banknote className="h-3 w-3" />
-                        <span>מחיר במרכז</span>
-                      </div>
-                      <div className="font-bold text-blue-700">{t.centerHourlyRate}₪</div>
-                    </div>
-                  )}
-                  {t.externalCourseRate && (
-                    <div className="bg-orange-50 rounded-lg p-3 text-center">
-                      <div className="flex items-center justify-center gap-1 text-orange-600 text-xs mb-1">
-                        <Banknote className="h-3 w-3" />
-                        <span>קורס חיצוני</span>
-                      </div>
-                      <div className="font-bold text-orange-700">{t.externalCourseRate}₪</div>
-                    </div>
-                  )}
+              {/* Balance */}
+              <div className={`rounded-lg p-3 text-center ${
+                (t.totalPaid || 0) > 0 
+                  ? "bg-green-50 dark:bg-green-950/20" 
+                  : "bg-slate-50 dark:bg-slate-800"
+              }`}>
+                <div className="flex items-center justify-center gap-1 text-xs mb-1 text-muted-foreground">
+                  <span className="font-bold">₪</span>
+                  <span>יתרה לתשלום</span>
                 </div>
-              )}
+                <div className={`font-bold text-lg ${
+                  (t.totalPaid || 0) > 0 
+                    ? "text-green-700 dark:text-green-400" 
+                    : "text-muted-foreground"
+                }`}>
+                  {(t.totalPaid || 0).toLocaleString()} ₪
+                </div>
+              </div>
 
               {/* Action buttons */}
               <div className="flex gap-2 pt-2 border-t">
