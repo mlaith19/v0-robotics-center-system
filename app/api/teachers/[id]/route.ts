@@ -14,7 +14,19 @@ export async function GET(req: Request, { params }: Ctx) {
       return Response.json({ error: "Teacher not found" }, { status: 404 })
     }
 
-    return Response.json(result[0])
+    // Get courses where this teacher is assigned (teacherIds contains this teacher's id)
+    const courses = await sql`
+      SELECT id, name FROM "Course" 
+      WHERE "teacherIds"::jsonb @> ${JSON.stringify([id])}::jsonb
+      ORDER BY name
+    `
+
+    const teacher = {
+      ...result[0],
+      teacherCourses: courses.map((c: any) => ({ course: { id: c.id, name: c.name } }))
+    }
+
+    return Response.json(teacher)
   } catch (err) {
     console.error("GET /api/teachers/[id] error:", err)
     return Response.json({ error: "Failed to load teacher" }, { status: 500 })
