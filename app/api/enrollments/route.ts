@@ -8,28 +8,45 @@ export async function GET(req: Request) {
     const courseId = searchParams.get("courseId")
     const studentId = searchParams.get("studentId")
 
-    let query = `
-      SELECT e.*, s.name as "studentName", c.name as "courseName"
-      FROM "Enrollment" e
-      LEFT JOIN "Student" s ON e."studentId" = s.id
-      LEFT JOIN "Course" c ON e."courseId" = c.id
-      WHERE 1=1
-    `
-    const params: any[] = []
-    let paramIndex = 1
-
-    if (courseId) {
-      query += ` AND e."courseId" = $${paramIndex++}`
-      params.push(courseId)
+    // Use tagged template literal for different query scenarios
+    let result
+    if (courseId && studentId) {
+      result = await sql`
+        SELECT e.*, s.name as "studentName", c.name as "courseName"
+        FROM "Enrollment" e
+        LEFT JOIN "Student" s ON e."studentId" = s.id
+        LEFT JOIN "Course" c ON e."courseId" = c.id
+        WHERE e."courseId" = ${courseId} AND e."studentId" = ${studentId}
+        ORDER BY e."enrollmentDate" DESC
+      `
+    } else if (courseId) {
+      result = await sql`
+        SELECT e.*, s.name as "studentName", c.name as "courseName"
+        FROM "Enrollment" e
+        LEFT JOIN "Student" s ON e."studentId" = s.id
+        LEFT JOIN "Course" c ON e."courseId" = c.id
+        WHERE e."courseId" = ${courseId}
+        ORDER BY e."enrollmentDate" DESC
+      `
+    } else if (studentId) {
+      result = await sql`
+        SELECT e.*, s.name as "studentName", c.name as "courseName"
+        FROM "Enrollment" e
+        LEFT JOIN "Student" s ON e."studentId" = s.id
+        LEFT JOIN "Course" c ON e."courseId" = c.id
+        WHERE e."studentId" = ${studentId}
+        ORDER BY e."enrollmentDate" DESC
+      `
+    } else {
+      result = await sql`
+        SELECT e.*, s.name as "studentName", c.name as "courseName"
+        FROM "Enrollment" e
+        LEFT JOIN "Student" s ON e."studentId" = s.id
+        LEFT JOIN "Course" c ON e."courseId" = c.id
+        ORDER BY e."enrollmentDate" DESC
+      `
     }
-    if (studentId) {
-      query += ` AND e."studentId" = $${paramIndex++}`
-      params.push(studentId)
-    }
 
-    query += ` ORDER BY e."enrollmentDate" DESC`
-
-    const result = await sql(query, params)
     return Response.json(result)
   } catch (err) {
     console.error("GET /api/enrollments error:", err)
