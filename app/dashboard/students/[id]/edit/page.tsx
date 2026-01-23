@@ -124,14 +124,14 @@ export default function EditStudentPage() {
 
       setSubmitSuccess(true)
       setHasChanges(false)
+      setIsSubmitting(false)
       
+      // Navigate to students list after showing success message
       setTimeout(() => {
-        router.push("/dashboard/students")
-        router.refresh()
+        window.location.href = "/dashboard/students"
       }, 1500)
     } catch (err: any) {
       setSubmitError(err?.message ?? "שגיאה בעדכון תלמיד")
-    } finally {
       setIsSubmitting(false)
     }
   }
