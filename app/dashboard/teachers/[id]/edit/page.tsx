@@ -125,8 +125,7 @@ export default function EditTeacherPage() {
         throw new Error(txt || `Failed to update teacher (${res.status})`)
       }
 
-      router.push("/dashboard/teachers")
-      router.refresh()
+      window.location.href = "/dashboard/teachers"
     } catch (e: any) {
       setError(e?.message ?? "שגיאה בשמירה")
     } finally {
