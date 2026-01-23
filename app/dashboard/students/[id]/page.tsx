@@ -20,12 +20,15 @@ interface Student {
   address: string | null
   city: string | null
   birthDate: string | null
-  studentId: string | null
-  parentName: string | null
-  parentPhone: string | null
-  notes: string | null
-  schoolId: string | null
+  idNumber: string | null
+  father: string | null
+  mother: string | null
+  additionalPhone: string | null
+  healthFund: string | null
+  allergies: string | null
   status: string
+  totalSessions: number | null
+  courseIds: string[]
   createdAt: string
   enrollments: any[]
   payments: any[]
@@ -58,13 +61,19 @@ export default function StudentViewPage() {
   const id = params.id as string
   const [student, setStudent] = useState<Student | null>(null)
   const [loading, setLoading] = useState(true)
+  const [courses, setCourses] = useState<any[]>([])
 
   useEffect(() => {
-    const fetchStudent = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(`/api/students/${id}`)
-        if (res.ok) {
-          const data = await res.json()
+        const [studentRes, coursesRes] = await Promise.all([
+          fetch(`/api/students/${id}`),
+          fetch("/api/courses")
+        ])
+        
+        if (studentRes.ok) {
+          const data = await studentRes.json()
+          
           // Fetch related data
           const [enrollmentsRes, paymentsRes, attendanceRes] = await Promise.all([
             fetch(`/api/enrollments?studentId=${id}`),
@@ -78,10 +87,16 @@ export default function StudentViewPage() {
           
           setStudent({
             ...data,
+            courseIds: data.courseIds || [],
             enrollments: Array.isArray(enrollments) ? enrollments : [],
             payments: Array.isArray(payments) ? payments : [],
             attendances: Array.isArray(attendances) ? attendances : []
           })
+        }
+        
+        if (coursesRes.ok) {
+          const coursesData = await coursesRes.json()
+          setCourses(Array.isArray(coursesData) ? coursesData : [])
         }
       } catch (err) {
         console.error("Failed to fetch student:", err)
@@ -89,7 +104,7 @@ export default function StudentViewPage() {
         setLoading(false)
       }
     }
-    fetchStudent()
+    fetchData()
   }, [id])
 
   if (loading) {
@@ -103,6 +118,11 @@ export default function StudentViewPage() {
   if (!student) {
     return <div className="text-center py-10">לא נמצא תלמיד</div>
   }
+
+  // Get enrolled course names
+  const enrolledCourseNames = (student.courseIds || [])
+    .map(cid => courses.find(c => c.id === cid)?.name)
+    .filter(Boolean)
 
   return (
     <div dir="rtl" className="min-h-screen">
@@ -186,7 +206,7 @@ export default function StudentViewPage() {
             <CardContent className="space-y-4">
               <div className="flex flex-row-reverse justify-between items-center">
                 <span className="text-muted-foreground">תעודת זהות:</span>
-                <span className="font-medium">{safeText(student.studentId)}</span>
+                <span className="font-medium">{safeText(student.idNumber)}</span>
               </div>
               <div className="flex flex-row-reverse justify-between items-center">
                 <span className="text-muted-foreground">תאריך לידה:</span>
@@ -221,8 +241,8 @@ export default function StudentViewPage() {
                 <span className="font-medium">{safeText(student.email)}</span>
               </div>
               <div className="flex flex-row-reverse justify-between items-center">
-                <span className="text-muted-foreground">טלפון הורה:</span>
-                <span className="font-medium">{safeText(student.parentPhone)}</span>
+                <span className="text-muted-foreground">טלפון נוסף:</span>
+                <span className="font-medium">{safeText(student.additionalPhone)}</span>
               </div>
             </CardContent>
           </Card>
@@ -237,29 +257,63 @@ export default function StudentViewPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-row-reverse justify-between items-center">
-                <span className="text-muted-foreground">שם הורה:</span>
-                <span className="font-medium">{safeText(student.parentName)}</span>
+                <span className="text-muted-foreground">שם האב:</span>
+                <span className="font-medium">{safeText(student.father)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">שם האם:</span>
+                <span className="font-medium">{safeText(student.mother)}</span>
               </div>
               <div className="flex flex-row-reverse justify-between items-center">
                 <span className="text-muted-foreground">טלפון הורה:</span>
-                <span className="font-medium">{safeText(student.parentPhone)}</span>
+                <span className="font-medium">{safeText(student.additionalPhone)}</span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Notes Card */}
+          {/* Medical Info Card */}
           <Card>
             <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
               <div className="p-2 bg-red-100 rounded-lg">
                 <Heart className="h-5 w-5 text-red-600" />
               </div>
-              <CardTitle className="text-lg">הערות ורגישויות</CardTitle>
+              <CardTitle className="text-lg">מידע רפואי</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-foreground">{safeText(student.notes) || "אין הערות"}</p>
+            <CardContent className="space-y-4">
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">קופת חולים:</span>
+                <span className="font-medium">{safeText(student.healthFund)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">רגישויות ואלרגיות:</span>
+                <span className="font-medium">{safeText(student.allergies)}</span>
+              </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Courses Card */}
+        <Card>
+          <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <BookOpen className="h-5 w-5 text-purple-600" />
+            </div>
+            <CardTitle className="text-lg">קורסים משויכים</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {enrolledCourseNames.length > 0 ? (
+              <div className="flex gap-2 flex-wrap">
+                {enrolledCourseNames.map((name, idx) => (
+                  <Badge key={idx} variant="outline" className="text-sm py-1 px-3">
+                    {name}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">לא משויך לקורסים</p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Tabs for Enrollments, Payments, Attendance */}
         <Card className="p-6">

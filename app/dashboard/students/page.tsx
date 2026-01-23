@@ -19,7 +19,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Plus, Search, List, LayoutGrid, Eye, Pencil, Trash2, Phone, Mail, User, MapPin, Users, Loader2 } from "lucide-react"
-import Loading from "@/components/ui/loading" // Import Loading component
 
 interface Student {
   id: string
@@ -28,9 +27,10 @@ interface Student {
   phone?: string | null
   status?: string | null
   city?: string | null
-  parentName?: string | null
-  parentPhone?: string | null
-  schoolId?: string | null
+  father?: string | null
+  mother?: string | null
+  additionalPhone?: string | null
+  healthFund?: string | null
   createdAt?: string
 }
 
@@ -208,9 +208,9 @@ export default function StudentsPage() {
                       <Mail className="h-4 w-4" />
                     </div>
                   )}
-                  {student.parentName && (
+                  {student.father && (
                     <div className="flex items-center justify-end gap-2 text-muted-foreground">
-                      <span>הורה: {student.parentName}</span>
+                      <span>אב: {student.father}</span>
                       <Users className="h-4 w-4" />
                     </div>
                   )}
