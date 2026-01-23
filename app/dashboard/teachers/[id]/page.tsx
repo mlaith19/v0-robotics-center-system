@@ -6,7 +6,11 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowRight, Mail, Phone, User, Edit, BookOpen, Receipt, CalendarCheck, Plus } from "lucide-react"
+import { ArrowRight, Mail, Phone, User, Edit, BookOpen, Receipt, CalendarCheck, Plus, Loader2 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type Teacher = {
   id: string
@@ -59,6 +63,27 @@ export default function TeacherViewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Payment dialog state
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
+  const [isAddingPayment, setIsAddingPayment] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "credit" | "transfer" | "check" | "bit">("cash")
+  const [paymentDescription, setPaymentDescription] = useState("")
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0])
+  const [cardLastDigits, setCardLastDigits] = useState("")
+  const [bankName, setBankName] = useState("")
+  const [bankBranch, setBankBranch] = useState("")
+  const [accountNumber, setAccountNumber] = useState("")
+
+  const israeliBanks = [
+    "בנק לאומי",
+    "בנק הפועלים",
+    "בנק דיסקונט",
+    "בנק מזרחי טפחות",
+    "בנק יהב",
+    "בנק ירושלים",
+  ]
+
   useEffect(() => {
     if (!id) return
     let cancelled = false
@@ -85,6 +110,50 @@ export default function TeacherViewPage() {
       cancelled = true
     }
   }, [id])
+
+  const handleAddPayment = async () => {
+    if (!paymentAmount || Number(paymentAmount) <= 0) return
+    if (paymentMethod === "credit" && cardLastDigits.length !== 4) return
+    if ((paymentMethod === "transfer" || paymentMethod === "check") && (!bankName || !bankBranch || !accountNumber)) return
+
+    setIsAddingPayment(true)
+    try {
+      const res = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(paymentAmount),
+          date: paymentDate,
+          paymentMethod,
+          description: paymentDescription,
+          teacherId: id,
+          cardLastDigits: paymentMethod === "credit" ? cardLastDigits : undefined,
+          bankName: (paymentMethod === "transfer" || paymentMethod === "check") ? bankName : undefined,
+          bankBranch: (paymentMethod === "transfer" || paymentMethod === "check") ? bankBranch : undefined,
+          accountNumber: (paymentMethod === "transfer" || paymentMethod === "check") ? accountNumber : undefined,
+        }),
+      })
+
+      if (res.ok) {
+        // Reset form and close dialog
+        setPaymentAmount("")
+        setPaymentMethod("cash")
+        setPaymentDescription("")
+        setPaymentDate(new Date().toISOString().split("T")[0])
+        setCardLastDigits("")
+        setBankName("")
+        setBankBranch("")
+        setAccountNumber("")
+        setIsPaymentDialogOpen(false)
+        // Refresh page to get updated data
+        window.location.reload()
+      }
+    } catch (err) {
+      console.error("Failed to add payment:", err)
+    } finally {
+      setIsAddingPayment(false)
+    }
+  }
 
   const courses = useMemo(() => teacher?.teacherCourses?.map((x) => x.course) ?? [], [teacher])
   const payments = useMemo(() => teacher?.payments ?? [], [teacher])
@@ -262,7 +331,12 @@ export default function TeacherViewPage() {
                     <span className="text-green-600 font-bold">₪</span>
                     <span className="text-xs text-green-700 dark:text-green-400">שולם</span>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:bg-green-100">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0 text-green-600 hover:bg-green-100"
+                    onClick={() => setIsPaymentDialogOpen(true)}
+                  >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -364,6 +438,130 @@ export default function TeacherViewPage() {
           </TabsContent>
         </Tabs>
       </Card>
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>הוספת תשלום חדש</DialogTitle>
+            <DialogDescription>הזן את פרטי התשלום</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="payment-amount">סכום *</Label>
+              <Input
+                id="payment-amount"
+                type="number"
+                placeholder="0"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment-date">תאריך</Label>
+              <Input
+                id="payment-date"
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">אמצעי תשלום</Label>
+              <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
+                <SelectTrigger id="payment-method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">מזומן</SelectItem>
+                  <SelectItem value="credit">אשראי</SelectItem>
+                  <SelectItem value="transfer">העברה בנקאית</SelectItem>
+                  <SelectItem value="check">שיק</SelectItem>
+                  <SelectItem value="bit">ביט</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {paymentMethod === "credit" && (
+              <div className="space-y-2">
+                <Label htmlFor="card-digits">4 ספרות אחרונות של כרטיס *</Label>
+                <Input
+                  id="card-digits"
+                  placeholder="1234"
+                  maxLength={4}
+                  value={cardLastDigits}
+                  onChange={(e) => setCardLastDigits(e.target.value.replace(/\D/g, ""))}
+                />
+              </div>
+            )}
+
+            {(paymentMethod === "transfer" || paymentMethod === "check") && (
+              <div className="grid gap-3 grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="bank-name">בנק *</Label>
+                  <Select value={bankName} onValueChange={setBankName}>
+                    <SelectTrigger id="bank-name">
+                      <SelectValue placeholder="בחר בנק" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {israeliBanks.map((bank) => (
+                        <SelectItem key={bank} value={bank}>
+                          {bank}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bank-branch">סניף *</Label>
+                  <Input
+                    id="bank-branch"
+                    placeholder="מספר סניף"
+                    value={bankBranch}
+                    onChange={(e) => setBankBranch(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="account-number">מס' חשבון *</Label>
+                  <Input
+                    id="account-number"
+                    placeholder="מספר חשבון"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="payment-description">תיאור</Label>
+              <Input
+                id="payment-description"
+                placeholder="תיאור התשלום (אופציונלי)"
+                value={paymentDescription}
+                onChange={(e) => setPaymentDescription(e.target.value)}
+              />
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={handleAddPayment}
+              disabled={isAddingPayment || !paymentAmount || Number(paymentAmount) <= 0}
+            >
+              {isAddingPayment ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  מוסיף...
+                </>
+              ) : (
+                "הוסף תשלום"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
