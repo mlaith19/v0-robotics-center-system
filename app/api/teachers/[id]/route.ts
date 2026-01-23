@@ -17,7 +17,7 @@ export async function GET(req: Request, { params }: Ctx) {
     // Get courses where this teacher is assigned (teacherIds contains this teacher's id)
     const courses = await sql`
       SELECT id, name FROM "Course" 
-      WHERE "teacherIds"::jsonb @> ${JSON.stringify([id])}::jsonb
+      WHERE ${id} = ANY("teacherIds")
       ORDER BY name
     `
 
