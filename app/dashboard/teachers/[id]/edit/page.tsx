@@ -71,11 +71,11 @@ export default function EditTeacherPage() {
           setForm({
             name: t.name ?? "",
             idNumber: t.idNumber ?? "",
-            birthDate: t.birthDate ?? "",
+            birthDate: t.birthDate ? t.birthDate.split("T")[0] : "",
             city: t.city ?? "",
             email: t.email ?? "",
             phone: t.phone ?? "",
-            specialization: t.specialization ?? "",
+            specialization: (t as any).specialty ?? "",
             status: t.status ?? "פעיל",
             bio: t.bio ?? "",
             centerHourlyRate: t.centerHourlyRate ?? 0,

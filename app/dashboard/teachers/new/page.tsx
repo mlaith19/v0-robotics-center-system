@@ -9,18 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { CityCombobox } from "@/components/ui/combobox-city"
-import {
-  ArrowRight,
-  User,
-  Mail,
-  Phone,
-  GraduationCap,
-  FileText,
-  Banknote,
-  Calendar,
-  Award as IdCard,
-  MapPin,
-} from "lucide-react"
+import { ArrowRight, User, Mail, Phone, GraduationCap, FileText, Banknote, Calendar, Award as IdCard, MapPin } from "lucide-react"
 
 export default function NewTeacherPage() {
   const router = useRouter()
@@ -48,8 +37,6 @@ export default function NewTeacherPage() {
       setError(null)
       setSubmitting(true)
 
-      // בשלב הזה ה-DB (Prisma Teacher) כולל: name, email, phone
-      // את שאר השדות נשמור בעתיד אחרי שנרחיב את schema
       const res = await fetch("/api/teachers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,6 +44,15 @@ export default function NewTeacherPage() {
           name: newTeacher.name.trim(),
           email: newTeacher.email.trim() || null,
           phone: newTeacher.phone.trim() || null,
+          idNumber: newTeacher.idNumber.trim() || null,
+          birthDate: newTeacher.birthDate || null,
+          city: newTeacher.city || null,
+          specialization: newTeacher.specialization.trim() || null,
+          status: newTeacher.status || null,
+          bio: newTeacher.bio.trim() || null,
+          centerHourlyRate: newTeacher.centerHourlyRate || null,
+          travelRate: newTeacher.travelRate || null,
+          externalCourseRate: newTeacher.externalCourseRate || null,
         }),
       })
 

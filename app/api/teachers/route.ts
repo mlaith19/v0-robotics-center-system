@@ -18,6 +18,15 @@ export async function POST(req: Request) {
     const name = String(body.name ?? "").trim()
     const email = body.email ? String(body.email).trim() : null
     const phone = body.phone ? String(body.phone).trim() : null
+    const idNumber = body.idNumber ? String(body.idNumber).trim() : null
+    const birthDate = body.birthDate || null
+    const city = body.city ? String(body.city).trim() : null
+    const specialty = body.specialization ? String(body.specialization).trim() : null
+    const status = body.status ? String(body.status).trim() : "פעיל"
+    const bio = body.bio ? String(body.bio).trim() : null
+    const centerHourlyRate = body.centerHourlyRate ?? null
+    const travelRate = body.travelRate ?? null
+    const externalCourseRate = body.externalCourseRate ?? null
 
     if (!name) {
       return Response.json({ error: "name is required" }, { status: 400 })
@@ -27,8 +36,14 @@ export async function POST(req: Request) {
     const now = new Date().toISOString()
 
     const result = await sql`
-      INSERT INTO "Teacher" (id, name, email, phone, "createdAt", "updatedAt")
-      VALUES (${id}, ${name}, ${email}, ${phone}, ${now}, ${now})
+      INSERT INTO "Teacher" (
+        id, name, email, phone, "idNumber", "birthDate", city, specialty, status, bio,
+        "centerHourlyRate", "travelRate", "externalCourseRate", "createdAt", "updatedAt"
+      )
+      VALUES (
+        ${id}, ${name}, ${email}, ${phone}, ${idNumber}, ${birthDate}, ${city}, ${specialty}, ${status}, ${bio},
+        ${centerHourlyRate}, ${travelRate}, ${externalCourseRate}, ${now}, ${now}
+      )
       RETURNING *
     `
 

@@ -29,11 +29,33 @@ export async function PUT(req: Request, { params }: Ctx) {
     const name = String(body.name ?? "").trim()
     const email = body.email ? String(body.email).trim() : null
     const phone = body.phone ? String(body.phone).trim() : null
+    const idNumber = body.idNumber ? String(body.idNumber).trim() : null
+    const birthDate = body.birthDate || null
+    const city = body.city ? String(body.city).trim() : null
+    const specialty = body.specialization ? String(body.specialization).trim() : null
+    const status = body.status ? String(body.status).trim() : null
+    const bio = body.bio ? String(body.bio).trim() : null
+    const centerHourlyRate = body.centerHourlyRate ?? null
+    const travelRate = body.travelRate ?? null
+    const externalCourseRate = body.externalCourseRate ?? null
     const now = new Date().toISOString()
 
     const result = await sql`
       UPDATE "Teacher"
-      SET name = ${name}, email = ${email}, phone = ${phone}, "updatedAt" = ${now}
+      SET 
+        name = ${name}, 
+        email = ${email}, 
+        phone = ${phone}, 
+        "idNumber" = ${idNumber},
+        "birthDate" = ${birthDate},
+        city = ${city},
+        specialty = ${specialty},
+        status = ${status},
+        bio = ${bio},
+        "centerHourlyRate" = ${centerHourlyRate},
+        "travelRate" = ${travelRate},
+        "externalCourseRate" = ${externalCourseRate},
+        "updatedAt" = ${now}
       WHERE id = ${id}
       RETURNING *
     `

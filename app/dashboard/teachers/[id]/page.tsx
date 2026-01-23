@@ -13,6 +13,15 @@ type Teacher = {
   name: string
   email?: string | null
   phone?: string | null
+  idNumber?: string | null
+  birthDate?: string | null
+  city?: string | null
+  specialty?: string | null
+  status?: string | null
+  bio?: string | null
+  centerHourlyRate?: number | null
+  travelRate?: number | null
+  externalCourseRate?: number | null
   createdAt?: string
   updatedAt?: string
   teacherCourses?: { course: { id: string; name: string } }[]
@@ -175,14 +184,55 @@ export default function TeacherViewPage() {
           <TabsContent value="general" className="mt-6 space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Card className="p-4">
+                <div className="text-sm text-muted-foreground">תעודת זהות</div>
+                <div className="font-semibold">{teacher.idNumber ?? "-"}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground">תאריך לידה</div>
+                <div className="font-semibold">{fmtDate(teacher.birthDate)}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground">עיר</div>
+                <div className="font-semibold">{teacher.city ?? "-"}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground">התמחות</div>
+                <div className="font-semibold">{teacher.specialty ?? "-"}</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground">סטטוס</div>
+                <div className="font-semibold">{teacher.status ?? "-"}</div>
+              </Card>
+              <Card className="p-4">
                 <div className="text-sm text-muted-foreground">נוצר</div>
                 <div className="font-semibold">{fmtDate(teacher.createdAt)}</div>
               </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">עודכן</div>
-                <div className="font-semibold">{fmtDate(teacher.updatedAt)}</div>
-              </Card>
             </div>
+
+            {teacher.bio && (
+              <Card className="p-4">
+                <div className="text-sm text-muted-foreground mb-2">אודות</div>
+                <div className="text-sm">{teacher.bio}</div>
+              </Card>
+            )}
+
+            <Card className="p-4">
+              <div className="text-sm text-muted-foreground mb-3">תעריפים</div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <div className="text-xs text-muted-foreground">מחיר שעה במרכז</div>
+                  <div className="font-semibold">{teacher.centerHourlyRate ?? 0} ₪</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">נסיעות</div>
+                  <div className="font-semibold">{teacher.travelRate ?? 0} ₪</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">מחיר שעה בקורס חיצוני</div>
+                  <div className="font-semibold">{teacher.externalCourseRate ?? 0} ₪</div>
+                </div>
+              </div>
+            </Card>
           </TabsContent>
 
           <TabsContent value="courses" className="mt-6 space-y-3">
