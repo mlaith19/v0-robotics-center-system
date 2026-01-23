@@ -204,104 +204,100 @@ export default function TeacherViewPage() {
     )
 
   return (
-    <div dir="rtl" className="p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowRight className="h-5 w-5" />
-        </Button>
+    <div dir="rtl" className="p-6 max-w-4xl mx-auto space-y-4">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between bg-gradient-to-l from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl p-4 border border-blue-100 dark:border-blue-900">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="bg-transparent hover:bg-white/50">
+            <ArrowRight className="h-5 w-5" />
+          </Button>
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+            <User className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <div className="text-xl font-bold text-foreground">{teacher.name}</div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Mail className="h-3.5 w-3.5" />
+                {teacher.email ?? "-"}
+              </span>
+              <span className="flex items-center gap-1">
+                <Phone className="h-3.5 w-3.5" />
+                {teacher.phone ?? "-"}
+              </span>
+            </div>
+          </div>
+        </div>
 
         <Link href={`/dashboard/teachers/${teacher.id}/edit`}>
-          <Button className="gap-2">
+          <Button className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
             <Edit className="h-4 w-4" />
             ערוך
           </Button>
         </Link>
       </div>
 
-      <Card className="p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <div className="text-2xl font-bold">{teacher.name}</div>
-            <div className="text-sm text-muted-foreground">פרטי מורה</div>
-          </div>
-        </div>
-
-        <div className="grid gap-3 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Mail className="h-4 w-4" />
-            <span>{teacher.email ?? "-"}</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Phone className="h-4 w-4" />
-            <span>{teacher.phone ?? "-"}</span>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="p-6">
+      <Card className="p-4 border-0 shadow-sm bg-white/50 dark:bg-card/50">
         <Tabs defaultValue="general" dir="rtl" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="general">כללי</TabsTrigger>
-            <TabsTrigger value="courses">קורסים</TabsTrigger>
-            <TabsTrigger value="payments">תשלומים</TabsTrigger>
-            <TabsTrigger value="attendance">נוכחות</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-lg">
+            <TabsTrigger value="general" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">כללי</TabsTrigger>
+            <TabsTrigger value="courses" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">קורסים</TabsTrigger>
+            <TabsTrigger value="payments" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">תשלומים</TabsTrigger>
+            <TabsTrigger value="attendance" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">נוכחות</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="mt-6 space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">תעודת זהות</div>
-                <div className="font-semibold">{teacher.idNumber ?? "-"}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">תאריך לידה</div>
-                <div className="font-semibold">{fmtDate(teacher.birthDate)}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">עיר</div>
-                <div className="font-semibold">{teacher.city ?? "-"}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">התמחות</div>
-                <div className="font-semibold">{teacher.specialty ?? "-"}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">סטטוס</div>
-                <div className="font-semibold">{teacher.status ?? "-"}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">נוצר</div>
-                <div className="font-semibold">{fmtDate(teacher.createdAt)}</div>
-              </Card>
+          <TabsContent value="general" className="mt-4 space-y-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs text-muted-foreground mb-1">תעודת זהות</div>
+                <div className="font-semibold text-sm">{teacher.idNumber ?? "-"}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs text-muted-foreground mb-1">תאריך לידה</div>
+                <div className="font-semibold text-sm">{fmtDate(teacher.birthDate)}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs text-muted-foreground mb-1">עיר</div>
+                <div className="font-semibold text-sm">{teacher.city ?? "-"}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs text-muted-foreground mb-1">התמחות</div>
+                <div className="font-semibold text-sm">{teacher.specialty ?? "-"}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs text-muted-foreground mb-1">סטטוס</div>
+                <div className="font-semibold text-sm">{teacher.status ?? "-"}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs text-muted-foreground mb-1">נוצר</div>
+                <div className="font-semibold text-sm">{fmtDate(teacher.createdAt)}</div>
+              </div>
             </div>
 
             {teacher.bio && (
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground mb-2">אודות</div>
+              <div className="p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900">
+                <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">אודות</div>
                 <div className="text-sm">{teacher.bio}</div>
-              </Card>
+              </div>
             )}
 
-            <Card className="p-4">
-              <div className="text-sm text-muted-foreground mb-3">תעריפים</div>
-              <div className="grid gap-4 md:grid-cols-3">
+            <div className="p-3 rounded-lg bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900">
+              <div className="text-xs text-green-600 dark:text-green-400 mb-2">תעריפים</div>
+              <div className="grid gap-3 md:grid-cols-3">
                 <div>
                   <div className="text-xs text-muted-foreground">מחיר שעה במרכז</div>
-                  <div className="font-semibold">{teacher.centerHourlyRate ?? 0} ₪</div>
+                  <div className="font-semibold text-green-700 dark:text-green-400">{teacher.centerHourlyRate ?? 0} ₪</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">נסיעות</div>
-                  <div className="font-semibold">{teacher.travelRate ?? 0} ₪</div>
+                  <div className="font-semibold text-green-700 dark:text-green-400">{teacher.travelRate ?? 0} ₪</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">מחיר שעה בקורס חיצוני</div>
-                  <div className="font-semibold">{teacher.externalCourseRate ?? 0} ₪</div>
+                  <div className="font-semibold text-green-700 dark:text-green-400">{teacher.externalCourseRate ?? 0} ₪</div>
                 </div>
               </div>
-            </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="courses" className="mt-6 space-y-3">
