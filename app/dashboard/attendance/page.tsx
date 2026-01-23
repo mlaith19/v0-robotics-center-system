@@ -103,6 +103,8 @@ export default function AttendancePage() {
     setSavingStatus((prev) => ({ ...prev, [personId]: true }))
 
     try {
+      console.log("[v0] Saving attendance:", { personId, courseId: selectedId, date: dateStr, status })
+      
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,8 +116,11 @@ export default function AttendancePage() {
         }),
       })
 
+      const data = await res.json()
+      console.log("[v0] API response:", res.ok, data)
+
       if (!res.ok) {
-        throw new Error("Failed to save attendance")
+        throw new Error(data.error || "Failed to save attendance")
       }
 
       // Revalidate attendance data
