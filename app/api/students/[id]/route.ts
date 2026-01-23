@@ -27,13 +27,37 @@ export async function PUT(req: Request, { params }: Ctx) {
 
   try {
     const now = new Date().toISOString()
+    
+    // Extract and clean all fields that exist in the Student table
     const name = body.name ? String(body.name).trim() : null
     const email = body.email ? String(body.email).trim().toLowerCase() : null
     const phone = body.phone ? String(body.phone).trim() : null
+    const address = body.address ? String(body.address).trim() : null
+    const city = body.city ? String(body.city).trim() : null
+    const parentName = body.parentName || body.father ? String(body.parentName || body.father).trim() : null
+    const parentPhone = body.parentPhone || body.additionalPhone ? String(body.parentPhone || body.additionalPhone).trim() : null
+    const notes = body.notes || body.allergies ? String(body.notes || body.allergies).trim() : null
+    const status = body.status ? String(body.status).trim() : "פעיל"
+    const birthDate = body.birthDate ? String(body.birthDate) : null
+    const studentId = body.studentId || body.idNumber ? String(body.studentId || body.idNumber).trim() : null
+    const schoolId = body.schoolId ? String(body.schoolId).trim() : null
 
     const result = await sql`
       UPDATE "Student"
-      SET name = ${name}, email = ${email}, phone = ${phone}, "updatedAt" = ${now}
+      SET 
+        name = ${name}, 
+        email = ${email}, 
+        phone = ${phone},
+        address = ${address},
+        city = ${city},
+        "parentName" = ${parentName},
+        "parentPhone" = ${parentPhone},
+        notes = ${notes},
+        status = ${status},
+        "birthDate" = ${birthDate},
+        "studentId" = ${studentId},
+        "schoolId" = ${schoolId},
+        "updatedAt" = ${now}
       WHERE id = ${id}
       RETURNING *
     `

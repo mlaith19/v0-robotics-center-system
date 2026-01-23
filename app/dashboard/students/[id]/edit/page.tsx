@@ -96,19 +96,19 @@ export default function EditStudentPage() {
     setSubmitError(null)
 
     try {
+      // Map form fields to database column names
       const payload = {
-        ...student,
-        idNumber: student.idNumber || null,
-        birthDate: student.birthDate || null,
+        name: student.name || null,
         email: student.email || null,
         phone: student.phone || null,
         address: student.address || null,
         city: student.city || null,
-        father: student.father || null,
-        mother: student.mother || null,
-        additionalPhone: student.additionalPhone || null,
-        healthFund: student.healthFund || null,
-        allergies: student.allergies || null,
+        status: student.status || "פעיל",
+        birthDate: student.birthDate || null,
+        studentId: student.idNumber || null, // Map idNumber to studentId
+        parentName: student.father || null, // Map father to parentName
+        parentPhone: student.additionalPhone || null, // Map additionalPhone to parentPhone
+        notes: student.allergies || null, // Map allergies to notes
       }
 
       const res = await fetch(`/api/students/${id}`, {
@@ -126,10 +126,10 @@ export default function EditStudentPage() {
       setHasChanges(false)
       setIsSubmitting(false)
       
-      // Navigate to students list after showing success message
+      // Navigate to students list immediately after short feedback
       setTimeout(() => {
         window.location.href = "/dashboard/students"
-      }, 1500)
+      }, 800)
     } catch (err: any) {
       setSubmitError(err?.message ?? "שגיאה בעדכון תלמיד")
       setIsSubmitting(false)
