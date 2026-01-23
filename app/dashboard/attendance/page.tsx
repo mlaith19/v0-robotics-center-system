@@ -123,15 +123,24 @@ export default function AttendancePage() {
     setSavingStatus((prev) => ({ ...prev, [personId]: true }))
 
     try {
+      // Build request body based on attendance type
+      const requestBody: Record<string, string> = {
+        courseId,
+        date: dateStr,
+        status,
+      }
+      
+      // For teacher attendance, send teacherId. For student/course, send studentId
+      if (attendanceType === "teacher") {
+        requestBody.teacherId = personId
+      } else {
+        requestBody.studentId = personId
+      }
+      
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId: personId,
-          courseId,
-          date: dateStr,
-          status,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (!res.ok) {

@@ -70,10 +70,11 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { studentId, courseId, date, status, notes } = body
+    const { studentId, teacherId, courseId, date, status, notes } = body
 
-    if (!studentId || !courseId || !date || !status) {
-      return Response.json({ error: "studentId, courseId, date, and status are required" }, { status: 400 })
+    // Either studentId or teacherId is required (not both)
+    if ((!studentId && !teacherId) || !courseId || !date || !status) {
+      return Response.json({ error: "studentId or teacherId, courseId, date, and status are required" }, { status: 400 })
     }
 
     // Validate that course exists
@@ -82,22 +83,42 @@ export async function POST(req: Request) {
       return Response.json({ error: "Course not found" }, { status: 404 })
     }
 
-    // Validate that student exists
-    const studentExists = await sql`SELECT id FROM "Student" WHERE id = ${studentId}`
-    if (studentExists.length === 0) {
-      return Response.json({ error: "Student not found" }, { status: 404 })
+    // Validate that student or teacher exists
+    if (studentId) {
+      const studentExists = await sql`SELECT id FROM "Student" WHERE id = ${studentId}`
+      if (studentExists.length === 0) {
+        return Response.json({ error: "Student not found" }, { status: 404 })
+      }
+    }
+    
+    if (teacherId) {
+      const teacherExists = await sql`SELECT id FROM "Teacher" WHERE id = ${teacherId}`
+      if (teacherExists.length === 0) {
+        return Response.json({ error: "Teacher not found" }, { status: 404 })
+      }
     }
 
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
 
     // Upsert - update if exists, insert if not
-    const existing = await sql`
-      SELECT id FROM "Attendance" 
-      WHERE "studentId" = ${studentId} 
-        AND "courseId" = ${courseId} 
-        AND "date" = ${date}
-    `
+    // Check based on whether it's student or teacher attendance
+    let existing
+    if (studentId) {
+      existing = await sql`
+        SELECT id FROM "Attendance" 
+        WHERE "studentId" = ${studentId} 
+          AND "courseId" = ${courseId} 
+          AND "date" = ${date}
+      `
+    } else {
+      existing = await sql`
+        SELECT id FROM "Attendance" 
+        WHERE "teacherId" = ${teacherId} 
+          AND "courseId" = ${courseId} 
+          AND "date" = ${date}
+      `
+    }
 
     if (existing.length > 0) {
       const result = await sql`
@@ -110,8 +131,8 @@ export async function POST(req: Request) {
     }
 
     const result = await sql`
-      INSERT INTO "Attendance" (id, "studentId", "courseId", date, status, notes, "createdAt")
-      VALUES (${id}, ${studentId}, ${courseId}, ${date}, ${status}, ${notes || null}, ${now})
+      INSERT INTO "Attendance" (id, "studentId", "teacherId", "courseId", date, status, notes, "createdAt")
+      VALUES (${id}, ${studentId || null}, ${teacherId || null}, ${courseId}, ${date}, ${status}, ${notes || null}, ${now})
       RETURNING *
     `
 
