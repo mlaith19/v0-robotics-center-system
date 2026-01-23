@@ -4,7 +4,30 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    const courses = await sql`SELECT * FROM "Course" ORDER BY "createdAt" DESC`
+    // Get courses with enrollment count and payment stats
+    const courses = await sql`
+      SELECT 
+        c.*,
+        COALESCE(enrollment_stats."enrollmentCount", 0) as "enrollmentCount",
+        COALESCE(payment_stats."totalPaid", 0) as "totalPaid",
+        COALESCE(payment_stats."paidCount", 0) as "paidCount"
+      FROM "Course" c
+      LEFT JOIN (
+        SELECT "courseId", COUNT(*) as "enrollmentCount"
+        FROM "Enrollment"
+        GROUP BY "courseId"
+      ) enrollment_stats ON c.id = enrollment_stats."courseId"
+      LEFT JOIN (
+        SELECT 
+          e."courseId",
+          COALESCE(SUM(p.amount), 0) as "totalPaid",
+          COUNT(DISTINCT p."studentId") as "paidCount"
+        FROM "Enrollment" e
+        LEFT JOIN "Payment" p ON e."studentId" = p."studentId"
+        GROUP BY e."courseId"
+      ) payment_stats ON c.id = payment_stats."courseId"
+      ORDER BY c."createdAt" DESC
+    `
     return Response.json(courses)
   } catch (err) {
     console.error("GET /api/courses error:", err)

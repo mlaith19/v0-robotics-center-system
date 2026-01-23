@@ -31,9 +31,9 @@ type Course = {
   teacherIds?: string[]
   createdAt: string
   updatedAt: string
-  _count?: {
-    enrollments: number
-  }
+  enrollmentCount?: number
+  totalPaid?: number
+  paidCount?: number
   teachers?: { id: string; name: string }[]
 }
 
@@ -240,7 +240,7 @@ export default function CoursesPage() {
                 {/* Students count */}
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Users className="h-4 w-4 text-blue-500" />
-                  <span>{c._count?.enrollments || 0} תלמידים</span>
+                  <span>{c.enrollmentCount || 0} תלמידים</span>
                 </div>
 
                 {/* Duration */}
@@ -275,14 +275,28 @@ export default function CoursesPage() {
                     <CheckCircle2 className="h-3 w-3" />
                     <span>שילמו</span>
                   </div>
-                  <div className="font-bold text-green-700">0/0</div>
+                  <div className="font-bold text-green-700">{c.paidCount || 0}/{c.enrollmentCount || 0}</div>
                 </div>
-                <div className="bg-red-50 rounded-lg p-3 text-center">
-                  <div className="flex items-center justify-center gap-1 text-red-600 text-xs mb-1">
+                <div className={`rounded-lg p-3 text-center ${
+                  ((c.enrollmentCount || 0) * (c.price || 0) - (c.totalPaid || 0)) > 0 
+                    ? "bg-red-50" 
+                    : "bg-green-50"
+                }`}>
+                  <div className={`flex items-center justify-center gap-1 text-xs mb-1 ${
+                    ((c.enrollmentCount || 0) * (c.price || 0) - (c.totalPaid || 0)) > 0 
+                      ? "text-red-600" 
+                      : "text-green-600"
+                  }`}>
                     <AlertCircle className="h-3 w-3" />
                     <span>יתרה</span>
                   </div>
-                  <div className="font-bold text-red-700">0₪</div>
+                  <div className={`font-bold ${
+                    ((c.enrollmentCount || 0) * (c.price || 0) - (c.totalPaid || 0)) > 0 
+                      ? "text-red-700" 
+                      : "text-green-700"
+                  }`}>
+                    {((c.enrollmentCount || 0) * (c.price || 0) - (c.totalPaid || 0)).toLocaleString()}₪
+                  </div>
                 </div>
               </div>
 
