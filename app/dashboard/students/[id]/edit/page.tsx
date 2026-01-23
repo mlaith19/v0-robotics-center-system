@@ -126,7 +126,7 @@ export default function EditStudentPage() {
       setHasChanges(false)
       
       setTimeout(() => {
-        router.push(`/dashboard/students/${id}`)
+        router.push("/dashboard/students")
         router.refresh()
       }, 1500)
     } catch (err: any) {
@@ -195,8 +195,13 @@ export default function EditStudentPage() {
 
       {submitSuccess && (
         <Card className="border-2 border-green-200 bg-green-50 p-4">
-          <div className="font-medium text-green-700">השינויים נשמרו בהצלחה!</div>
-          <div className="text-sm text-green-700/80 mt-1">מעביר לדף התלמיד...</div>
+          <div className="font-medium text-green-700 flex items-center gap-2">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            השינויים נשמרו בהצלחה!
+          </div>
+          <div className="text-sm text-green-700/80 mt-1">מעביר לרשימת התלמידים...</div>
         </Card>
       )}
 
