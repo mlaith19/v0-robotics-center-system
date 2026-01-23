@@ -233,7 +233,7 @@ export default function AttendancePage() {
             <CardDescription>בחר סוג, פריט ותאריך לניהול נוכחות</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className={`grid gap-3 ${attendanceType === "student" ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
+            <div className={`grid gap-3 ${attendanceType === "course" ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
               <div className="space-y-2">
                 <label className="text-sm font-medium">סוג</label>
                 <Select
@@ -300,7 +300,7 @@ export default function AttendancePage() {
                 </Select>
               </div>
 
-              {attendanceType === "student" && (
+              {(attendanceType === "student" || attendanceType === "teacher") && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">קורס</label>
                   <Select
@@ -312,7 +312,7 @@ export default function AttendancePage() {
                     disabled={!courses.length || !selectedId}
                   >
                     <SelectTrigger className="h-10">
-                      <SelectValue placeholder={selectedId ? "בחר קורס" : "בחר תלמיד קודם"} />
+                      <SelectValue placeholder={selectedId ? "בחר קורס" : `בחר ${attendanceType === "student" ? "תלמיד" : "מורה"} קודם`} />
                     </SelectTrigger>
                     <SelectContent>
                       {courses.map((course: Course) => (
@@ -345,7 +345,7 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
 
-        {selectedId && tableData.length > 0 && (attendanceType !== "student" || selectedCourseId) && (
+        {selectedId && tableData.length > 0 && (attendanceType === "course" || selectedCourseId) && (
           <Card className="border-green-200 bg-green-50/30">
             <CardHeader>
               <CardTitle className="text-lg">
