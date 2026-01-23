@@ -10,7 +10,7 @@ export async function GET() {
         (SELECT COUNT(*) FROM "Teacher" WHERE status = 'פעיל') as "activeTeachers",
         (SELECT COUNT(*) FROM "School") as "totalSchools",
         (SELECT COUNT(*) FROM "Enrollment") as "totalEnrollments",
-        (SELECT COALESCE(SUM(amount), 0) FROM "Payment" WHERE date >= NOW() - INTERVAL '30 days') as "monthlyIncome",
+        (SELECT COALESCE(SUM(amount), 0) FROM "Payment" WHERE "paymentDate" >= NOW() - INTERVAL '30 days') as "monthlyIncome",
         (SELECT COALESCE(SUM(amount), 0) FROM "Expense" WHERE date >= NOW() - INTERVAL '30 days') as "monthlyExpenses"
     `
 
