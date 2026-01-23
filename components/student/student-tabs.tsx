@@ -29,10 +29,10 @@ type Enrollment = {
 type Payment = {
   id: string
   amount: number
-  status: "PAID" | "PENDING" | "CANCELED"
-  method: "CASH" | "CREDIT" | "BANK_TRANSFER" | "BIT" | "PAYBOX" | "OTHER"
-  paidAt: string
-  note?: string | null
+  status?: "PAID" | "PENDING" | "CANCELED"
+  paymentType?: string
+  paymentDate?: string
+  description?: string | null
 }
 
 type Attendance = {
@@ -64,20 +64,23 @@ function paymentStatusHe(s: Payment["status"]) {
   return "בוטל"
 }
 
-function paymentMethodHe(m: Payment["method"]) {
-  switch (m) {
-    case "CASH":
+function paymentMethodHe(m?: string) {
+  switch (m?.toLowerCase()) {
+    case "cash":
       return "מזומן"
-    case "CREDIT":
+    case "credit":
       return "אשראי"
-    case "BANK_TRANSFER":
+    case "transfer":
+    case "bank_transfer":
       return "העברה בנקאית"
-    case "BIT":
+    case "check":
+      return "שיק"
+    case "bit":
       return "ביט"
-    case "PAYBOX":
+    case "paybox":
       return "פייבוקס"
     default:
-      return "אחר"
+      return "מזומן"
   }
 }
 
@@ -123,9 +126,15 @@ export function StudentTabs({
   ]
 
   const paymentsSummary = useMemo(() => {
-    const paid = payments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + p.amount, 0)
+    // Sum all payments (payments without status are considered paid)
+    const paid = payments.reduce((sum, p) => {
+      if (!p.status || p.status === "PAID") {
+        return sum + Number(p.amount)
+      }
+      return sum
+    }, 0)
     // Calculate total course costs (charges) from enrollments
-    const charges = enrollments.reduce((sum, e) => sum + (e.coursePrice || 0), 0)
+    const charges = enrollments.reduce((sum, e) => sum + Number(e.coursePrice || 0), 0)
     // Balance = paid - charges (negative means owes money, positive means credit)
     const balance = paid - charges
     return { paid, charges, balance }
@@ -410,23 +419,15 @@ export function StudentTabs({
               <Card key={p.id} className="p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">{formatDateTime(p.paidAt)}</div>
-                    <div className="text-sm text-muted-foreground">שיטה: {paymentMethodHe(p.method)}</div>
-                    {p.note ? <div className="text-xs text-muted-foreground">הערה: {p.note}</div> : null}
+                    <div className="text-sm text-muted-foreground">{formatDate(p.paymentDate)}</div>
+                    <div className="text-sm text-muted-foreground">שיטה: {paymentMethodHe(p.paymentType)}</div>
+                    {p.description ? <div className="text-xs text-muted-foreground">הערה: {p.description}</div> : null}
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold">{p.amount.toLocaleString()} ₪</span>
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        p.status === "PAID"
-                          ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
-                          : p.status === "PENDING"
-                          ? "bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400"
-                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                      }`}
-                    >
-                      {paymentStatusHe(p.status)}
+                    <span className="text-lg font-bold">{Number(p.amount).toLocaleString()} ₪</span>
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400">
+                      שולם
                     </span>
                   </div>
                 </div>
