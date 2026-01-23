@@ -11,6 +11,7 @@ import {
   MapPin, Calendar, CreditCard, Users, Heart, BookOpen 
 } from "lucide-react"
 import { StudentTabs } from "@/components/student/student-tabs"
+import { mutate } from "swr"
 
 interface Student {
   id: string
@@ -318,9 +319,11 @@ export default function StudentViewPage() {
         {/* Tabs for Enrollments, Payments, Attendance */}
         <Card className="p-6">
           <StudentTabs
+            studentId={id}
             enrollments={student.enrollments}
             payments={student.payments}
             attendances={student.attendances}
+            onPaymentAdded={() => mutate()}
           />
         </Card>
 

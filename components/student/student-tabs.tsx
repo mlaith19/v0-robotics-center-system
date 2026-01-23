@@ -1,9 +1,14 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, Receipt, CalendarCheck, DollarSign } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { BookOpen, Receipt, CalendarCheck, Plus, Loader2 } from "lucide-react"
 
 type Course = {
   id: string
@@ -81,14 +86,25 @@ function attendanceStatusHe(s: Attendance["status"]) {
 }
 
 export function StudentTabs({
+  studentId,
   enrollments,
   payments,
   attendances,
+  onPaymentAdded,
 }: {
+  studentId: string
   enrollments: Enrollment[]
   payments: Payment[]
   attendances: Attendance[]
+  onPaymentAdded?: () => void
 }) {
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
+  const [isAddingPayment, setIsAddingPayment] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "credit" | "transfer" | "bit">("cash")
+  const [paymentDescription, setPaymentDescription] = useState("")
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0])
+
   const paymentsSummary = useMemo(() => {
     const paid = payments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + p.amount, 0)
     // Calculate total course costs (charges) from enrollments
@@ -105,6 +121,38 @@ export function StudentTabs({
     const hours = attendances.reduce((sum, a) => sum + (a.hours ?? 0), 0)
     return { total, present, percent, hours }
   }, [attendances])
+
+  const handleAddPayment = async () => {
+    if (!paymentAmount || Number(paymentAmount) <= 0) return
+
+    setIsAddingPayment(true)
+    try {
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(paymentAmount),
+          date: paymentDate,
+          paymentMethod,
+          description: paymentDescription,
+          studentId,
+        }),
+      })
+
+      if (response.ok) {
+        // Reset form
+        setPaymentAmount("")
+        setPaymentMethod("cash")
+        setPaymentDescription("")
+        setPaymentDate(new Date().toISOString().split("T")[0])
+        setIsPaymentDialogOpen(false)
+        onPaymentAdded?.()
+      }
+    } catch (error) {
+      console.error("Failed to add payment:", error)
+    }
+    setIsAddingPayment(false)
+  }
 
   return (
     <Tabs defaultValue="general" className="w-full" dir="rtl">
@@ -168,7 +216,87 @@ export function StudentTabs({
 
       <TabsContent value="payments" className="space-y-4 mt-6">
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card className="p-4 bg-green-50 dark:bg-green-950/20">
+          <Card className="p-4 bg-green-50 dark:bg-green-950/20 relative">
+            <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="absolute top-2 left-2 h-8 w-8 rounded-full bg-green-100 hover:bg-green-200 text-green-700"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md" dir="rtl">
+                <DialogHeader>
+                  <DialogTitle>הוספת תשלום חדש</DialogTitle>
+                  <DialogDescription>הזן את פרטי התשלום</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-amount">סכום *</Label>
+                    <Input
+                      id="payment-amount"
+                      type="number"
+                      placeholder="0"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-date">תאריך</Label>
+                    <Input
+                      id="payment-date"
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-method">אמצעי תשלום</Label>
+                    <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
+                      <SelectTrigger id="payment-method">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">מזומן</SelectItem>
+                        <SelectItem value="credit">אשראי</SelectItem>
+                        <SelectItem value="transfer">העברה בנקאית</SelectItem>
+                        <SelectItem value="bit">ביט</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-description">תיאור</Label>
+                    <Input
+                      id="payment-description"
+                      placeholder="תיאור התשלום (אופציונלי)"
+                      value={paymentDescription}
+                      onChange={(e) => setPaymentDescription(e.target.value)}
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleAddPayment}
+                    disabled={isAddingPayment || !paymentAmount}
+                    className="w-full"
+                  >
+                    {isAddingPayment ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                        שומר...
+                      </>
+                    ) : (
+                      "הוסף תשלום"
+                    )}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <div className="flex items-center gap-2 mb-2">
               <span className="text-green-600 font-bold">₪</span>
               <p className="text-xs text-green-700 dark:text-green-400">שולם</p>
