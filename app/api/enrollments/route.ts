@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     let result
     if (courseId && studentId) {
       result = await sql`
-        SELECT e.*, s.name as "studentName", c.name as "courseName"
+        SELECT e.*, s.name as "studentName", c.name as "courseName", c.price as "coursePrice"
         FROM "Enrollment" e
         LEFT JOIN "Student" s ON e."studentId" = s.id
         LEFT JOIN "Course" c ON e."courseId" = c.id
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
       `
     } else if (courseId) {
       result = await sql`
-        SELECT e.*, s.name as "studentName", c.name as "courseName"
+        SELECT e.*, s.name as "studentName", c.name as "courseName", c.price as "coursePrice"
         FROM "Enrollment" e
         LEFT JOIN "Student" s ON e."studentId" = s.id
         LEFT JOIN "Course" c ON e."courseId" = c.id
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
       `
     } else if (studentId) {
       result = await sql`
-        SELECT e.*, s.name as "studentName", c.name as "courseName"
+        SELECT e.*, s.name as "studentName", c.name as "courseName", c.price as "coursePrice"
         FROM "Enrollment" e
         LEFT JOIN "Student" s ON e."studentId" = s.id
         LEFT JOIN "Course" c ON e."courseId" = c.id
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
       `
     } else {
       result = await sql`
-        SELECT e.*, s.name as "studentName", c.name as "courseName"
+        SELECT e.*, s.name as "studentName", c.name as "courseName", c.price as "coursePrice"
         FROM "Enrollment" e
         LEFT JOIN "Student" s ON e."studentId" = s.id
         LEFT JOIN "Course" c ON e."courseId" = c.id

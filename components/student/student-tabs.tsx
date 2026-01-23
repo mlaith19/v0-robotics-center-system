@@ -17,6 +17,7 @@ type Enrollment = {
   joinedAt?: string
   enrollmentDate?: string
   courseName?: string
+  coursePrice?: number | null
   course?: Course | null
 }
 
@@ -90,10 +91,13 @@ export function StudentTabs({
 }) {
   const paymentsSummary = useMemo(() => {
     const paid = payments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + p.amount, 0)
-    const pending = payments.filter((p) => p.status === "PENDING").reduce((sum, p) => sum + p.amount, 0)
-    const total = paid + pending
+    // Calculate total course costs from enrollments
+    const totalCourseCosts = enrollments.reduce((sum, e) => sum + (e.coursePrice || 0), 0)
+    // Pending = total course costs minus what was paid
+    const pending = Math.max(0, totalCourseCosts - paid)
+    const total = totalCourseCosts
     return { paid, pending, total }
-  }, [payments])
+  }, [payments, enrollments])
 
   const attendanceSummary = useMemo(() => {
     const total = attendances.length
@@ -175,7 +179,7 @@ export function StudentTabs({
 
           <Card className="p-4 bg-orange-50 dark:bg-orange-950/20">
             <div className="flex items-center gap-2 mb-2">
-              <Receipt className="h-4 w-4 text-orange-600" />
+              <span className="text-orange-600 font-bold">₪</span>
               <p className="text-xs text-orange-700 dark:text-orange-400">ממתין</p>
             </div>
             <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">{paymentsSummary.pending.toLocaleString()} ₪</p>
