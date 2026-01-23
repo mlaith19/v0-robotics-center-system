@@ -12,10 +12,10 @@ type Course = {
 
 type Enrollment = {
   id: string
-  sessionsLeft: number
+  sessionsLeft?: number
   status: string
-  joinedAt: string
-  course: Course
+  joinedAt?: string
+  course?: Course | null
 }
 
 type Payment = {
@@ -139,7 +139,7 @@ export function StudentTabs({
               <Card key={enr.id} className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1 flex-1">
-                    <h5 className="font-semibold text-foreground">{enr.course.name}</h5>
+                    <h5 className="font-semibold text-foreground">{enr.course?.name ?? "קורס לא ידוע"}</h5>
                     <div className="text-xs text-muted-foreground">
                       הצטרף: {formatDate(enr.joinedAt)} · סטטוס: {enr.status}
                     </div>
@@ -147,7 +147,7 @@ export function StudentTabs({
 
                   <div className="bg-blue-50 dark:bg-blue-950/20 px-3 py-1.5 rounded-lg">
                     <p className="text-xs text-blue-700 dark:text-blue-400 mb-0.5">יתרת מפגשים</p>
-                    <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{enr.sessionsLeft}</p>
+                    <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{enr.sessionsLeft ?? 0}</p>
                   </div>
                 </div>
               </Card>
