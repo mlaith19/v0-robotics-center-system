@@ -125,7 +125,7 @@ export default function EditTeacherPage() {
         throw new Error(txt || `Failed to update teacher (${res.status})`)
       }
 
-      router.push(`/dashboard/teachers/${id}`)
+      router.push("/dashboard/teachers")
       router.refresh()
     } catch (e: any) {
       setError(e?.message ?? "שגיאה בשמירה")
@@ -146,31 +146,16 @@ export default function EditTeacherPage() {
     <div className="container mx-auto p-6 max-w-4xl" dir="rtl">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href={`/dashboard/teachers/${id}`}>
-              <Button variant="ghost" size="sm">
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">עריכת מורה</h1>
-              <p className="text-muted-foreground mt-2">עדכן את פרטי המורה</p>
-            </div>
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard/teachers">
+            <Button variant="ghost" size="sm">
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">עריכת מורה</h1>
+            <p className="text-muted-foreground mt-2">עדכן את פרטי המורה</p>
           </div>
-          <Button onClick={onSave} disabled={saving || !form.name.trim()} className="gap-2">
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                שומר...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                שמור שינויים
-              </>
-            )}
-          </Button>
         </div>
 
         {error && (
@@ -401,7 +386,7 @@ export default function EditTeacherPage() {
         </Card>
 
         <div className="flex gap-3 justify-end">
-          <Link href={`/dashboard/teachers/${id}`}>
+          <Link href="/dashboard/teachers">
             <Button variant="outline" size="lg" className="bg-transparent">
               ביטול
             </Button>
