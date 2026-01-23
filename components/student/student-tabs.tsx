@@ -153,6 +153,14 @@ export function StudentTabs({
     return attendances.filter((a) => a.courseId === selectedCourseId)
   }, [attendances, selectedCourseId])
 
+  // Calculate remaining sessions for a specific course
+  const getRemainingSessions = (courseId: string, totalSessions: number) => {
+    const presentCount = attendances.filter(
+      (a) => a.courseId === courseId && (a.status === "present" || a.status === "PRESENT")
+    ).length
+    return Math.max(0, totalSessions - presentCount)
+  }
+
   // Get selected course details from enrollment (flat structure)
   const selectedCourse = useMemo(() => {
     if (!selectedCourseId) return null
@@ -267,23 +275,29 @@ export function StudentTabs({
           <h4 className="font-semibold text-foreground">קורסים רשומים</h4>
 
           {enrollments.length > 0 ? (
-            enrollments.map((enr) => (
-              <Card key={enr.id} className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1 flex-1">
-                    <h5 className="font-semibold text-foreground">{enr.courseName || enr.course?.name || "קורס לא ידוע"}</h5>
-                    <div className="text-xs text-muted-foreground">
-                      הצטרף: {formatDate(enr.enrollmentDate || enr.joinedAt)} · סטטוס: {enr.status === "active" ? "פעיל" : enr.status}
+            enrollments.map((enr) => {
+              const courseId = enr.courseId || enr.courseIdRef
+              const totalSessions = enr.courseDuration || 0
+              const remainingSessions = getRemainingSessions(courseId, totalSessions)
+              
+              return (
+                <Card key={enr.id} className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1 flex-1">
+                      <h5 className="font-semibold text-foreground">{enr.courseName || "קורס לא ידוע"}</h5>
+                      <div className="text-xs text-muted-foreground">
+                        הצטרף: {formatDate(enr.enrollmentDate || enr.joinedAt)} · סטטוס: {enr.status === "active" ? "פעיל" : enr.status}
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-950/20 px-3 py-1.5 rounded-lg">
+                      <p className="text-xs text-blue-700 dark:text-blue-400 mb-0.5">יתרת מפגשים</p>
+                      <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{remainingSessions}</p>
                     </div>
                   </div>
-
-                  <div className="bg-blue-50 dark:bg-blue-950/20 px-3 py-1.5 rounded-lg">
-                    <p className="text-xs text-blue-700 dark:text-blue-400 mb-0.5">יתרת מפגשים</p>
-                    <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{enr.sessionsLeft ?? 0}</p>
-                  </div>
-                </div>
-              </Card>
-            ))
+                </Card>
+              )
+            })
           ) : (
             <Card className="p-8 text-center">
               <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
