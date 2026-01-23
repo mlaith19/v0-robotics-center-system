@@ -9,26 +9,57 @@ export async function GET(req: Request) {
     const studentId = searchParams.get("studentId")
     const date = searchParams.get("date")
 
-    let query = `SELECT * FROM "Attendance" WHERE 1=1`
-    const params: any[] = []
-    let paramIndex = 1
-
-    if (courseId) {
-      query += ` AND "courseId" = $${paramIndex++}`
-      params.push(courseId)
+    // Use tagged template literals for different query scenarios
+    let result
+    if (courseId && studentId && date) {
+      result = await sql`
+        SELECT * FROM "Attendance" 
+        WHERE "courseId" = ${courseId} AND "studentId" = ${studentId} AND "date" = ${date}
+        ORDER BY "date" DESC, "createdAt" DESC
+      `
+    } else if (courseId && studentId) {
+      result = await sql`
+        SELECT * FROM "Attendance" 
+        WHERE "courseId" = ${courseId} AND "studentId" = ${studentId}
+        ORDER BY "date" DESC, "createdAt" DESC
+      `
+    } else if (courseId && date) {
+      result = await sql`
+        SELECT * FROM "Attendance" 
+        WHERE "courseId" = ${courseId} AND "date" = ${date}
+        ORDER BY "date" DESC, "createdAt" DESC
+      `
+    } else if (studentId && date) {
+      result = await sql`
+        SELECT * FROM "Attendance" 
+        WHERE "studentId" = ${studentId} AND "date" = ${date}
+        ORDER BY "date" DESC, "createdAt" DESC
+      `
+    } else if (courseId) {
+      result = await sql`
+        SELECT * FROM "Attendance" 
+        WHERE "courseId" = ${courseId}
+        ORDER BY "date" DESC, "createdAt" DESC
+      `
+    } else if (studentId) {
+      result = await sql`
+        SELECT * FROM "Attendance" 
+        WHERE "studentId" = ${studentId}
+        ORDER BY "date" DESC, "createdAt" DESC
+      `
+    } else if (date) {
+      result = await sql`
+        SELECT * FROM "Attendance" 
+        WHERE "date" = ${date}
+        ORDER BY "date" DESC, "createdAt" DESC
+      `
+    } else {
+      result = await sql`
+        SELECT * FROM "Attendance"
+        ORDER BY "date" DESC, "createdAt" DESC
+      `
     }
-    if (studentId) {
-      query += ` AND "studentId" = $${paramIndex++}`
-      params.push(studentId)
-    }
-    if (date) {
-      query += ` AND "date" = $${paramIndex++}`
-      params.push(date)
-    }
 
-    query += ` ORDER BY "date" DESC, "createdAt" DESC`
-
-    const result = await sql(query, params)
     return Response.json(result)
   } catch (err) {
     console.error("GET /api/attendance error:", err)
