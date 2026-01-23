@@ -38,10 +38,11 @@ type Payment = {
 type Attendance = {
   id: string
   date: string
-  status: "PRESENT" | "ABSENT"
-  hours: number
+  status: string
+  courseName?: string | null
+  courseDuration?: number | null
+  courseId?: string
   note?: string | null
-  course?: { id: string; name: string } | null
 }
 
 function formatDate(dateString?: string) {
@@ -84,8 +85,12 @@ function paymentMethodHe(m?: string) {
   }
 }
 
-function attendanceStatusHe(s: Attendance["status"]) {
-  return s === "PRESENT" ? "נוכח" : "נעדר"
+function attendanceStatusHe(s: string) {
+  if (s === "present" || s === "PRESENT") return "נוכח"
+  if (s === "absent" || s === "ABSENT") return "נעדר"
+  if (s === "sick") return "חולה"
+  if (s === "vacation") return "חופש"
+  return s
 }
 
 export function StudentTabs({
@@ -142,10 +147,14 @@ export function StudentTabs({
 
   const attendanceSummary = useMemo(() => {
     const total = attendances.length
-    const present = attendances.filter((a) => a.status === "PRESENT").length
+    const present = attendances.filter((a) => a.status === "present" || a.status === "PRESENT").length
     const percent = total === 0 ? 0 : Math.round((present / total) * 100)
-    const hours = attendances.reduce((sum, a) => sum + (a.hours ?? 0), 0)
-    return { total, present, percent, hours }
+    // Calculate hours from course duration (in minutes, convert to hours)
+    const hours = attendances.reduce((sum, a) => {
+      const duration = a.courseDuration || 0
+      return sum + (duration / 60)
+    }, 0)
+    return { total, present, percent, hours: Math.round(hours * 10) / 10 }
   }, [attendances])
 
   const handleAddPayment = async () => {
@@ -475,29 +484,35 @@ export function StudentTabs({
           <h4 className="font-semibold text-foreground">רשומות נוכחות</h4>
 
           {attendances.length > 0 ? (
-            attendances.map((a) => (
-              <Card key={a.id} className="p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium">{formatDateTime(a.date)}</div>
-                    <div className="text-sm text-muted-foreground">
-                      קורס: {a.course?.name ?? "—"} · שעות: {a.hours}
+            attendances.map((a) => {
+              const hours = a.courseDuration ? Math.round((a.courseDuration / 60) * 10) / 10 : 0
+              const isPresent = a.status === "present" || a.status === "PRESENT"
+              const statusColor = isPresent
+                ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
+                : a.status === "sick"
+                  ? "bg-yellow-50 text-yellow-700 dark:bg-yellow-950/20 dark:text-yellow-400"
+                  : a.status === "vacation"
+                    ? "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400"
+                    : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
+              
+              return (
+                <Card key={a.id} className="p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium">{formatDateTime(a.date)}</div>
+                      <div className="text-sm text-muted-foreground">
+                        קורס: {a.courseName || "—"} · שעות: {hours}
+                      </div>
+                      {a.note ? <div className="text-xs text-muted-foreground">הערה: {a.note}</div> : null}
                     </div>
-                    {a.note ? <div className="text-xs text-muted-foreground">הערה: {a.note}</div> : null}
-                  </div>
 
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      a.status === "PRESENT"
-                        ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
-                        : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
-                    }`}
-                  >
-                    {attendanceStatusHe(a.status)}
-                  </span>
-                </div>
-              </Card>
-            ))
+                    <span className={`text-xs px-2 py-1 rounded-full ${statusColor}`}>
+                      {attendanceStatusHe(a.status)}
+                    </span>
+                  </div>
+                </Card>
+              )
+            })
           ) : (
             <Card className="p-8 text-center">
               <CalendarCheck className="h-12 w-12 text-muted-foreground mx-auto mb-2" />

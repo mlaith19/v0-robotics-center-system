@@ -10,53 +10,70 @@ export async function GET(req: Request) {
     const date = searchParams.get("date")
 
     // Use tagged template literals for different query scenarios
+    // JOIN with Course to get course name and duration
     let result
     if (courseId && studentId && date) {
       result = await sql`
-        SELECT * FROM "Attendance" 
-        WHERE "courseId" = ${courseId} AND "studentId" = ${studentId} AND "date" = ${date}
-        ORDER BY "date" DESC, "createdAt" DESC
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        WHERE a."courseId" = ${courseId} AND a."studentId" = ${studentId} AND a."date" = ${date}
+        ORDER BY a."date" DESC, a."createdAt" DESC
       `
     } else if (courseId && studentId) {
       result = await sql`
-        SELECT * FROM "Attendance" 
-        WHERE "courseId" = ${courseId} AND "studentId" = ${studentId}
-        ORDER BY "date" DESC, "createdAt" DESC
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        WHERE a."courseId" = ${courseId} AND a."studentId" = ${studentId}
+        ORDER BY a."date" DESC, a."createdAt" DESC
       `
     } else if (courseId && date) {
       result = await sql`
-        SELECT * FROM "Attendance" 
-        WHERE "courseId" = ${courseId} AND "date" = ${date}
-        ORDER BY "date" DESC, "createdAt" DESC
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        WHERE a."courseId" = ${courseId} AND a."date" = ${date}
+        ORDER BY a."date" DESC, a."createdAt" DESC
       `
     } else if (studentId && date) {
       result = await sql`
-        SELECT * FROM "Attendance" 
-        WHERE "studentId" = ${studentId} AND "date" = ${date}
-        ORDER BY "date" DESC, "createdAt" DESC
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        WHERE a."studentId" = ${studentId} AND a."date" = ${date}
+        ORDER BY a."date" DESC, a."createdAt" DESC
       `
     } else if (courseId) {
       result = await sql`
-        SELECT * FROM "Attendance" 
-        WHERE "courseId" = ${courseId}
-        ORDER BY "date" DESC, "createdAt" DESC
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        WHERE a."courseId" = ${courseId}
+        ORDER BY a."date" DESC, a."createdAt" DESC
       `
     } else if (studentId) {
       result = await sql`
-        SELECT * FROM "Attendance" 
-        WHERE "studentId" = ${studentId}
-        ORDER BY "date" DESC, "createdAt" DESC
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        WHERE a."studentId" = ${studentId}
+        ORDER BY a."date" DESC, a."createdAt" DESC
       `
     } else if (date) {
       result = await sql`
-        SELECT * FROM "Attendance" 
-        WHERE "date" = ${date}
-        ORDER BY "date" DESC, "createdAt" DESC
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        WHERE a."date" = ${date}
+        ORDER BY a."date" DESC, a."createdAt" DESC
       `
     } else {
       result = await sql`
-        SELECT * FROM "Attendance"
-        ORDER BY "date" DESC, "createdAt" DESC
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        ORDER BY a."date" DESC, a."createdAt" DESC
       `
     }
 
