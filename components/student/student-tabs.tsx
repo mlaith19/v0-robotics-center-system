@@ -117,6 +117,7 @@ export function StudentTabs({
   const [bankName, setBankName] = useState("")
   const [bankBranch, setBankBranch] = useState("")
   const [accountNumber, setAccountNumber] = useState("")
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
 
   const israeliBanks = [
     "בנק לאומי",
@@ -146,15 +147,33 @@ export function StudentTabs({
     return { paid, charges, balance }
   }, [payments, enrollments])
 
+  // Filter attendances by selected course
+  const filteredAttendances = useMemo(() => {
+    if (!selectedCourseId) return attendances
+    return attendances.filter((a) => a.courseId === selectedCourseId)
+  }, [attendances, selectedCourseId])
+
+  // Get selected course details
+  const selectedCourse = useMemo(() => {
+    if (!selectedCourseId) return null
+    const enrollment = enrollments.find((e: any) => e.course?.id === selectedCourseId)
+    return enrollment?.course || null
+  }, [enrollments, selectedCourseId])
+
   const attendanceSummary = useMemo(() => {
-    // Count present attendance records
-    const present = attendances.filter((a) => a.status === "present" || a.status === "PRESENT").length
+    // Count present attendance records (filtered by course if selected)
+    const present = filteredAttendances.filter((a) => a.status === "present" || a.status === "PRESENT").length
     
-    // Calculate total sessions from all enrolled courses
-    const totalSessions = enrollments.reduce((sum, e: any) => {
-      const courseDuration = e.course?.duration || 0
-      return sum + courseDuration
-    }, 0)
+    // Calculate total sessions based on selected course or all courses
+    let totalSessions: number
+    if (selectedCourseId && selectedCourse) {
+      totalSessions = selectedCourse.duration || 0
+    } else {
+      totalSessions = enrollments.reduce((sum, e: any) => {
+        const courseDuration = e.course?.duration || 0
+        return sum + courseDuration
+      }, 0)
+    }
     
     // Calculate remaining sessions (total - attended)
     const remaining = Math.max(0, totalSessions - present)
@@ -163,7 +182,7 @@ export function StudentTabs({
     const percent = totalSessions === 0 ? 0 : Math.round((present / totalSessions) * 100)
     
     return { totalSessions, present, remaining, percent }
-  }, [attendances, enrollments])
+  }, [filteredAttendances, enrollments, selectedCourseId, selectedCourse])
 
   const handleAddPayment = async () => {
     if (!paymentAmount || Number(paymentAmount) <= 0) return
@@ -460,6 +479,41 @@ export function StudentTabs({
       </TabsContent>
 
       <TabsContent value="attendance" className="space-y-4 mt-6">
+        {/* Course Selection Buttons */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button
+            variant={selectedCourseId === null ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedCourseId(null)}
+            className={selectedCourseId === null ? "" : "bg-transparent"}
+          >
+            כל הקורסים
+          </Button>
+          {enrollments.map((enr: any) => (
+            <Button
+              key={enr.course?.id || enr.id}
+              variant={selectedCourseId === enr.course?.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCourseId(enr.course?.id || null)}
+              className={selectedCourseId === enr.course?.id ? "" : "bg-transparent"}
+            >
+              {enr.course?.name || enr.courseName || "קורס"}
+            </Button>
+          ))}
+        </div>
+
+        {/* Course Info Header */}
+        {selectedCourse && (
+          <Card className="p-4 bg-primary/5 border-primary/20 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-primary">{selectedCourse.name}</h4>
+                <p className="text-sm text-muted-foreground">מספר מפגשים בקורס: {selectedCourse.duration || 0}</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <div className="grid grid-cols-3 gap-4 mb-6">
           <Card className="p-4 bg-green-50 dark:bg-green-950/20">
             <div className="flex items-center gap-2 mb-2">
@@ -491,8 +545,8 @@ export function StudentTabs({
         <div className="space-y-3">
           <h4 className="font-semibold text-foreground">רשומות נוכחות</h4>
 
-          {attendances.length > 0 ? (
-            attendances.map((a) => {
+          {filteredAttendances.length > 0 ? (
+            filteredAttendances.map((a) => {
               const isPresent = a.status === "present" || a.status === "PRESENT"
               const statusColor = isPresent
                 ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
@@ -507,9 +561,11 @@ export function StudentTabs({
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-1">
                       <div className="text-sm font-medium">{formatDateTime(a.date)}</div>
-                      <div className="text-sm text-muted-foreground">
-                        קורס: {a.courseName || "—"}
-                      </div>
+                      {!selectedCourseId && (
+                        <div className="text-sm text-muted-foreground">
+                          קורס: {a.courseName || "—"}
+                        </div>
+                      )}
                       {a.note ? <div className="text-xs text-muted-foreground">הערה: {a.note}</div> : null}
                     </div>
 
