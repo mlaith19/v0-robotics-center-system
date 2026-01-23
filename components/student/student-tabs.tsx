@@ -153,11 +153,17 @@ export function StudentTabs({
     return attendances.filter((a) => a.courseId === selectedCourseId)
   }, [attendances, selectedCourseId])
 
-  // Get selected course details
+  // Get selected course details from enrollment (flat structure)
   const selectedCourse = useMemo(() => {
     if (!selectedCourseId) return null
-    const enrollment = enrollments.find((e: any) => e.course?.id === selectedCourseId)
-    return enrollment?.course || null
+    const enrollment = enrollments.find((e: any) => e.courseId === selectedCourseId || e.courseIdRef === selectedCourseId)
+    if (!enrollment) return null
+    return {
+      id: enrollment.courseId || enrollment.courseIdRef,
+      name: enrollment.courseName,
+      duration: enrollment.courseDuration,
+      price: enrollment.coursePrice
+    }
   }, [enrollments, selectedCourseId])
 
   const attendanceSummary = useMemo(() => {
@@ -169,8 +175,9 @@ export function StudentTabs({
     if (selectedCourseId && selectedCourse) {
       totalSessions = selectedCourse.duration || 0
     } else {
+      // Sum duration from all enrolled courses (flat structure from API)
       totalSessions = enrollments.reduce((sum, e: any) => {
-        const courseDuration = e.course?.duration || 0
+        const courseDuration = e.courseDuration || 0
         return sum + courseDuration
       }, 0)
     }
@@ -489,17 +496,20 @@ export function StudentTabs({
           >
             כל הקורסים
           </Button>
-          {enrollments.map((enr: any) => (
-            <Button
-              key={enr.course?.id || enr.id}
-              variant={selectedCourseId === enr.course?.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCourseId(enr.course?.id || null)}
-              className={selectedCourseId === enr.course?.id ? "" : "bg-transparent"}
-            >
-              {enr.course?.name || enr.courseName || "קורס"}
-            </Button>
-          ))}
+          {enrollments.map((enr: any) => {
+            const courseId = enr.courseId || enr.courseIdRef
+            return (
+              <Button
+                key={courseId || enr.id}
+                variant={selectedCourseId === courseId ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCourseId(courseId || null)}
+                className={selectedCourseId === courseId ? "" : "bg-transparent"}
+              >
+                {enr.courseName || "קורס"}
+              </Button>
+            )
+          })}
         </div>
 
         {/* Course Info Header */}
