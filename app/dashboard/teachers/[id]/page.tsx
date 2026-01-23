@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowRight, Mail, Phone, User, Edit, BookOpen, Receipt, CalendarCheck } from "lucide-react"
+import { ArrowRight, Mail, Phone, User, Edit, BookOpen, Receipt, CalendarCheck, Plus } from "lucide-react"
 
 type Teacher = {
   id: string
@@ -256,26 +256,33 @@ export default function TeacherViewPage() {
 
           <TabsContent value="payments" className="mt-6 space-y-4">
             <div className="grid grid-cols-3 gap-4">
-              <Card className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Receipt className="h-4 w-4" />
-                  שולם
+              <Card className="p-4 bg-green-50 dark:bg-green-950/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600 font-bold">₪</span>
+                    <span className="text-xs text-green-700 dark:text-green-400">שולם</span>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:bg-green-100">
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div className="text-2xl font-bold">{paidSum.toLocaleString("he-IL")} ₪</div>
+                <div className="text-2xl font-bold text-green-700 dark:text-green-400">{paidSum.toLocaleString("he-IL")} ₪</div>
               </Card>
-              <Card className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Receipt className="h-4 w-4" />
-                  ממתין
+              <Card className="p-4 bg-orange-50 dark:bg-orange-950/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-orange-600 font-bold">₪</span>
+                  <span className="text-xs text-orange-700 dark:text-orange-400">חיובים</span>
                 </div>
-                <div className="text-2xl font-bold">{pendingSum.toLocaleString("he-IL")} ₪</div>
+                <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">{pendingSum.toLocaleString("he-IL")} ₪</div>
               </Card>
-              <Card className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Receipt className="h-4 w-4" />
-                  סה״כ
+              <Card className={`p-4 ${(paidSum - pendingSum) >= 0 ? "bg-green-50 dark:bg-green-950/20" : "bg-red-50 dark:bg-red-950/20"}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`font-bold ${(paidSum - pendingSum) >= 0 ? "text-green-600" : "text-red-600"}`}>₪</span>
+                  <span className={`text-xs ${(paidSum - pendingSum) >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>יתרה</span>
                 </div>
-                <div className="text-2xl font-bold">{(paidSum + pendingSum).toLocaleString("he-IL")} ₪</div>
+                <div className={`text-2xl font-bold ${(paidSum - pendingSum) >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
+                  {(paidSum - pendingSum).toLocaleString("he-IL")} ₪
+                </div>
               </Card>
             </div>
 
