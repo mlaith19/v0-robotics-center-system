@@ -24,6 +24,7 @@ export default function NewStudentPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
 
   // Fetch courses from API
   const { data: courses = [] } = useSWR<Course[]>("/api/courses", fetcher)
@@ -58,6 +59,10 @@ export default function NewStudentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Prevent double submission
+    if (isSubmitting || submitSuccess) return
+    
     setIsSubmitting(true)
     setSubmitError(null)
 
@@ -110,8 +115,14 @@ export default function NewStudentPage() {
         })
       }
 
-      router.push("/dashboard/students")
-      router.refresh()
+      // Mark as success to prevent double submission
+      setSubmitSuccess(true)
+      
+      // Redirect after short delay to show success message
+      setTimeout(() => {
+        router.push("/dashboard/students")
+        router.refresh()
+      }, 1500)
     } catch (err: any) {
       setSubmitError(err?.message ?? "שגיאה בהוספת תלמיד")
     } finally {
@@ -132,6 +143,13 @@ export default function NewStudentPage() {
           <p className="text-muted-foreground mt-1">הוסף תלמיד חדש למערכת הרובוטיקה</p>
         </div>
       </div>
+
+      {submitSuccess && (
+        <Card className="border-2 border-green-200 bg-green-50 p-4">
+          <div className="font-medium text-green-700">התלמיד נוסף בהצלחה!</div>
+          <div className="text-sm text-green-700/80 mt-1">מעביר לרשימת התלמידים...</div>
+        </Card>
+      )}
 
       {submitError && (
         <Card className="border-2 border-red-200 bg-red-50 p-4">
@@ -477,9 +495,9 @@ export default function NewStudentPage() {
             type="submit"
             size="lg"
             className="h-12 px-8 text-base"
-            disabled={isSubmitting || !newStudent.name}
+            disabled={isSubmitting || submitSuccess || !newStudent.name}
           >
-            {isSubmitting ? "שומר..." : "הוסף תלמיד"}
+            {submitSuccess ? "נשמר בהצלחה!" : isSubmitting ? "שומר..." : "הוסף תלמיד"}
           </Button>
 
           <Link href="/dashboard/students">
