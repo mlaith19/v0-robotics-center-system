@@ -56,6 +56,12 @@ export default function AttendancePage() {
   const { data: teachers = [] } = useSWR<Teacher[]>("/api/teachers", fetcher)
   const { data: courses = [] } = useSWR<Course[]>("/api/courses", fetcher)
 
+  // Fetch attendance history for selected course (all dates)
+  const { data: attendanceHistory = [] } = useSWR<any[]>(
+    selectedId && attendanceType === "course" ? `/api/attendance?courseId=${selectedId}` : null,
+    fetcher
+  )
+
   // Fetch enrollments for selected course
   const { data: enrollments = [] } = useSWR<Enrollment[]>(
     selectedId && attendanceType === "course" ? `/api/enrollments?courseId=${selectedId}` : null,
@@ -355,6 +361,7 @@ export default function AttendancePage() {
                     <TableRow className="bg-muted/50">
                       <TableHead className="text-right font-semibold">שם</TableHead>
                       <TableHead className="text-right font-semibold">טלפון</TableHead>
+                      <TableHead className="text-right font-semibold">תאריך</TableHead>
                       <TableHead className="text-right font-semibold">סטטוס נוכחות</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -365,6 +372,9 @@ export default function AttendancePage() {
                           {person.name}
                         </TableCell>
                         <TableCell className="text-muted-foreground">{person.phone}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {format(selectedDate, "dd/MM/yyyy")}
+                        </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             {getStatusButton(person.id, "present", "נוכח", Check)}
@@ -388,6 +398,55 @@ export default function AttendancePage() {
               <p className="text-muted-foreground">
                 {attendanceType === "course" ? "אין תלמידים רשומים לקורס זה" : "לא נמצאו נתונים"}
               </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Attendance History Table */}
+        {selectedId && attendanceType === "course" && attendanceHistory.length > 0 && (
+          <Card className="border-blue-200 bg-blue-50/30">
+            <CardHeader>
+              <CardTitle className="text-lg">היסטוריית נוכחות - {selectedItem?.name}</CardTitle>
+              <CardDescription>כל הנוכחויות שנרשמו לקורס זה</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border bg-white overflow-auto max-h-[400px]">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-white">
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="text-right font-semibold">תאריך</TableHead>
+                      <TableHead className="text-right font-semibold">שם תלמיד</TableHead>
+                      <TableHead className="text-right font-semibold">סטטוס</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {attendanceHistory.map((record: any) => {
+                      const student = students.find((s) => s.id === record.studentId)
+                      const statusLabels: Record<string, { label: string; color: string }> = {
+                        present: { label: "נוכח", color: "bg-green-100 text-green-700" },
+                        absent: { label: "לא נוכח", color: "bg-red-100 text-red-700" },
+                        sick: { label: "חולה", color: "bg-yellow-100 text-yellow-700" },
+                        vacation: { label: "חופש", color: "bg-blue-100 text-blue-700" },
+                      }
+                      const statusInfo = statusLabels[record.status] || { label: record.status, color: "bg-gray-100" }
+                      
+                      return (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-medium">
+                            {record.date ? format(new Date(record.date), "dd/MM/yyyy") : "-"}
+                          </TableCell>
+                          <TableCell>{student?.name || "לא ידוע"}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                              {statusInfo.label}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         )}
