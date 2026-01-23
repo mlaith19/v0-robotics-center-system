@@ -31,11 +31,13 @@ interface Expense {
 interface Payment {
   id: string
   amount: number
-  date: string
+  paymentDate: string
   paymentMethod: string
+  paymentType?: string
   description?: string
   studentId?: string
   schoolId?: string
+  studentName?: string
   student?: { id: string; firstName: string; lastName: string }
   school?: { id: string; name: string }
 }
@@ -953,7 +955,9 @@ export default function CashierPage() {
                       <TableRow key={payment.id}>
                         <TableCell className="font-medium">{payment.description || "-"}</TableCell>
                         <TableCell>
-                          {payment.student
+                          {payment.studentName
+                            ? payment.studentName
+                            : payment.student
                             ? `${payment.student.firstName} ${payment.student.lastName}`
                             : payment.school
                             ? payment.school.name
@@ -961,7 +965,7 @@ export default function CashierPage() {
                         </TableCell>
                         <TableCell>{getPaymentMethodLabel(payment.paymentMethod)}</TableCell>
                         <TableCell className="text-green-600 font-semibold">₪{Number(payment.amount).toLocaleString()}</TableCell>
-                        <TableCell>{new Date(payment.date).toLocaleDateString("he-IL")}</TableCell>
+                        <TableCell>{payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString("he-IL") : "-"}</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="icon" onClick={() => deleteIncome(payment.id)}>
                             <Trash2 className="h-4 w-4 text-red-600" />

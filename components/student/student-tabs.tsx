@@ -101,9 +101,26 @@ export function StudentTabs({
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
   const [isAddingPayment, setIsAddingPayment] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState("")
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "credit" | "transfer" | "bit">("cash")
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "credit" | "transfer" | "check" | "bit">("cash")
   const [paymentDescription, setPaymentDescription] = useState("")
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0])
+  const [cardLastDigits, setCardLastDigits] = useState("")
+  const [bankName, setBankName] = useState("")
+  const [bankBranch, setBankBranch] = useState("")
+  const [accountNumber, setAccountNumber] = useState("")
+
+  const israeliBanks = [
+    "בנק לאומי",
+    "בנק הפועלים",
+    "בנק דיסקונט",
+    "בנק מזרחי טפחות",
+    "בנק יהב",
+    "בנק ירושלים",
+    "בנק איגוד",
+    "בנק מסד",
+    "בנק אוצר החייל",
+    "בנק דואר",
+  ]
 
   const paymentsSummary = useMemo(() => {
     const paid = payments.filter((p) => p.status === "PAID").reduce((sum, p) => sum + p.amount, 0)
@@ -124,6 +141,8 @@ export function StudentTabs({
 
   const handleAddPayment = async () => {
     if (!paymentAmount || Number(paymentAmount) <= 0) return
+    if (paymentMethod === "credit" && cardLastDigits.length !== 4) return
+    if ((paymentMethod === "transfer" || paymentMethod === "check") && (!bankName || !bankBranch || !accountNumber)) return
 
     setIsAddingPayment(true)
     try {
@@ -136,6 +155,10 @@ export function StudentTabs({
           paymentMethod,
           description: paymentDescription,
           studentId,
+          cardLastDigits: paymentMethod === "credit" ? cardLastDigits : undefined,
+          bankName: (paymentMethod === "transfer" || paymentMethod === "check") ? bankName : undefined,
+          bankBranch: (paymentMethod === "transfer" || paymentMethod === "check") ? bankBranch : undefined,
+          accountNumber: (paymentMethod === "transfer" || paymentMethod === "check") ? accountNumber : undefined,
         }),
       })
 
@@ -145,6 +168,10 @@ export function StudentTabs({
         setPaymentMethod("cash")
         setPaymentDescription("")
         setPaymentDate(new Date().toISOString().split("T")[0])
+        setCardLastDigits("")
+        setBankName("")
+        setBankBranch("")
+        setAccountNumber("")
         setIsPaymentDialogOpen(false)
         onPaymentAdded?.()
       }
@@ -264,10 +291,62 @@ export function StudentTabs({
                         <SelectItem value="cash">מזומן</SelectItem>
                         <SelectItem value="credit">אשראי</SelectItem>
                         <SelectItem value="transfer">העברה בנקאית</SelectItem>
+                        <SelectItem value="check">שיק</SelectItem>
                         <SelectItem value="bit">ביט</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {paymentMethod === "credit" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="card-digits">4 ספרות אחרונות של כרטיס *</Label>
+                      <Input
+                        id="card-digits"
+                        placeholder="1234"
+                        maxLength={4}
+                        value={cardLastDigits}
+                        onChange={(e) => setCardLastDigits(e.target.value.replace(/\D/g, ""))}
+                      />
+                    </div>
+                  )}
+
+                  {(paymentMethod === "transfer" || paymentMethod === "check") && (
+                    <div className="grid gap-3 grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="bank-name">בנק *</Label>
+                        <Select value={bankName} onValueChange={setBankName}>
+                          <SelectTrigger id="bank-name">
+                            <SelectValue placeholder="בחר בנק" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {israeliBanks.map((bank) => (
+                              <SelectItem key={bank} value={bank}>
+                                {bank}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bank-branch">סניף *</Label>
+                        <Input
+                          id="bank-branch"
+                          placeholder="מספר סניף"
+                          value={bankBranch}
+                          onChange={(e) => setBankBranch(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="account-number">מס' חשבון *</Label>
+                        <Input
+                          id="account-number"
+                          placeholder="מספר חשבון"
+                          value={accountNumber}
+                          onChange={(e) => setAccountNumber(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="payment-description">תיאור</Label>
