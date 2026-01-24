@@ -284,32 +284,51 @@ export function StudentTabs({
 
       <TabsContent value="courses" className="space-y-4 mt-6">
         <div className="space-y-3">
-          <h4 className="font-semibold text-foreground">קורסים רשומים</h4>
+          <h4 className="font-semibold text-foreground text-lg">קורסים רשומים</h4>
 
           {enrollments.length > 0 ? (
-            enrollments.map((enr) => {
-              const courseId = enr.courseId || enr.courseIdRef
-              const totalSessions = enr.courseDuration || 0
-              const remainingSessions = getRemainingSessions(courseId, totalSessions)
-              
-              return (
-                <Card key={enr.id} className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1 flex-1">
-                      <h5 className="font-semibold text-foreground">{enr.courseName || "קורס לא ידוע"}</h5>
-                      <div className="text-xs text-muted-foreground">
-                        הצטרף: {formatDate(enr.enrollmentDate || enr.joinedAt)} · סטטוס: {enr.status === "active" ? "פעיל" : enr.status}
-                      </div>
-                    </div>
-
-                    <div className="bg-blue-50 dark:bg-blue-950/20 px-3 py-1.5 rounded-lg">
-                      <p className="text-xs text-blue-700 dark:text-blue-400 mb-0.5">יתרת מפגשים</p>
-                      <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{remainingSessions}</p>
-                    </div>
-                  </div>
-                </Card>
-              )
-            })
+            <Card className="overflow-hidden border-2">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-right font-bold text-foreground">שם הקורס</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">תאריך הצטרפות</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">סה״כ מפגשים</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">יתרת מפגשים</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">סטטוס</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {enrollments.map((enr) => {
+                    const courseId = enr.courseId || enr.courseIdRef
+                    const totalSessions = enr.courseDuration || 0
+                    const remainingSessions = getRemainingSessions(courseId, totalSessions)
+                    
+                    return (
+                      <TableRow key={enr.id} className="hover:bg-muted/30">
+                        <TableCell className="font-semibold">{enr.courseName || "קורס לא ידוע"}</TableCell>
+                        <TableCell>{formatDate(enr.enrollmentDate || enr.joinedAt)}</TableCell>
+                        <TableCell className="font-medium">{totalSessions}</TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                            {remainingSessions}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            enr.status === "active" 
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+                          }`}>
+                            {enr.status === "active" ? "פעיל" : enr.status}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
           ) : (
             <Card className="p-8 text-center">
               <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
@@ -589,39 +608,46 @@ export function StudentTabs({
         </div>
 
         <div className="space-y-3">
-          <h4 className="font-semibold text-foreground">רשומות נוכחות</h4>
+          <h4 className="font-semibold text-foreground text-lg">רשומות נוכחות</h4>
 
           {filteredAttendances.length > 0 ? (
-            filteredAttendances.map((a) => {
-              const isPresent = a.status === "present" || a.status === "PRESENT"
-              const statusColor = isPresent
-                ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
-                : a.status === "sick"
-                  ? "bg-yellow-50 text-yellow-700 dark:bg-yellow-950/20 dark:text-yellow-400"
-                  : a.status === "vacation"
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400"
-                    : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
-              
-              return (
-                <Card key={a.id} className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="text-sm font-medium">{formatDateTime(a.date)}</div>
-                      {!selectedCourseId && (
-                        <div className="text-sm text-muted-foreground">
-                          קורס: {a.courseName || "—"}
-                        </div>
-                      )}
-                      {a.note ? <div className="text-xs text-muted-foreground">הערה: {a.note}</div> : null}
-                    </div>
-
-                    <span className={`text-xs px-2 py-1 rounded-full ${statusColor}`}>
-                      {attendanceStatusHe(a.status)}
-                    </span>
-                  </div>
-                </Card>
-              )
-            })
+            <Card className="overflow-hidden border-2">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-right font-bold text-foreground">תאריך</TableHead>
+                    {!selectedCourseId && <TableHead className="text-right font-bold text-foreground">קורס</TableHead>}
+                    <TableHead className="text-right font-bold text-foreground">הערה</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">סטטוס</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAttendances.map((a) => {
+                    const isPresent = a.status === "present" || a.status === "PRESENT"
+                    const statusStyle = isPresent
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                      : a.status === "sick"
+                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                        : a.status === "vacation"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                    
+                    return (
+                      <TableRow key={a.id} className="hover:bg-muted/30">
+                        <TableCell className="font-medium">{formatDateTime(a.date)}</TableCell>
+                        {!selectedCourseId && <TableCell>{a.courseName || "—"}</TableCell>}
+                        <TableCell className="text-muted-foreground">{a.note || "—"}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyle}`}>
+                            {attendanceStatusHe(a.status)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
           ) : (
             <Card className="p-8 text-center">
               <CalendarCheck className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
