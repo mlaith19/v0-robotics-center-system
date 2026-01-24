@@ -122,11 +122,17 @@ export default function SchedulePage() {
       }
       
       // בדוק אם הקורס פעיל בתאריך הנתון
-      if (course.startDate) {
+      if (course.startDate && course.endDate) {
+        const startDate = new Date(course.startDate)
+        const endDate = new Date(course.endDate)
+        // התמודד עם מקרה של תאריכים הפוכים - קח את הטווח הנכון
+        const actualStart = startDate < endDate ? startDate : endDate
+        const actualEnd = startDate < endDate ? endDate : startDate
+        if (date < actualStart || date > actualEnd) return false
+      } else if (course.startDate) {
         const startDate = new Date(course.startDate)
         if (date < startDate) return false
-      }
-      if (course.endDate) {
+      } else if (course.endDate) {
         const endDate = new Date(course.endDate)
         if (date > endDate) return false
       }
