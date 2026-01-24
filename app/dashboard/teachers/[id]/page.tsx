@@ -80,6 +80,9 @@ export default function TeacherViewPage() {
   const [teacherAttendance, setTeacherAttendance] = useState<any[]>([])
   const [selectedAttendanceCourse, setSelectedAttendanceCourse] = useState<string>("all")
   const [payments, setPayments] = useState<any[]>([]) // Declare payments variable
+  
+  // Period filter for payments tab (default: current month)
+  const [paymentsPeriod, setPaymentsPeriod] = useState<"month" | "3months" | "6months" | "year">("month")
 
   // Payment dialog state
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
@@ -261,26 +264,71 @@ export default function TeacherViewPage() {
     return statusMap[status] || status
   }
 
-  // Calculate total expenses (הוצאות)
+  // Helper function to get date range based on period
+  const getDateRange = (period: "month" | "3months" | "6months" | "year") => {
+    const now = new Date()
+    const startDate = new Date()
+    
+    switch (period) {
+      case "month":
+        startDate.setDate(1) // First day of current month
+        break
+      case "3months":
+        startDate.setMonth(now.getMonth() - 3)
+        break
+      case "6months":
+        startDate.setMonth(now.getMonth() - 6)
+        break
+      case "year":
+        startDate.setFullYear(now.getFullYear() - 1)
+        break
+    }
+    
+    return { startDate, endDate: now }
+  }
+  
+  // Filter expenses by period
+  const filteredExpenses = useMemo(() => {
+    const { startDate } = getDateRange(paymentsPeriod)
+    return teacherExpenses.filter((e: any) => {
+      const expenseDate = new Date(e.date || e.createdAt)
+      return expenseDate >= startDate
+    })
+  }, [teacherExpenses, paymentsPeriod])
+  
+  // Filter attendance by period for payments calculation
+  const filteredAttendanceForPayments = useMemo(() => {
+    const { startDate } = getDateRange(paymentsPeriod)
+    return attendance.filter((a: any) => {
+      const attendanceDate = new Date(a.date)
+      return attendanceDate >= startDate
+    })
+  }, [attendance, paymentsPeriod])
+  
+  // Calculate total expenses (הוצאות) - filtered by period
   const expensesSum = useMemo(
-    () => teacherExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0),
-    [teacherExpenses],
+    () => filteredExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0),
+    [filteredExpenses],
   )
   
-  // Calculate total salary payments to teacher (from payments table, type = salary/שכר)
+  // Calculate total salary payments to teacher - filtered by period
   const paidSum = useMemo(() => {
+    const { startDate } = getDateRange(paymentsPeriod)
     return (payments || [])
-      .filter((p: any) => p.type === "salary" || p.type === "שכר" || p.description?.includes("שכר"))
+      .filter((p: any) => {
+        const paymentDate = new Date(p.date || p.createdAt)
+        const isSalary = p.type === "salary" || p.type === "שכר" || p.description?.includes("שכר")
+        return isSalary && paymentDate >= startDate
+      })
       .reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0)
-  }, [payments])
+  }, [payments, paymentsPeriod])
   
-  // Calculate total owed to teacher based on hours worked and rates per course location
-  // This is the GROSS amount owed (שעות × תעריף)
+  // Calculate total owed to teacher based on hours worked - filtered by period
   const owedToTeacher = useMemo(() => {
     const centerRate = teacher?.centerHourlyRate || 0
     const externalRate = teacher?.externalHourlyRate || 0
     
-    return attendance.reduce((sum, a: any) => {
+    return filteredAttendanceForPayments.reduce((sum, a: any) => {
       const status = a.status?.toLowerCase()
       const isPresent = status === "נוכח" || status === "present"
       if (!isPresent) return sum
@@ -308,7 +356,7 @@ export default function TeacherViewPage() {
       
       return sum + (hours * rate)
     }, 0)
-  }, [attendance, teacher?.centerHourlyRate, teacher?.externalHourlyRate])
+  }, [filteredAttendanceForPayments, teacher?.centerHourlyRate, teacher?.externalHourlyRate])
   
   // Pending/debt = total owed minus what was paid as salary
   const pendingSum = useMemo(() => {
@@ -567,8 +615,45 @@ export default function TeacherViewPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="payments" className="mt-6 space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+<TabsContent value="payments" className="mt-6 space-y-4">
+  {/* Period Filter Buttons */}
+  <div className="flex items-center gap-2 flex-wrap">
+    <span className="text-sm text-muted-foreground ml-2">תקופה:</span>
+    <Button
+      variant={paymentsPeriod === "month" ? "default" : "outline"}
+      size="sm"
+      onClick={() => setPaymentsPeriod("month")}
+      className={paymentsPeriod === "month" ? "" : "bg-transparent"}
+    >
+      חודש נוכחי
+    </Button>
+    <Button
+      variant={paymentsPeriod === "3months" ? "default" : "outline"}
+      size="sm"
+      onClick={() => setPaymentsPeriod("3months")}
+      className={paymentsPeriod === "3months" ? "" : "bg-transparent"}
+    >
+      3 חודשים
+    </Button>
+    <Button
+      variant={paymentsPeriod === "6months" ? "default" : "outline"}
+      size="sm"
+      onClick={() => setPaymentsPeriod("6months")}
+      className={paymentsPeriod === "6months" ? "" : "bg-transparent"}
+    >
+      6 חודשים
+    </Button>
+    <Button
+      variant={paymentsPeriod === "year" ? "default" : "outline"}
+      size="sm"
+      onClick={() => setPaymentsPeriod("year")}
+      className={paymentsPeriod === "year" ? "" : "bg-transparent"}
+    >
+      שנה
+    </Button>
+  </div>
+
+  <div className="grid grid-cols-3 gap-4">
               <Card className="p-4 bg-red-50 dark:bg-red-950/20">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -604,9 +689,9 @@ export default function TeacherViewPage() {
               </Card>
             </div>
 
-            {teacherExpenses.length ? (
+            {filteredExpenses.length ? (
               <div className="space-y-3">
-                {teacherExpenses.map((e) => (
+                {filteredExpenses.map((e) => (
                   <Card key={e.id} className="p-4 border-red-100 dark:border-red-900">
                     <div className="flex items-center justify-between gap-4">
                       <div>
