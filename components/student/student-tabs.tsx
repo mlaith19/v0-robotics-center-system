@@ -20,7 +20,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { BookOpen, Receipt, CalendarCheck, Plus, Loader2 } from "lucide-react"
+import { BookOpen, Receipt, CalendarCheck, Plus, Loader2, User, Phone, CreditCard, Users, Heart } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 type Course = {
   id: string
@@ -106,17 +108,43 @@ function attendanceStatusHe(s: string) {
   return s
 }
 
+type Student = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  address: string | null
+  city: string | null
+  birthDate: string | null
+  idNumber: string | null
+  father: string | null
+  mother: string | null
+  additionalPhone: string | null
+  healthFund: string | null
+  allergies: string | null
+  status: string
+}
+
+function safeText(v: any) {
+  if (v === null || v === undefined || v === "") return "—"
+  return String(v)
+}
+
 export function StudentTabs({
   studentId,
+  student,
   enrollments,
   payments,
   attendances,
+  enrolledCourseNames = [],
   onPaymentAdded,
 }: {
   studentId: string
+  student?: Student
   enrollments: Enrollment[]
   payments: Payment[]
   attendances: Attendance[]
+  enrolledCourseNames?: string[]
   onPaymentAdded?: () => void
 }) {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
@@ -279,13 +307,139 @@ export function StudentTabs({
   }
 
   return (
-    <Tabs defaultValue="general" className="w-full" dir="rtl">
-      <TabsList className="grid w-full grid-cols-4">
+    <Tabs defaultValue="profile" className="w-full" dir="rtl">
+      <TabsList className="grid w-full grid-cols-5">
+        <TabsTrigger value="profile">פרופיל</TabsTrigger>
         <TabsTrigger value="general">כללי</TabsTrigger>
         <TabsTrigger value="courses">קורסים</TabsTrigger>
         <TabsTrigger value="payments">תשלומים</TabsTrigger>
         <TabsTrigger value="attendance">נוכחות</TabsTrigger>
       </TabsList>
+
+      {/* Profile Tab - All student details */}
+      <TabsContent value="profile" className="space-y-6 mt-6">
+        {/* Details Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Personal Info Card */}
+          <Card className="overflow-hidden border-2">
+            <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4 bg-green-50/50 dark:bg-green-950/20">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CreditCard className="h-5 w-5 text-green-600" />
+              </div>
+              <CardTitle className="text-lg">מידע אישי</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">תעודת זהות:</span>
+                <span className="font-medium">{safeText(student?.idNumber)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">תאריך לידה:</span>
+                <span className="font-medium">{formatDate(student?.birthDate || undefined)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">כתובת:</span>
+                <span className="font-medium">{safeText(student?.address)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">עיר:</span>
+                <span className="font-medium">{safeText(student?.city)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact Info Card */}
+          <Card className="overflow-hidden border-2">
+            <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4 bg-blue-50/50 dark:bg-blue-950/20">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Phone className="h-5 w-5 text-blue-600" />
+              </div>
+              <CardTitle className="text-lg">פרטי קשר</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">טלפון:</span>
+                <span className="font-medium">{safeText(student?.phone)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">אימייל:</span>
+                <span className="font-medium">{safeText(student?.email)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">טלפון נוסף:</span>
+                <span className="font-medium">{safeText(student?.additionalPhone)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Parent Info Card */}
+          <Card className="overflow-hidden border-2">
+            <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4 bg-emerald-50/50 dark:bg-emerald-950/20">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <Users className="h-5 w-5 text-emerald-600" />
+              </div>
+              <CardTitle className="text-lg">פרטי הורים</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">שם האב:</span>
+                <span className="font-medium">{safeText(student?.father)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">שם האם:</span>
+                <span className="font-medium">{safeText(student?.mother)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">טלפון הורה:</span>
+                <span className="font-medium">{safeText(student?.additionalPhone)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Medical Info Card */}
+          <Card className="overflow-hidden border-2">
+            <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4 bg-red-50/50 dark:bg-red-950/20">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Heart className="h-5 w-5 text-red-600" />
+              </div>
+              <CardTitle className="text-lg">מידע רפואי</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">קופת חולים:</span>
+                <span className="font-medium">{safeText(student?.healthFund)}</span>
+              </div>
+              <div className="flex flex-row-reverse justify-between items-center">
+                <span className="text-muted-foreground">רגישויות ואלרגיות:</span>
+                <span className="font-medium">{safeText(student?.allergies)}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Courses Card */}
+        <Card className="overflow-hidden border-2">
+          <CardHeader className="flex flex-row-reverse items-center justify-start gap-2 pb-4 bg-purple-50/50 dark:bg-purple-950/20">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <BookOpen className="h-5 w-5 text-purple-600" />
+            </div>
+            <CardTitle className="text-lg">קורסים משויכים</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {enrolledCourseNames.length > 0 ? (
+              <div className="flex gap-2 flex-wrap">
+                {enrolledCourseNames.map((name, idx) => (
+                  <Badge key={idx} variant="outline" className="text-sm py-1.5 px-4 bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-950/30 dark:border-purple-800 dark:text-purple-300">
+                    {name}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">לא משויך לקורסים</p>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
 
       <TabsContent value="general" className="space-y-4 mt-6">
         <Card className="p-5">
