@@ -21,6 +21,7 @@ export default function EditGafanProgramPage() {
   const params = useParams()
   const { data: program, error, isLoading } = useSWR(`/api/gafan/${params.id}`, fetcher)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState(false)
   const [formData, setFormData] = useState({
     programNumber: "",
     name: "",
@@ -53,7 +54,7 @@ export default function EditGafanProgramPage() {
   ]
 
   useEffect(() => {
-    if (program && !program.error) {
+    if (program && !program.error && !dataLoaded) {
       const newFormData = {
         programNumber: program.programNumber || "",
         name: program.name || "",
@@ -74,8 +75,9 @@ export default function EditGafanProgramPage() {
       }
       console.log("[v0] Setting formData to:", newFormData)
       setFormData(newFormData)
+      setDataLoaded(true)
     }
-  }, [program])
+  }, [program, dataLoaded])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,6 +129,8 @@ export default function EditGafanProgramPage() {
       bankCode: bank?.code || "",
     })
   }
+
+  console.log("[v0] Render - formData.programNumber:", formData.programNumber, "dataLoaded:", dataLoaded)
 
   if (isLoading) {
     return (
