@@ -32,6 +32,7 @@ export async function POST(req: Request) {
       price_min,
       price_max,
       status,
+      provider_type,
       notes,
     } = body
 
@@ -46,14 +47,14 @@ export async function POST(req: Request) {
       INSERT INTO "Gafan" (
         id, name, "programNumber", "validYear", "companyName", "companyId", 
         "companyAddress", "bankName", "bankCode", "branchNumber", "accountNumber",
-        "operatorName", "priceMin", "priceMax", status, notes, "createdAt", "updatedAt"
+        "operatorName", "priceMin", "priceMax", status, "provider_type", notes, "createdAt", "updatedAt"
       )
       VALUES (
         ${id}, ${name}, ${program_number || null}, ${valid_year || null}, 
         ${company_name || null}, ${company_id || null}, ${company_address || null},
         ${bank_name || null}, ${bank_code || null}, ${branch_number || null}, 
         ${account_number || null}, ${operator_name || null}, ${price_min || null}, 
-        ${price_max || null}, ${status || "מתעניין"}, ${notes || null}, ${now}, ${now}
+        ${price_max || null}, ${status || "מתעניין"}, ${provider_type || "internal"}, ${notes || null}, ${now}, ${now}
       )
       RETURNING *
     `

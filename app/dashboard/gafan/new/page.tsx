@@ -31,6 +31,7 @@ export default function NewGafanProgramPage() {
     priceMin: "",
     priceMax: "",
     status: "מתעניין",
+    providerType: "internal",
     notes: "",
   })
 
@@ -71,6 +72,7 @@ export default function NewGafanProgramPage() {
           price_min: Number(formData.priceMin),
           price_max: formData.priceMax ? Number(formData.priceMax) : null,
           status: formData.status,
+          provider_type: formData.providerType,
           notes: formData.notes || null,
         }),
       })
@@ -131,6 +133,25 @@ export default function NewGafanProgramPage() {
                   <SelectItem value="מתעניין">מתעניין</SelectItem>
                   <SelectItem value="פעיל">פעיל</SelectItem>
                   <SelectItem value="לא פעיל">לא פעיל</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Provider Type Field */}
+            <div className="flex items-center gap-4 mt-4 pt-4 border-t border-blue-200">
+              <div className="flex-1">
+                <Label htmlFor="providerType" className="text-base font-semibold">
+                  סוג ספק
+                </Label>
+                <p className="text-sm text-muted-foreground">האם התוכנית מופעלת על ידי החברה או ספק חיצוני</p>
+              </div>
+              <Select value={formData.providerType} onValueChange={(value) => setFormData({ ...formData, providerType: value })}>
+                <SelectTrigger id="providerType" className="w-[200px] bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="internal">החברה שלנו</SelectItem>
+                  <SelectItem value="external">ספק חיצוני</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -27,15 +27,29 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params
     const body = await req.json()
-    const { name, description, schoolId, startDate, endDate, price, status } = body
-
+    
     const now = new Date().toISOString()
 
     const result = await sql`
       UPDATE "Gafan"
-      SET name = ${name}, description = ${description || null}, "schoolId" = ${schoolId},
-          "startDate" = ${startDate || null}, "endDate" = ${endDate || null},
-          price = ${price || 0}, status = ${status || "active"}, "updatedAt" = ${now}
+      SET 
+        name = ${body.name || null},
+        "program_number" = ${body.program_number || null},
+        "valid_year" = ${body.valid_year || null},
+        "company_name" = ${body.company_name || null},
+        "company_id" = ${body.company_id || null},
+        "company_address" = ${body.company_address || null},
+        "bank_name" = ${body.bank_name || null},
+        "bank_code" = ${body.bank_code || null},
+        "branch_number" = ${body.branch_number || null},
+        "account_number" = ${body.account_number || null},
+        "operator_name" = ${body.operator_name || null},
+        "price_min" = ${body.price_min || 0},
+        "price_max" = ${body.price_max || null},
+        status = ${body.status || "מתעניין"},
+        "provider_type" = ${body.provider_type || "internal"},
+        notes = ${body.notes || null},
+        "updatedAt" = ${now}
       WHERE id = ${id}
       RETURNING *
     `
