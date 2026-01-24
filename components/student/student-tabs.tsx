@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect } from "react"
+
 import { TableCell } from "@/components/ui/table"
 
 import { TableBody } from "@/components/ui/table"
@@ -158,6 +160,22 @@ export function StudentTabs({
   const [bankBranch, setBankBranch] = useState("")
   const [accountNumber, setAccountNumber] = useState("")
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
+  const [paymentType, setPaymentType] = useState<"payment" | "discount" | "credit">("payment")
+  const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null)
+
+  // Fetch current user to check if admin
+  useEffect(() => {
+    const userData = localStorage.getItem("currentUser")
+    if (userData) {
+      try {
+        setCurrentUser(JSON.parse(userData))
+      } catch (e) {
+        console.error("Failed to parse user data")
+      }
+    }
+  }, [])
+
+  const isAdmin = currentUser?.role === "Administrator" || currentUser?.role === "admin"
 
   const israeliBanks = [
     "בנק לאומי",
@@ -266,8 +284,14 @@ export function StudentTabs({
 
   const handleAddPayment = async () => {
     if (!paymentAmount || Number(paymentAmount) <= 0) return
-    if (paymentMethod === "credit" && cardLastDigits.length !== 4) return
-    if ((paymentMethod === "transfer" || paymentMethod === "check") && (!bankName || !bankBranch || !accountNumber)) return
+    if (paymentType === "payment" && paymentMethod === "credit" && cardLastDigits.length !== 4) return
+    if (paymentType === "payment" && (paymentMethod === "transfer" || paymentMethod === "check") && (!bankName || !bankBranch || !accountNumber)) return
+
+    // Only admin can add discount/credit
+    if ((paymentType === "discount" || paymentType === "credit") && !isAdmin) {
+      alert("רק מנהל יכול להוסיף הנחה או זיכוי")
+      return
+    }
 
     setIsAddingPayment(true)
     try {
@@ -277,13 +301,14 @@ export function StudentTabs({
         body: JSON.stringify({
           amount: Number(paymentAmount),
           date: paymentDate,
-          paymentMethod,
-          description: paymentDescription,
+          paymentMethod: paymentType === "payment" ? paymentMethod : paymentType,
+          description: paymentDescription || (paymentType === "discount" ? "הנחה" : paymentType === "credit" ? "זיכוי" : ""),
           studentId,
-          cardLastDigits: paymentMethod === "credit" ? cardLastDigits : undefined,
-          bankName: (paymentMethod === "transfer" || paymentMethod === "check") ? bankName : undefined,
-          bankBranch: (paymentMethod === "transfer" || paymentMethod === "check") ? bankBranch : undefined,
-          accountNumber: (paymentMethod === "transfer" || paymentMethod === "check") ? accountNumber : undefined,
+          paymentType,
+          cardLastDigits: paymentType === "payment" && paymentMethod === "credit" ? cardLastDigits : undefined,
+          bankName: paymentType === "payment" && (paymentMethod === "transfer" || paymentMethod === "check") ? bankName : undefined,
+          bankBranch: paymentType === "payment" && (paymentMethod === "transfer" || paymentMethod === "check") ? bankBranch : undefined,
+          accountNumber: paymentType === "payment" && (paymentMethod === "transfer" || paymentMethod === "check") ? accountNumber : undefined,
         }),
       })
 
@@ -297,6 +322,7 @@ export function StudentTabs({
         setBankName("")
         setBankBranch("")
         setAccountNumber("")
+        setPaymentType("payment")
         setIsPaymentDialogOpen(false)
         onPaymentAdded?.()
       }
@@ -557,6 +583,49 @@ export function StudentTabs({
                   <DialogDescription>הזן את פרטי התשלום</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 mt-4">
+                  {/* Payment Type Selection */}
+                  <div className="space-y-2">
+                    <Label>סוג פעולה</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={paymentType === "payment" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPaymentType("payment")}
+                        className={paymentType === "payment" ? "" : "bg-transparent"}
+                      >
+                        תשלום
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={paymentType === "discount" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPaymentType("discount")}
+                        disabled={!isAdmin}
+                        className={paymentType === "discount" ? "bg-orange-500 hover:bg-orange-600" : "bg-transparent"}
+                        title={!isAdmin ? "רק מנהל יכול להוסיף הנחה" : ""}
+                      >
+                        הנחה
+                        {!isAdmin && <span className="mr-1 text-xs">(מנהל)</span>}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={paymentType === "credit" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPaymentType("credit")}
+                        disabled={!isAdmin}
+                        className={paymentType === "credit" ? "bg-purple-500 hover:bg-purple-600" : "bg-transparent"}
+                        title={!isAdmin ? "רק מנהל יכול להוסיף זיכוי" : ""}
+                      >
+                        זיכוי
+                        {!isAdmin && <span className="mr-1 text-xs">(מנהל)</span>}
+                      </Button>
+                    </div>
+                    {!isAdmin && (paymentType === "discount" || paymentType === "credit") && (
+                      <p className="text-xs text-red-500">רק מנהל יכול להוסיף הנחה או זיכוי</p>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="payment-amount">סכום *</Label>
                     <Input
@@ -578,23 +647,25 @@ export function StudentTabs({
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="payment-method">אמצעי תשלום</Label>
-                    <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
-                      <SelectTrigger id="payment-method">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">מזומן</SelectItem>
-                        <SelectItem value="credit">אשראי</SelectItem>
-                        <SelectItem value="transfer">העברה בנקאית</SelectItem>
-                        <SelectItem value="check">שיק</SelectItem>
-                        <SelectItem value="bit">ביט</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {paymentType === "payment" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="payment-method">אמצעי תשלום</Label>
+                      <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
+                        <SelectTrigger id="payment-method">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">מזומן</SelectItem>
+                          <SelectItem value="credit">אשראי</SelectItem>
+                          <SelectItem value="transfer">העברה בנקאית</SelectItem>
+                          <SelectItem value="check">שיק</SelectItem>
+                          <SelectItem value="bit">ביט</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                  {paymentMethod === "credit" && (
+                  {paymentType === "payment" && paymentMethod === "credit" && (
                     <div className="space-y-2">
                       <Label htmlFor="card-digits">4 ספרות אחרונות של כרטיס *</Label>
                       <Input
@@ -607,7 +678,7 @@ export function StudentTabs({
                     </div>
                   )}
 
-                  {(paymentMethod === "transfer" || paymentMethod === "check") && (
+                  {paymentType === "payment" && (paymentMethod === "transfer" || paymentMethod === "check") && (
                     <div className="grid gap-3 grid-cols-3">
                       <div className="space-y-2">
                         <Label htmlFor="bank-name">בנק *</Label>
@@ -657,8 +728,8 @@ export function StudentTabs({
 
                   <Button
                     onClick={handleAddPayment}
-                    disabled={isAddingPayment || !paymentAmount}
-                    className="w-full"
+                    disabled={isAddingPayment || !paymentAmount || ((paymentType === "discount" || paymentType === "credit") && !isAdmin)}
+                    className={`w-full ${paymentType === "discount" ? "bg-orange-500 hover:bg-orange-600" : paymentType === "credit" ? "bg-purple-500 hover:bg-purple-600" : ""}`}
                   >
                     {isAddingPayment ? (
                       <>
@@ -666,7 +737,7 @@ export function StudentTabs({
                         שומר...
                       </>
                     ) : (
-                      "הוסף תשלום"
+                      paymentType === "payment" ? "הוסף תשלום" : paymentType === "discount" ? "הוסף הנחה" : "הוסף זיכוי"
                     )}
                   </Button>
                 </div>
@@ -708,6 +779,7 @@ export function StudentTabs({
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <TableHead className="text-right font-bold text-foreground">תאריך</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">סוג</TableHead>
                     <TableHead className="text-right font-bold text-foreground">סכום</TableHead>
                     <TableHead className="text-right font-bold text-foreground">אמצעי תשלום</TableHead>
                     <TableHead className="text-right font-bold text-foreground">הערה</TableHead>
@@ -715,19 +787,37 @@ export function StudentTabs({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((p) => (
-                    <TableRow key={p.id} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{formatDate(p.paymentDate)}</TableCell>
-                      <TableCell className="font-bold text-primary">{Number(p.amount).toLocaleString()} ₪</TableCell>
-                      <TableCell>{paymentMethodHe(p.paymentType)}</TableCell>
-                      <TableCell className="text-muted-foreground">{p.description || "—"}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                          שולם
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {payments.map((p) => {
+                    const isDiscount = p.paymentType === "discount"
+                    const isCredit = p.paymentType === "credit"
+                    const typeLabel = isDiscount ? "הנחה" : isCredit ? "זיכוי" : "תשלום"
+                    const typeStyle = isDiscount 
+                      ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+                      : isCredit 
+                        ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                        : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                    
+                    return (
+                      <TableRow key={p.id} className="hover:bg-muted/30">
+                        <TableCell className="font-medium">{formatDate(p.paymentDate)}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${typeStyle}`}>
+                            {typeLabel}
+                          </span>
+                        </TableCell>
+                        <TableCell className={`font-bold ${isDiscount || isCredit ? "text-orange-600" : "text-primary"}`}>
+                          {Number(p.amount).toLocaleString()} ₪
+                        </TableCell>
+                        <TableCell>{isDiscount || isCredit ? "—" : paymentMethodHe(p.paymentType)}</TableCell>
+                        <TableCell className="text-muted-foreground">{p.description || "—"}</TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            {isDiscount ? "אושר" : isCredit ? "זוכה" : "שולם"}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </Card>
