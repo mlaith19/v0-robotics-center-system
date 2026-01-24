@@ -19,7 +19,9 @@ interface Course {
   startDate?: string
   endDate?: string
   weekdays?: string[]
-  teachers?: { id: string; firstName: string; lastName: string }[]
+  daysOfWeek?: string[]
+  teachers?: { id: string; name: string }[]
+  teacherIds?: string[]
   students?: number
 }
 
@@ -86,7 +88,7 @@ export default function SchedulePage() {
         course.teachers.forEach((teacher) => {
           if (!seenIds.has(teacher.id)) {
             seenIds.add(teacher.id)
-            uniqueTeachers.push({ id: teacher.id, name: `${teacher.firstName} ${teacher.lastName}` })
+            uniqueTeachers.push({ id: teacher.id, name: teacher.name })
           }
         })
       }
@@ -112,10 +114,24 @@ export default function SchedulePage() {
 
     return filteredCourses.filter((course) => {
       if (!dayName) return false
-      if (!course.weekdays || !Array.isArray(course.weekdays) || course.weekdays.length === 0) {
+      
+      // בדוק גם weekdays וגם daysOfWeek (תאימות לאחור)
+      const courseDays = course.weekdays || course.daysOfWeek || []
+      if (!Array.isArray(courseDays) || courseDays.length === 0) {
         return false
       }
-      if (!course.weekdays.includes(dayName)) {
+      
+      // בדוק אם הקורס פעיל בתאריך הנתון
+      if (course.startDate) {
+        const startDate = new Date(course.startDate)
+        if (date < startDate) return false
+      }
+      if (course.endDate) {
+        const endDate = new Date(course.endDate)
+        if (date > endDate) return false
+      }
+      
+      if (!courseDays.includes(dayName)) {
         return false
       }
       return true
@@ -211,7 +227,7 @@ export default function SchedulePage() {
                           >
                             <div className={`font-semibold text-sm mb-1 ${colors.text}`}>{course.name}</div>
                             <div className={`text-xs ${colors.text} opacity-80`}>
-                              {course.startTime} - {course.endTime} • {course.teachers?.map((t) => `${t.firstName} ${t.lastName}`).join(", ")}
+                              {course.startTime} - {course.endTime} • {course.teachers?.map((t) => t.name).join(", ")}
                             </div>
                           </Card>
                         )
@@ -480,7 +496,7 @@ export default function SchedulePage() {
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">מורים</div>
                   <div className="font-medium">
-                    {selectedCourse.teachers?.map((t) => `${t.firstName} ${t.lastName}`).join(", ") || "לא צוין"}
+                    {selectedCourse.teachers?.map((t) => t.name).join(", ") || "לא צוין"}
                   </div>
                 </div>
                 <div>
@@ -506,7 +522,7 @@ export default function SchedulePage() {
               <div>
                 <div className="text-sm text-muted-foreground mb-1">ימי שבוע</div>
                 <div className="flex flex-wrap gap-2">
-                  {selectedCourse.weekdays?.map((day: string) => (
+                  {(selectedCourse.weekdays || selectedCourse.daysOfWeek)?.map((day: string) => (
                     <span key={day} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
                       {day}
                     </span>

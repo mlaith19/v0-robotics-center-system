@@ -28,7 +28,22 @@ export async function GET() {
       ) payment_stats ON c.id = payment_stats."courseId"
       ORDER BY c."createdAt" DESC
     `
-    return Response.json(courses)
+    
+    // Get all teachers for mapping
+    const teachers = await sql`SELECT id, name FROM "Teacher"`
+    const teacherMap = new Map(teachers.map((t: any) => [t.id, t.name]))
+    
+    // Map courses with teacher names and weekdays alias
+    const coursesWithTeachers = courses.map((course: any) => ({
+      ...course,
+      weekdays: course.daysOfWeek || [],
+      teachers: (course.teacherIds || []).map((id: string) => ({
+        id,
+        name: teacherMap.get(id) || "לא ידוע"
+      }))
+    }))
+    
+    return Response.json(coursesWithTeachers)
   } catch (err) {
     console.error("GET /api/courses error:", err)
     return Response.json({ error: "Failed to load courses" }, { status: 500 })
