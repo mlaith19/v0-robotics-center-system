@@ -234,7 +234,7 @@ export default function TeachersPage() {
                       ? "text-red-700 dark:text-red-400"
                       : "text-muted-foreground"
                 }`}>
-                  {(t.balance || 0).toLocaleString()} ₪
+                  {Math.round(t.balance || 0).toLocaleString()} ₪
                 </div>
               </div>
 
