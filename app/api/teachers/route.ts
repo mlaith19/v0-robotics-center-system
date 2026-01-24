@@ -4,11 +4,45 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    // Get all teachers - balance will be calculated when teacherId column is added to Payment table
+    // Get all teachers with calculated balance
+    // Balance = Total Paid (from TeacherExpense) - Owed (from Attendance hours * rate)
     const teachers = await sql`
-      SELECT *, 0 as "totalPaid"
-      FROM "Teacher"
-      ORDER BY "createdAt" DESC
+      SELECT t.*,
+        COALESCE(expenses.total_paid, 0) as "totalPaid",
+        COALESCE(attendance.total_owed, 0) as "totalOwed",
+        COALESCE(expenses.total_paid, 0) - COALESCE(attendance.total_owed, 0) as "balance"
+      FROM "Teacher" t
+      LEFT JOIN (
+        SELECT "teacherId", SUM(amount) as total_paid
+        FROM "TeacherExpense"
+        GROUP BY "teacherId"
+      ) expenses ON t.id = expenses."teacherId"
+      LEFT JOIN (
+        SELECT 
+          a."teacherId",
+          SUM(
+            CASE 
+              WHEN LOWER(a.status) IN ('נוכח', 'present') THEN
+                COALESCE(
+                  a.hours,
+                  EXTRACT(EPOCH FROM (c."endTime" - c."startTime")) / 3600
+                ) * COALESCE(
+                  CASE 
+                    WHEN LOWER(c.location) LIKE '%מרכז%' OR c.location IS NULL OR c.location = '' THEN t."centerHourlyRate"
+                    ELSE t."externalHourlyRate"
+                  END,
+                  0
+                )
+              ELSE 0
+            END
+          ) as total_owed
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        LEFT JOIN "Teacher" t ON a."teacherId" = t.id
+        WHERE a."teacherId" IS NOT NULL
+        GROUP BY a."teacherId"
+      ) attendance ON t.id = attendance."teacherId"
+      ORDER BY t."createdAt" DESC
     `
     return Response.json(teachers)
   } catch (err) {

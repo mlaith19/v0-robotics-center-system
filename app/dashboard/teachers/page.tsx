@@ -215,22 +215,26 @@ export default function TeachersPage() {
                 )}
               </div>
 
-              {/* Balance */}
+              {/* Balance - Paid minus Owed */}
               <div className={`rounded-lg p-3 text-center ${
-                (t.totalPaid || 0) > 0 
+                (t.balance || 0) > 0 
                   ? "bg-green-50 dark:bg-green-950/20" 
-                  : "bg-slate-50 dark:bg-slate-800"
+                  : (t.balance || 0) < 0
+                    ? "bg-red-50 dark:bg-red-950/20"
+                    : "bg-slate-50 dark:bg-slate-800"
               }`}>
                 <div className="flex items-center justify-center gap-1 text-xs mb-1 text-muted-foreground">
                   <span className="font-bold">₪</span>
-                  <span>יתרה לתשלום</span>
+                  <span>יתרה</span>
                 </div>
                 <div className={`font-bold text-lg ${
-                  (t.totalPaid || 0) > 0 
+                  (t.balance || 0) > 0 
                     ? "text-green-700 dark:text-green-400" 
-                    : "text-muted-foreground"
+                    : (t.balance || 0) < 0
+                      ? "text-red-700 dark:text-red-400"
+                      : "text-muted-foreground"
                 }`}>
-                  {(t.totalPaid || 0).toLocaleString()} ₪
+                  {(t.balance || 0).toLocaleString()} ₪
                 </div>
               </div>
 
