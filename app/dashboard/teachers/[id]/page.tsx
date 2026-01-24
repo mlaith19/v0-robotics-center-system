@@ -110,6 +110,15 @@ export default function TeacherViewPage() {
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [isCourseDialogOpen, setIsCourseDialogOpen] = useState(false)
 
+  // Attendance dialog state
+  const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false)
+  const [isAddingAttendance, setIsAddingAttendance] = useState(false)
+  const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split("T")[0])
+  const [attendanceHours, setAttendanceHours] = useState("")
+  const [attendanceStatus, setAttendanceStatus] = useState<"נוכח" | "חיסור" | "איחור">("נוכח")
+  const [attendanceCourseId, setAttendanceCourseId] = useState("")
+  const [attendanceNote, setAttendanceNote] = useState("")
+
   const openCourseDialog = (course) => {
     setSelectedCourse(course)
     setIsCourseDialogOpen(true)
@@ -207,6 +216,43 @@ export default function TeacherViewPage() {
       console.error("Failed to add expense:", err)
     } finally {
       setIsAddingPayment(false)
+    }
+  }
+
+  // Handle adding attendance record for teacher
+  const handleAddAttendance = async () => {
+    if (!attendanceDate || !attendanceHours || Number(attendanceHours) <= 0) return
+
+    setIsAddingAttendance(true)
+    try {
+      const res = await fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teacherId: id,
+          courseId: attendanceCourseId || null,
+          date: attendanceDate,
+          hours: Number(attendanceHours),
+          status: attendanceStatus,
+          note: attendanceNote || null,
+        }),
+      })
+
+      if (res.ok) {
+        // Reset form and close dialog
+        setAttendanceDate(new Date().toISOString().split("T")[0])
+        setAttendanceHours("")
+        setAttendanceStatus("נוכח")
+        setAttendanceCourseId("")
+        setAttendanceNote("")
+        setIsAttendanceDialogOpen(false)
+        // Refresh page to get updated data
+        window.location.reload()
+      }
+    } catch (err) {
+      console.error("Failed to add attendance:", err)
+    } finally {
+      setIsAddingAttendance(false)
     }
   }
 
@@ -473,9 +519,19 @@ export default function TeacherViewPage() {
           <TabsContent value="attendance" className="mt-6 space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <Card className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CalendarCheck className="h-4 w-4" />
-                  נוכחות
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CalendarCheck className="h-4 w-4" />
+                    נוכחות
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0 text-primary hover:bg-primary/10"
+                    onClick={() => setIsAttendanceDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
                 <div className="text-2xl font-bold">{attendancePct}%</div>
               </Card>
@@ -711,6 +767,97 @@ export default function TeacherViewPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Attendance Dialog */}
+      <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>הוספת נוכחות למורה</DialogTitle>
+            <DialogDescription>רשום את שעות העבודה של המורה</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="attendance-date">תאריך *</Label>
+              <Input
+                id="attendance-date"
+                type="date"
+                value={attendanceDate}
+                onChange={(e) => setAttendanceDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="attendance-hours">מספר שעות *</Label>
+              <Input
+                id="attendance-hours"
+                type="number"
+                step="0.5"
+                min="0"
+                placeholder="0"
+                value={attendanceHours}
+                onChange={(e) => setAttendanceHours(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="attendance-status">סטטוס</Label>
+              <Select value={attendanceStatus} onValueChange={(v: "נוכח" | "חיסור" | "איחור") => setAttendanceStatus(v)}>
+                <SelectTrigger id="attendance-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="נוכח">נוכח</SelectItem>
+                  <SelectItem value="חיסור">חיסור</SelectItem>
+                  <SelectItem value="איחור">איחור</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {courses.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="attendance-course">קורס (אופציונלי)</Label>
+                <Select value={attendanceCourseId} onValueChange={setAttendanceCourseId}>
+                  <SelectTrigger id="attendance-course">
+                    <SelectValue placeholder="בחר קורס" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="attendance-note">הערה (אופציונלי)</Label>
+              <Input
+                id="attendance-note"
+                placeholder="הערה לנוכחות"
+                value={attendanceNote}
+                onChange={(e) => setAttendanceNote(e.target.value)}
+              />
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={handleAddAttendance}
+              disabled={isAddingAttendance || !attendanceDate || !attendanceHours || Number(attendanceHours) <= 0}
+            >
+              {isAddingAttendance ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  מוסיף...
+                </>
+              ) : (
+                "הוסף נוכחות"
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
