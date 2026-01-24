@@ -604,37 +604,39 @@ export default function TeacherViewPage() {
 
             {/* Attendance Records */}
             {filteredAttendance.length ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {filteredAttendance.map((a: any) => {
                   const statusLabel = getStatusLabel(a.status)
                   const isPresent = statusLabel === "נוכח"
                   const isAbsent = statusLabel === "חיסור"
                   
                   return (
-                    <Card key={a.id} className={`p-4 border-r-4 ${
+                    <Card key={a.id} dir="rtl" className={`p-3 border-r-4 ${
                       isPresent ? "border-r-green-500 bg-green-50/50 dark:bg-green-950/10" :
                       isAbsent ? "border-r-red-500 bg-red-50/50 dark:bg-red-950/10" :
                       "border-r-orange-500 bg-orange-50/50 dark:bg-orange-950/10"
                     }`}>
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                            isPresent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                            isAbsent ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                            "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                          }`}>{statusLabel}</span>
+                      <div className="flex items-center justify-between gap-4 flex-row-reverse">
+                        {/* Right side - Date and Course */}
+                        <div className="flex items-center gap-2 text-right">
+                          <span className="font-medium">{fmtDate(a.date)}</span>
+                          <span className="text-muted-foreground">|</span>
+                          <span className="text-sm text-muted-foreground">{a.courseName ?? "-"}</span>
                           {a.hours && (
-                            <span className="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-muted-foreground">
-                              {a.hours} שעות
-                            </span>
+                            <>
+                              <span className="text-muted-foreground">|</span>
+                              <span className="text-sm text-muted-foreground">{a.hours} שעות</span>
+                            </>
                           )}
                         </div>
-                        <div className="text-left">
-                          <div className="font-medium">{fmtDate(a.date)}</div>
-                          <div className="text-sm text-muted-foreground">{a.courseName ?? "-"}</div>
-                        </div>
+                        {/* Left side - Status badge */}
+                        <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${
+                          isPresent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                          isAbsent ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                          "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                        }`}>{statusLabel}</span>
                       </div>
-                      {a.notes && <div className="text-sm text-muted-foreground mt-2 pt-2 border-t">{a.notes}</div>}
+                      {a.notes && <div className="text-sm text-muted-foreground mt-2 pt-2 border-t text-right">{a.notes}</div>}
                     </Card>
                   )
                 })}
