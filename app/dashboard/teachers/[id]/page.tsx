@@ -654,23 +654,25 @@ export default function TeacherViewPage() {
   </div>
 
   <div className="grid grid-cols-3 gap-4">
-              <Card className="p-4 bg-red-50 dark:bg-red-950/20">
+              {/* Paid to Teacher - shows expenses sum */}
+              <Card className="p-4 bg-green-50 dark:bg-green-950/20">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-red-600 font-bold">₪</span>
-                    <span className="text-xs text-red-700 dark:text-red-400">שולם למורה</span>
+                    <span className="text-green-600 font-bold">₪</span>
+                    <span className="text-xs text-green-700 dark:text-green-400">שולם למורה</span>
                   </div>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="h-6 w-6 p-0 text-red-600 hover:bg-red-100"
+                    className="h-6 w-6 p-0 text-green-600 hover:bg-green-100"
                     onClick={() => setIsPaymentDialogOpen(true)}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="text-2xl font-bold text-red-700 dark:text-red-400">{paidSum.toLocaleString("he-IL")} ₪</div>
+                <div className="text-2xl font-bold text-green-700 dark:text-green-400">{expensesSum.toLocaleString("he-IL")} ₪</div>
               </Card>
+              {/* Debt to Teacher - owed amount */}
               <Card className="p-4 bg-orange-50 dark:bg-orange-950/20">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-orange-600 font-bold">₪</span>
@@ -678,13 +680,14 @@ export default function TeacherViewPage() {
                 </div>
                 <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">{owedToTeacher.toLocaleString("he-IL")} ₪</div>
               </Card>
-              <Card className="p-4 bg-green-50 dark:bg-green-950/20">
+              {/* Balance - paid minus debt */}
+              <Card className={`p-4 ${expensesSum - owedToTeacher >= 0 ? "bg-blue-50 dark:bg-blue-950/20" : "bg-red-50 dark:bg-red-950/20"}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-green-600 font-bold">₪</span>
-                  <span className="text-xs text-green-700 dark:text-green-400">סה״כ הוצאות</span>
+                  <span className={`font-bold ${expensesSum - owedToTeacher >= 0 ? "text-blue-600" : "text-red-600"}`}>₪</span>
+                  <span className={`text-xs ${expensesSum - owedToTeacher >= 0 ? "text-blue-700 dark:text-blue-400" : "text-red-700 dark:text-red-400"}`}>יתרה</span>
                 </div>
-                <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-                  {expensesSum.toLocaleString("he-IL")} ₪
+                <div className={`text-2xl font-bold ${expensesSum - owedToTeacher >= 0 ? "text-blue-700 dark:text-blue-400" : "text-red-700 dark:text-red-400"}`}>
+                  {(expensesSum - owedToTeacher).toLocaleString("he-IL")} ₪
                 </div>
               </Card>
             </div>
