@@ -49,7 +49,6 @@ export default function EditGafanProgramPage() {
     providerType: "internal",
     notes: "",
   })
-  const [dataLoaded, setDataLoaded] = useState(false)
 
   const israeliBanks = [
     { name: "בנק לאומי", code: "10" },
@@ -64,7 +63,9 @@ export default function EditGafanProgramPage() {
   ]
 
   useEffect(() => {
+    console.log("[v0] useEffect running - program:", program, "dataLoadedRef:", dataLoadedRef.current)
     if (program && !program.error && !dataLoadedRef.current) {
+      console.log("[v0] Loading data into form - programNumber:", program.programNumber)
       dataLoadedRef.current = true
       setFormData({
         programNumber: program.programNumber || "",
@@ -137,6 +138,8 @@ export default function EditGafanProgramPage() {
       bankCode: bank?.code || "",
     })
   }
+
+  console.log("[v0] Render - formData:", formData.programNumber, formData.name, "isLoading:", isLoading, "program:", program?.name)
 
   if (isLoading) {
     return (
