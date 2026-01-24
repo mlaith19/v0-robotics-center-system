@@ -7,12 +7,23 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const courseId = searchParams.get("courseId")
     const studentId = searchParams.get("studentId")
+    const teacherId = searchParams.get("teacherId")
     const date = searchParams.get("date")
 
     // Use tagged template literals for different query scenarios
     // JOIN with Course to get course name and duration
     let result
-    if (courseId && studentId && date) {
+    
+    // Teacher attendance queries
+    if (teacherId) {
+      result = await sql`
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        FROM "Attendance" a
+        LEFT JOIN "Course" c ON a."courseId" = c.id
+        WHERE a."teacherId" = ${teacherId}
+        ORDER BY a."date" DESC, a."createdAt" DESC
+      `
+    } else if (courseId && studentId && date) {
       result = await sql`
         SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
         FROM "Attendance" a

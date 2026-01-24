@@ -77,6 +77,7 @@ export default function TeacherViewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [teacherExpenses, setTeacherExpenses] = useState<any[]>([])
+  const [teacherAttendance, setTeacherAttendance] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([]) // Declare payments variable
 
   // Payment dialog state
@@ -112,12 +113,12 @@ export default function TeacherViewPage() {
 
   // Attendance dialog state
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false)
-  const [isAddingAttendance, setIsAddingAttendance] = useState(false)
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split("T")[0])
   const [attendanceHours, setAttendanceHours] = useState("")
   const [attendanceStatus, setAttendanceStatus] = useState<"נוכח" | "חיסור" | "איחור">("נוכח")
   const [attendanceCourseId, setAttendanceCourseId] = useState("")
   const [attendanceNote, setAttendanceNote] = useState("")
+  const [isAddingAttendance, setIsAddingAttendance] = useState(false) // Declare isAddingAttendance variable
 
   const openCourseDialog = (course) => {
     setSelectedCourse(course)
@@ -148,20 +149,23 @@ export default function TeacherViewPage() {
         setLoading(true)
         setError(null)
 
-        // Fetch teacher data and expenses in parallel
-        const [teacherRes, expensesRes] = await Promise.all([
+        // Fetch teacher data, expenses, and attendance in parallel
+        const [teacherRes, expensesRes, attendanceRes] = await Promise.all([
           fetch(`/api/teachers/${id}?include=1`, { cache: "no-store" }),
-          fetch(`/api/expenses?teacherId=${id}`, { cache: "no-store" })
+          fetch(`/api/expenses?teacherId=${id}`, { cache: "no-store" }),
+          fetch(`/api/attendance?teacherId=${id}`, { cache: "no-store" })
         ])
         
         if (!teacherRes.ok) throw new Error(`Failed to load teacher (${teacherRes.status})`)
 
         const data = (await teacherRes.json()) as Teacher | null
         const expensesData = expensesRes.ok ? await expensesRes.json() : []
+        const attendanceData = attendanceRes.ok ? await attendanceRes.json() : []
         
         if (!cancelled) {
           setTeacher(data)
           setTeacherExpenses(Array.isArray(expensesData) ? expensesData : [])
+          setTeacherAttendance(Array.isArray(attendanceData) ? attendanceData : [])
           setPayments(data?.payments ?? []) // Initialize payments state
         }
       } catch (e: any) {
@@ -219,45 +223,9 @@ export default function TeacherViewPage() {
     }
   }
 
-  // Handle adding attendance record for teacher
-  const handleAddAttendance = async () => {
-    if (!attendanceDate || !attendanceHours || Number(attendanceHours) <= 0) return
-
-    setIsAddingAttendance(true)
-    try {
-      const res = await fetch("/api/attendance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          teacherId: id,
-          courseId: attendanceCourseId || null,
-          date: attendanceDate,
-          hours: Number(attendanceHours),
-          status: attendanceStatus,
-          note: attendanceNote || null,
-        }),
-      })
-
-      if (res.ok) {
-        // Reset form and close dialog
-        setAttendanceDate(new Date().toISOString().split("T")[0])
-        setAttendanceHours("")
-        setAttendanceStatus("נוכח")
-        setAttendanceCourseId("")
-        setAttendanceNote("")
-        setIsAttendanceDialogOpen(false)
-        // Refresh page to get updated data
-        window.location.reload()
-      }
-    } catch (err) {
-      console.error("Failed to add attendance:", err)
-    } finally {
-      setIsAddingAttendance(false)
-    }
-  }
-
   const courses = useMemo(() => teacher?.teacherCourses?.map((x) => x.course) ?? [], [teacher])
-  const attendance = useMemo(() => teacher?.attendance ?? [], [teacher])
+  // Use teacherAttendance from API instead of teacher?.attendance
+  const attendance = teacherAttendance
 
   // Calculate total paid to teacher from expenses
   const paidSum = useMemo(
@@ -280,6 +248,42 @@ export default function TeacherViewPage() {
     presentCount,
     totalCount,
   ])
+
+  const handleAddAttendance = async () => {
+    if (!attendanceDate || !attendanceHours || Number(attendanceHours) <= 0) return
+
+    setIsAddingAttendance(true)
+    try {
+      const res = await fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: attendanceDate,
+          hours: Number(attendanceHours),
+          status: attendanceStatus,
+          courseId: attendanceCourseId,
+          note: attendanceNote,
+          teacherId: id,
+        }),
+      })
+
+      if (res.ok) {
+        // Reset form and close dialog
+        setAttendanceDate(new Date().toISOString().split("T")[0])
+        setAttendanceHours("")
+        setAttendanceStatus("נוכח")
+        setAttendanceCourseId("")
+        setAttendanceNote("")
+        setIsAttendanceDialogOpen(false)
+        // Refresh page to get updated data
+        window.location.reload()
+      }
+    } catch (err) {
+      console.error("Failed to add attendance:", err)
+    } finally {
+      setIsAddingAttendance(false)
+    }
+  }
 
   if (loading) return <div className="p-6">טוען...</div>
 
@@ -517,15 +521,6 @@ export default function TeacherViewPage() {
           </TabsContent>
 
           <TabsContent value="attendance" className="mt-6 space-y-4">
-            {/* Add Attendance Button */}
-            <Button 
-              className="w-full"
-              onClick={() => setIsAttendanceDialogOpen(true)}
-            >
-              <Plus className="h-4 w-4 ml-2" />
-              הוסף נוכחות
-            </Button>
-
             <div className="grid grid-cols-3 gap-4">
               <Card className="p-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -554,19 +549,23 @@ export default function TeacherViewPage() {
 
             {attendance.length ? (
               <div className="space-y-3">
-                {attendance.map((a) => (
+                {attendance.map((a: any) => (
                   <Card key={a.id} className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <div className="font-medium">{fmtDate(a.date)}</div>
-                        <div className="text-sm text-muted-foreground">{a.course?.name ?? "-"}</div>
+                        <div className="text-sm text-muted-foreground">{a.courseName ?? "-"}</div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="text-sm text-muted-foreground">{a.hours} שעות</div>
-                        <span className="text-xs px-2 py-1 rounded-full border">{a.status}</span>
+                        {a.hours && <div className="text-sm text-muted-foreground">{a.hours} שעות</div>}
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          a.status === "נוכח" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                          a.status === "חיסור" || a.status === "לא נוכח" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                          "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                        }`}>{a.status}</span>
                       </div>
                     </div>
-                    {a.note ? <div className="text-sm text-muted-foreground mt-2">{a.note}</div> : null}
+                    {a.notes ? <div className="text-sm text-muted-foreground mt-2">{a.notes}</div> : null}
                   </Card>
                 ))}
               </div>
@@ -769,96 +768,7 @@ export default function TeacherViewPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Attendance Dialog */}
-      <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>הוספת נוכחות למורה</DialogTitle>
-            <DialogDescription>רשום את שעות העבודה של המורה</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="attendance-date">תאריך *</Label>
-              <Input
-                id="attendance-date"
-                type="date"
-                value={attendanceDate}
-                onChange={(e) => setAttendanceDate(e.target.value)}
-              />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="attendance-hours">מספר שעות *</Label>
-              <Input
-                id="attendance-hours"
-                type="number"
-                step="0.5"
-                min="0"
-                placeholder="0"
-                value={attendanceHours}
-                onChange={(e) => setAttendanceHours(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="attendance-status">סטטוס</Label>
-              <Select value={attendanceStatus} onValueChange={(v: "נוכח" | "חיסור" | "איחור") => setAttendanceStatus(v)}>
-                <SelectTrigger id="attendance-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="נוכח">נוכח</SelectItem>
-                  <SelectItem value="חיסור">חיסור</SelectItem>
-                  <SelectItem value="איחור">איחור</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {courses.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="attendance-course">קורס (אופציונלי)</Label>
-                <Select value={attendanceCourseId} onValueChange={setAttendanceCourseId}>
-                  <SelectTrigger id="attendance-course">
-                    <SelectValue placeholder="בחר קורס" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="attendance-note">הערה (אופציונלי)</Label>
-              <Input
-                id="attendance-note"
-                placeholder="הערה לנוכחות"
-                value={attendanceNote}
-                onChange={(e) => setAttendanceNote(e.target.value)}
-              />
-            </div>
-
-            <Button
-              className="w-full"
-              onClick={handleAddAttendance}
-              disabled={isAddingAttendance || !attendanceDate || !attendanceHours || Number(attendanceHours) <= 0}
-            >
-              {isAddingAttendance ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                  מוסיף...
-                </>
-              ) : (
-                "הוסף נוכחות"
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
