@@ -1,9 +1,12 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import NewSchoolPage from "../new/page"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -59,17 +62,13 @@ const schoolTypeLabels: Record<string, string> = {
 
 export default function SchoolViewPage() {
   const params = useParams()
-  const router = useRouter()
   const id = params.id as string
   const isNewPage = id === "new"
   const [school, setSchool] = useState<School | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (isNewPage) {
-      router.replace("/dashboard/schools/new")
-      return
-    }
+    if (isNewPage) return
     
     const fetchSchool = async () => {
       try {
@@ -85,14 +84,11 @@ export default function SchoolViewPage() {
       }
     }
     fetchSchool()
-  }, [id, isNewPage, router])
+  }, [id, isNewPage])
 
+  // אם זה דף new, מציג את טופס יצירת בית הספר
   if (isNewPage) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+    return <NewSchoolPage />
   }
 
   if (loading) {
