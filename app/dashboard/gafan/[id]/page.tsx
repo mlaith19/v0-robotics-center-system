@@ -5,26 +5,37 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowRight, Rocket, Building2, User, DollarSign, BookOpen, Users, TrendingUp, Edit, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import useSWR from "swr"
-import NewGafanProgramPage from "../new/page"
+import { useEffect } from "react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function GafanProgramViewPage() {
   const params = useParams()
+  const router = useRouter()
   
-  // אם ה-ID הוא "new", נציג את טופס יצירת התוכנית החדשה
+  // אם ה-ID הוא "new", נפנה לדף היצירה
   const isNewPage = params.id === "new"
+  
+  useEffect(() => {
+    if (isNewPage) {
+      router.replace("/dashboard/gafan/new")
+    }
+  }, [isNewPage, router])
   
   const { data: program, error, isLoading } = useSWR(
     isNewPage ? null : `/api/gafan/${params.id}`, 
     fetcher
   )
 
-  // אם זה דף new, מציג את טופס היצירה
+  // אם זה דף new, מציג loader בזמן ה-redirect
   if (isNewPage) {
-    return <NewGafanProgramPage />
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   if (isLoading) {
