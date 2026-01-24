@@ -3,14 +3,15 @@ import { sql } from "@/lib/db"
 export async function GET() {
   try {
     // Get all stats in a single query using subqueries
+    // Check for both Hebrew and English status values, and include NULL as active
     const result = await sql`
       SELECT 
-        (SELECT COUNT(*) FROM "Course" WHERE status = 'active') as "totalCourses",
-        (SELECT COUNT(*) FROM "Student" WHERE status = 'active') as "activeStudents",
-        (SELECT COUNT(*) FROM "Teacher" WHERE status = 'פעיל') as "activeTeachers",
+        (SELECT COUNT(*) FROM "Course" WHERE status = 'active' OR status = 'פעיל' OR status IS NULL) as "totalCourses",
+        (SELECT COUNT(*) FROM "Student" WHERE status = 'active' OR status = 'פעיל' OR status IS NULL) as "activeStudents",
+        (SELECT COUNT(*) FROM "Teacher" WHERE status = 'פעיל' OR status = 'active' OR status IS NULL) as "activeTeachers",
         (SELECT COUNT(*) FROM "School") as "totalSchools",
         (SELECT COUNT(*) FROM "Enrollment") as "totalEnrollments",
-        (SELECT COALESCE(SUM(amount), 0) FROM "Payment" WHERE "paymentDate" >= NOW() - INTERVAL '30 days') as "monthlyIncome",
+        (SELECT COALESCE(SUM(amount), 0) FROM "Payment" WHERE "paymentDate" >= NOW() - INTERVAL '30 days' AND ("paymentType" IS NULL OR "paymentType" NOT IN ('discount', 'credit'))) as "monthlyIncome",
         (SELECT COALESCE(SUM(amount), 0) FROM "Expense" WHERE date >= NOW() - INTERVAL '30 days') as "monthlyExpenses"
     `
 
