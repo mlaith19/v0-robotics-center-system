@@ -21,8 +21,7 @@ type RegistrationType = "student" | "teacher"
 
 interface Student {
   id: string
-  firstName: string
-  lastName: string
+  name: string
   phone: string
   email: string
   createdAt: string
@@ -30,8 +29,7 @@ interface Student {
 
 interface Teacher {
   id: string
-  firstName: string
-  lastName: string
+  name: string
   phone: string
   email: string
   createdAt: string
@@ -69,7 +67,7 @@ export default function RegistrationPage() {
   const registrations = [
     ...students.map((s) => ({
       id: s.id,
-      name: `${s.firstName} ${s.lastName}`,
+      name: s.name || "",
       type: "student" as RegistrationType,
       phone: s.phone || "",
       email: s.email || "",
@@ -78,7 +76,7 @@ export default function RegistrationPage() {
     })),
     ...teachers.map((t) => ({
       id: t.id,
-      name: `${t.firstName} ${t.lastName}`,
+      name: t.name || "",
       type: "teacher" as RegistrationType,
       phone: t.phone || "",
       email: t.email || "",
