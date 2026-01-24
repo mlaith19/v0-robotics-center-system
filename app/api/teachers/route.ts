@@ -14,7 +14,8 @@ export async function GET() {
       FROM "Teacher" t
       LEFT JOIN (
         SELECT "teacherId", SUM(amount) as total_paid
-        FROM "TeacherExpense"
+        FROM "Expense"
+        WHERE "teacherId" IS NOT NULL
         GROUP BY "teacherId"
       ) expenses ON t.id = expenses."teacherId"
       LEFT JOIN (
