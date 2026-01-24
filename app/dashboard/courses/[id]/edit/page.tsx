@@ -69,6 +69,7 @@ export default function EditCoursePage() {
     teacherIds: [] as string[],
     schoolId: "",
     gafanProgramId: "",
+    validYear: new Date().getFullYear().toString(),
   })
 
   useEffect(() => {
@@ -99,6 +100,7 @@ export default function EditCoursePage() {
             teacherIds: course.teacherIds || [],
             schoolId: course.schoolId || "",
             gafanProgramId: course.gafanProgramId || "",
+            validYear: course.validYear?.toString() || new Date().getFullYear().toString(),
           })
         }
         if (Array.isArray(teacherList)) setTeachers(teacherList)
@@ -295,88 +297,146 @@ export default function EditCoursePage() {
         </CardContent>
       </Card>
 
-      {/* מידע כללי */}
+      {/* מידע כללי / מידע בסיסי על התוכנית (לגפ"ן) */}
       <Card className="border-green-200 bg-green-50/50">
         <CardHeader className="text-right">
           <CardTitle className="flex flex-row-reverse items-center justify-end gap-2">
             <BookOpen className="h-5 w-5 text-green-600" />
-            מידע כללי
+            {formData.courseType === "gafan" ? "מידע בסיסי על התוכנית" : "מידע כללי"}
           </CardTitle>
-          <CardDescription className="text-right">פרטי הקורס הבסיסיים</CardDescription>
+          <CardDescription className="text-right">
+            {formData.courseType === "gafan" ? "פרטי תוכנית גפ\"ן הראשוניים" : "פרטי הקורס הבסיסיים"}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-right block">מס' קורס</Label>
-              <Input 
-                value={formData.courseNumber} 
-                onChange={(e) => setFormData({...formData, courseNumber: e.target.value})} 
-                placeholder="לדוגמה: ROB-001"
-                className="text-right"
-                dir="rtl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-right block">קטגוריה</Label>
-              <Input 
-                value={formData.category} 
-                onChange={(e) => setFormData({...formData, category: e.target.value})} 
-                placeholder="לדוגמה: רובוטיקה"
-                className="text-right"
-                dir="rtl"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-right block">שם הקורס *</Label>
-            <Input 
-              value={formData.name} 
-              onChange={(e) => setFormData({...formData, name: e.target.value})} 
-              placeholder="לדוגמה: רובוטיקה מתקדמת"
-              className="text-right"
-              dir="rtl"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-right block">תיאור *</Label>
-            <Textarea 
-              value={formData.description} 
-              onChange={(e) => setFormData({...formData, description: e.target.value})} 
-              placeholder="תאר את תוכן הקורס, היעדים והנושאים שילמדו..."
-              rows={3}
-              className="text-right"
-              dir="rtl"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-right block">רמה</Label>
-              <Select value={formData.level} onValueChange={(value) => setFormData({...formData, level: value})}>
-                <SelectTrigger className="text-right" dir="rtl">
-                  <SelectValue placeholder="בחר רמה" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">מתחילים</SelectItem>
-                  <SelectItem value="intermediate">מתקדמים</SelectItem>
-                  <SelectItem value="advanced">מומחים</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-right block">מספר מפגשים</Label>
-              <Input 
-                type="number"
-                value={formData.duration} 
-                onChange={(e) => setFormData({...formData, duration: e.target.value})} 
-                placeholder="לדוגמה: 12"
-                className="text-right"
-                dir="rtl"
-              />
-            </div>
-          </div>
+          
+          {formData.courseType === "gafan" ? (
+            /* שדות גפ"ן */
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-right block">מס' תוכנית *</Label>
+                  <Input
+                    value={formData.courseNumber}
+                    onChange={(e) => setFormData({...formData, courseNumber: e.target.value})}
+                    placeholder="לדוגמה: GP2024-001"
+                    className="text-right"
+                    dir="rtl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-right block">תוקף לשנה *</Label>
+                  <Input
+                    type="number"
+                    value={formData.validYear}
+                    onChange={(e) => setFormData({...formData, validYear: e.target.value})}
+                    placeholder={new Date().getFullYear().toString()}
+                    className="text-right"
+                    dir="rtl"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-right block">שם התוכנית *</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="לדוגמה: תוכנית רובוטיקה בית ספרית"
+                  className="text-right"
+                  dir="rtl"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-right block">מספר מפגשים</Label>
+                <Input 
+                  type="number"
+                  value={formData.duration} 
+                  onChange={(e) => setFormData({...formData, duration: e.target.value})} 
+                  placeholder="30"
+                  className="text-right"
+                  dir="rtl"
+                />
+              </div>
+            </>
+          ) : (
+            /* שדות קורס רגיל */
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-right block">מס' קורס</Label>
+                  <Input
+                    value={formData.courseNumber}
+                    onChange={(e) => setFormData({...formData, courseNumber: e.target.value})}
+                    placeholder="לדוגמה: ROB-001"
+                    className="text-right"
+                    dir="rtl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-right block">קטגוריה</Label>
+                  <Input
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    placeholder="לדוגמה: רובוטיקה"
+                    className="text-right"
+                    dir="rtl"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-right block">שם הקורס *</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="לדוגמה: רובוטיקה מתקדמת"
+                  className="text-right"
+                  dir="rtl"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-right block">תיאור *</Label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  placeholder="תאר את תוכן הקורס, היעדים והנושאים שילמדו..."
+                  rows={3}
+                  className="text-right"
+                  dir="rtl"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-right block">רמה</Label>
+                  <Select value={formData.level} onValueChange={(value) => setFormData({...formData, level: value})}>
+                    <SelectTrigger className="text-right" dir="rtl">
+                      <SelectValue placeholder="בחר רמה" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">מתחילים</SelectItem>
+                      <SelectItem value="intermediate">מתקדמים</SelectItem>
+                      <SelectItem value="advanced">מומחים</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-right block">מספר מפגשים</Label>
+                  <Input 
+                    type="number"
+                    value={formData.duration} 
+                    onChange={(e) => setFormData({...formData, duration: e.target.value})} 
+                    placeholder="לדוגמה: 12"
+                    className="text-right"
+                    dir="rtl"
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
