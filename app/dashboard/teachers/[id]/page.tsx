@@ -693,26 +693,39 @@ export default function TeacherViewPage() {
             </div>
 
             {filteredExpenses.length ? (
-              <div className="space-y-3">
-                {filteredExpenses.map((e) => (
-                  <Card key={e.id} className="p-4 border-red-100 dark:border-red-900">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground">{fmtDate(e.date)}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {e.paymentMethod ? `אמצעי תשלום: ${e.paymentMethod === "cash" ? "מזומן" : e.paymentMethod === "transfer" ? "העברה" : e.paymentMethod === "check" ? "שיק" : e.paymentMethod === "bit" ? "ביט" : e.paymentMethod}` : ""}
+              <div className="space-y-2">
+                {filteredExpenses.map((e) => {
+                  const paymentMethodLabel = e.paymentMethod === "cash" ? "מזומן" : e.paymentMethod === "transfer" ? "העברה" : e.paymentMethod === "check" ? "שיק" : e.paymentMethod === "bit" ? "ביט" : e.paymentMethod
+                  return (
+                    <Card key={e.id} dir="rtl" className="p-3 border-r-4 border-r-green-500 bg-green-50/50 dark:bg-green-950/10">
+                      <div className="flex items-center justify-between gap-4 flex-row-reverse">
+                        {/* Right side - Date, Payment Method, Description */}
+                        <div className="flex items-center gap-2 text-right flex-wrap">
+                          <span className="font-medium">{fmtDate(e.date)}</span>
+                          {paymentMethodLabel && (
+                            <>
+                              <span className="text-muted-foreground">|</span>
+                              <span className="text-sm text-muted-foreground">{paymentMethodLabel}</span>
+                            </>
+                          )}
+                          {e.description && (
+                            <>
+                              <span className="text-muted-foreground">|</span>
+                              <span className="text-sm text-muted-foreground">{e.description}</span>
+                            </>
+                          )}
+                        </div>
+                        {/* Left side - Amount and Badge */}
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            תשלום
+                          </span>
+                          <span className="font-bold text-green-600">{Number(e.amount).toLocaleString("he-IL")} ₪</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="font-bold text-red-600">{Number(e.amount).toLocaleString("he-IL")} ₪</div>
-                        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                          הוצאה
-                        </span>
-                      </div>
-                    </div>
-                    {e.description ? <div className="text-sm text-muted-foreground mt-2">{e.description}</div> : null}
-                  </Card>
-                ))}
+                    </Card>
+                  )
+                })}
               </div>
             ) : (
               <Card className="p-6 text-center text-muted-foreground">אין תשלומים למורה</Card>
