@@ -517,26 +517,25 @@ export default function TeacherViewPage() {
           </TabsContent>
 
           <TabsContent value="attendance" className="mt-6 space-y-4">
+            {/* Add Attendance Button */}
+            <Button 
+              className="w-full"
+              onClick={() => setIsAttendanceDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4 ml-2" />
+              הוסף נוכחות
+            </Button>
+
             <div className="grid grid-cols-3 gap-4">
               <Card className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CalendarCheck className="h-4 w-4" />
-                    נוכחות
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 w-6 p-0 text-primary hover:bg-primary/10"
-                    onClick={() => setIsAttendanceDialogOpen(true)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                  <CalendarCheck className="h-4 w-4" />
+                  נוכחות
                 </div>
                 <div className="text-2xl font-bold">{attendancePct}%</div>
               </Card>
               <Card className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                   <CalendarCheck className="h-4 w-4" />
                   מפגשים
                 </div>
@@ -545,7 +544,7 @@ export default function TeacherViewPage() {
                 </div>
               </Card>
               <Card className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                   <CalendarCheck className="h-4 w-4" />
                   שעות
                 </div>
