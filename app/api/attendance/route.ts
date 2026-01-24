@@ -17,7 +17,8 @@ export async function GET(req: Request) {
     // Teacher attendance queries
     if (teacherId) {
       result = await sql`
-        SELECT a.*, c.name as "courseName", c.duration as "courseDuration"
+        SELECT a.*, c.name as "courseName", c.duration as "courseDuration",
+               c."startTime" as "courseStartTime", c."endTime" as "courseEndTime"
         FROM "Attendance" a
         LEFT JOIN "Course" c ON a."courseId" = c.id
         WHERE a."teacherId" = ${teacherId}

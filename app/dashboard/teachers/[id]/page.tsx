@@ -275,8 +275,46 @@ export default function TeacherViewPage() {
     const owedAmount = hoursWorked * hourlyRate
     return Math.max(0, owedAmount - paidSum)
   }, [attendance, teacher?.centerHourlyRate, paidSum])
-  const totalHours = useMemo(() => attendance.reduce((s, a) => s + (a.hours ?? 0), 0), [attendance])
-  const presentCount = useMemo(() => attendance.filter((a) => a.status === "נוכח").length, [attendance])
+  // Calculate hours based on course start/end time for each "present" attendance
+  const totalHours = useMemo(() => {
+    return attendance.reduce((sum, a: any) => {
+      const status = a.status?.toLowerCase()
+      const isPresent = status === "נוכח" || status === "present"
+      if (!isPresent) return sum
+      
+      // Use hours field if explicitly set
+      if (a.hours) return sum + Number(a.hours)
+      
+      // Calculate from course startTime and endTime
+      if (a.courseStartTime && a.courseEndTime) {
+        // Parse time strings (format: "HH:MM:SS" or "HH:MM")
+        const parseTime = (timeStr: string) => {
+          const parts = timeStr.split(":")
+          return Number(parts[0]) + Number(parts[1]) / 60
+        }
+        const startHours = parseTime(a.courseStartTime)
+        const endHours = parseTime(a.courseEndTime)
+        const durationHours = endHours - startHours
+        return sum + (durationHours > 0 ? durationHours : 0)
+      }
+      
+      // Fallback to courseDuration (in minutes) if no start/end time
+      if (a.courseDuration) {
+        return sum + Number(a.courseDuration) / 60
+      }
+      
+      return sum
+    }, 0)
+  }, [attendance])
+  
+  // Count present attendance (support both Hebrew and English status)
+  const presentCount = useMemo(() => {
+    return attendance.filter((a) => {
+      const status = a.status?.toLowerCase()
+      return status === "נוכח" || status === "present"
+    }).length
+  }, [attendance])
+  
   const totalCount = useMemo(() => attendance.length, [attendance])
   const attendancePct = useMemo(() => (totalCount ? Math.round((presentCount / totalCount) * 100) : 0), [
     presentCount,
