@@ -108,16 +108,25 @@ export default function SchedulePage() {
     })
   }, [courses, filterCourse, filterTeacher])
 
+  // Debug: log courses data
+  console.log("[v0] All courses:", courses)
+  console.log("[v0] Filtered courses:", filteredCourses)
+
   const getCoursesForDate = (date: Date) => {
     const dayOfWeek = date.getDay()
     const dayName = Object.keys(weekdayToNumber).find((key) => weekdayToNumber[key] === dayOfWeek)
+    
+    console.log("[v0] Checking date:", date.toDateString(), "dayOfWeek:", dayOfWeek, "dayName:", dayName)
 
     return filteredCourses.filter((course) => {
       if (!dayName) return false
       
       // בדוק גם weekdays וגם daysOfWeek (תאימות לאחור)
       const courseDays = course.weekdays || course.daysOfWeek || []
+      console.log("[v0] Course:", course.name, "courseDays:", courseDays, "startDate:", course.startDate, "endDate:", course.endDate)
+      
       if (!Array.isArray(courseDays) || courseDays.length === 0) {
+        console.log("[v0] Course", course.name, "has no days - skipping")
         return false
       }
       
@@ -138,8 +147,10 @@ export default function SchedulePage() {
       }
       
       if (!courseDays.includes(dayName)) {
+        console.log("[v0] Course", course.name, "does not include day", dayName, "in", courseDays)
         return false
       }
+      console.log("[v0] Course", course.name, "MATCHES for date", date.toDateString())
       return true
     })
   }
