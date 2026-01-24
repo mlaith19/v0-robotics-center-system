@@ -32,8 +32,7 @@ interface Payment {
   id: string
   amount: number
   paymentDate: string
-  paymentMethod: string
-  paymentType?: string
+  paymentType: string // This stores both payment method (cash, credit, etc.) and special types (discount, credit)
   description?: string
   studentId?: string
   schoolId?: string
@@ -55,10 +54,7 @@ interface School {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
-const getTotalByPaymentMethod = (method: "cash" | "credit" | "transfer" | "check" | "bit") => {
-  // Placeholder implementation
-  return 0;
-}
+
 
 export default function CashierPage() {
   const router = useRouter()
@@ -340,9 +336,10 @@ export default function CashierPage() {
   }
 
   // Get income totals by payment method (only actual payments, not discounts/credits)
+  // Note: In DB, paymentType stores the payment method (cash, credit, etc.) or special types (discount, credit)
   const getIncomeByPaymentMethod = (method: "cash" | "credit" | "transfer" | "check" | "bit") => {
     return filteredPayments
-      .filter((p) => p.paymentMethod === method && p.paymentType !== "discount" && p.paymentType !== "credit")
+      .filter((p) => p.paymentType === method)
       .reduce((sum, p) => sum + Number(p.amount), 0)
   }
 
@@ -965,7 +962,7 @@ export default function CashierPage() {
                             ? payment.school.name
                             : "-"}
                         </TableCell>
-                        <TableCell>{getPaymentMethodLabel(payment.paymentMethod)}</TableCell>
+                        <TableCell>{getPaymentMethodLabel(payment.paymentType)}</TableCell>
                         <TableCell className="text-green-600 font-semibold">₪{Number(payment.amount).toLocaleString()}</TableCell>
                         <TableCell>{payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString("he-IL") : "-"}</TableCell>
                         <TableCell>
