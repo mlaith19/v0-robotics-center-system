@@ -55,6 +55,11 @@ interface School {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
+const getTotalByPaymentMethod = (method: "cash" | "credit" | "transfer" | "check" | "bit") => {
+  // Placeholder implementation
+  return 0;
+}
+
 export default function CashierPage() {
   const router = useRouter()
   const [timePeriod, setTimePeriod] = useState<"day" | "week" | "month" | "quarter" | "year">("month")
@@ -334,14 +339,11 @@ export default function CashierPage() {
     }
   }
 
-  const getTotalByPaymentMethod = (method: "cash" | "credit" | "transfer" | "check" | "bit") => {
-    const incomeTotal = filteredPayments
-      .filter((p) => p.paymentMethod === method)
+  // Get income totals by payment method (only actual payments, not discounts/credits)
+  const getIncomeByPaymentMethod = (method: "cash" | "credit" | "transfer" | "check" | "bit") => {
+    return filteredPayments
+      .filter((p) => p.paymentMethod === method && p.paymentType !== "discount" && p.paymentType !== "credit")
       .reduce((sum, p) => sum + Number(p.amount), 0)
-    const expenseTotal = filteredExpenses
-      .filter((e) => e.paymentMethod === method)
-      .reduce((sum, e) => sum + Number(e.amount), 0)
-    return incomeTotal - expenseTotal
   }
 
   if (expensesLoading || paymentsLoading) {
@@ -434,7 +436,7 @@ export default function CashierPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-purple-700">₪{getTotalByPaymentMethod("cash").toLocaleString()}</div>
+            <div className="text-xl font-bold text-purple-700">₪{getIncomeByPaymentMethod("cash").toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -446,7 +448,7 @@ export default function CashierPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-indigo-700">₪{getTotalByPaymentMethod("credit").toLocaleString()}</div>
+            <div className="text-xl font-bold text-indigo-700">₪{getIncomeByPaymentMethod("credit").toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -458,7 +460,7 @@ export default function CashierPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-cyan-700">₪{getTotalByPaymentMethod("transfer").toLocaleString()}</div>
+            <div className="text-xl font-bold text-cyan-700">₪{getIncomeByPaymentMethod("transfer").toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -470,7 +472,7 @@ export default function CashierPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-teal-700">₪{getTotalByPaymentMethod("check").toLocaleString()}</div>
+            <div className="text-xl font-bold text-teal-700">₪{getIncomeByPaymentMethod("check").toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -482,7 +484,7 @@ export default function CashierPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-amber-700">₪{getTotalByPaymentMethod("bit").toLocaleString()}</div>
+            <div className="text-xl font-bold text-amber-700">₪{getIncomeByPaymentMethod("bit").toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>
