@@ -27,6 +27,10 @@ interface GafanProgram {
   id: string
   name: string
   schoolId?: string
+  programNumber?: string
+  validYear?: number
+  priceMin?: number
+  priceMax?: number
 }
 
 const DAYS_OF_WEEK = [
@@ -246,24 +250,39 @@ export default function NewCoursePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="text-right block text-amber-700 dark:text-amber-400">תוכנית גפ"ן *</Label>
-                <Select value={formData.gafanProgramId} onValueChange={(value) => setFormData({...formData, gafanProgramId: value})}>
-                  <SelectTrigger className="text-right" dir="rtl">
-                    <SelectValue placeholder="בחר תוכנית" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {gafanPrograms.map((program) => (
-                      <SelectItem key={program.id} value={program.id}>
-                        {program.name}
-                      </SelectItem>
-                    ))}
-                    {gafanPrograms.length === 0 && (
-                      <SelectItem value="" disabled>לא נמצאו תוכניות גפ"ן</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+  <div className="space-y-2">
+  <Label className="text-right block text-amber-700 dark:text-amber-400">תוכנית גפ"ן *</Label>
+  <Select value={formData.gafanProgramId} onValueChange={(value) => {
+    // מצא את התוכנית שנבחרה ומלא את השדות אוטומטית
+    const selectedProgram = gafanPrograms.find(p => p.id === value)
+    if (selectedProgram) {
+      setFormData({
+        ...formData, 
+        gafanProgramId: value,
+        name: selectedProgram.name || formData.name,
+        courseNumber: selectedProgram.programNumber || formData.courseNumber,
+        validYear: selectedProgram.validYear?.toString() || formData.validYear,
+        price: selectedProgram.priceMin?.toString() || formData.price,
+      })
+    } else {
+      setFormData({...formData, gafanProgramId: value})
+    }
+  }}>
+  <SelectTrigger className="text-right" dir="rtl">
+  <SelectValue placeholder="בחר תוכנית" />
+  </SelectTrigger>
+  <SelectContent>
+  {gafanPrograms.map((program) => (
+  <SelectItem key={program.id} value={program.id}>
+  {program.name}
+  </SelectItem>
+  ))}
+  {gafanPrograms.length === 0 && (
+  <SelectItem value="" disabled>לא נמצאו תוכניות גפ"ן</SelectItem>
+  )}
+  </SelectContent>
+  </Select>
+  </div>
             </div>
           )}
         </CardContent>
