@@ -493,7 +493,7 @@ export default function UsersPage() {
                   <Badge variant="outline">{selectedPermissions.length} הרשאות נבחרו</Badge>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                   {PERMISSION_CATEGORIES.map((category) => {
                     const Icon = categoryIcons[category.id]
                     const allSelected = category.permissions.every((p) => selectedPermissions.includes(p.id))
@@ -505,32 +505,33 @@ export default function UsersPage() {
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Icon className="h-5 w-5" />
-                              <CardTitle className="text-sm">{category.name}</CardTitle>
+                            <div className="flex items-center gap-3">
+                              <Icon className="h-5 w-5 flex-shrink-0" />
+                              <CardTitle className="text-base font-semibold">{category.name}</CardTitle>
                             </div>
                             <Badge
                               variant="secondary"
-                              className="text-xs cursor-pointer"
+                              className="text-xs cursor-pointer flex-shrink-0"
                               onClick={() => toggleCategoryAll(category)}
                             >
                               {allSelected ? "ביטול" : "הכל"}
                             </Badge>
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent className="space-y-4">
                           {category.permissions.map((perm) => (
-                            <div key={perm.id} className="flex items-start gap-2">
+                            <div key={perm.id} className="flex items-start gap-3">
                               <Checkbox
                                 id={perm.id}
                                 checked={selectedPermissions.includes(perm.id)}
                                 onCheckedChange={() => togglePermission(perm.id)}
+                                className="mt-0.5 flex-shrink-0"
                               />
-                              <div className="grid gap-1 leading-none">
-                                <label htmlFor={perm.id} className="text-sm font-medium leading-none cursor-pointer">
+                              <div className="grid gap-1.5 leading-none min-w-0">
+                                <label htmlFor={perm.id} className="text-sm font-medium leading-tight cursor-pointer">
                                   {perm.name}
                                 </label>
-                                <p className="text-xs text-muted-foreground">{perm.description}</p>
+                                <p className="text-xs text-muted-foreground leading-relaxed">{perm.description}</p>
                               </div>
                             </div>
                           ))}
