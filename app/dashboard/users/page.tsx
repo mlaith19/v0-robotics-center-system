@@ -461,7 +461,7 @@ export default function UsersPage() {
             if (!open) resetForm()
           }}
         >
-          <DialogContent className="max-w-[1400px] w-[98vw] max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogContent className="!max-w-[1400px] w-[98vw] max-h-[90vh] overflow-y-auto sm:!max-w-[1400px]" dir="rtl">
             <DialogHeader>
               <DialogTitle>{editingUser ? "עריכת משתמש" : "משתמש חדש"}</DialogTitle>
               <DialogDescription>
