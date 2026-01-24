@@ -261,21 +261,26 @@ export default function TeacherViewPage() {
     return statusMap[status] || status
   }
 
-  // Calculate total paid to teacher from expenses
-  const paidSum = useMemo(
+  // Calculate total expenses (הוצאות)
+  const expensesSum = useMemo(
     () => teacherExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0),
     [teacherExpenses],
   )
   
-  // Calculate pending/owed amount based on hours worked and rates per course location
-  // centerHourlyRate = rate for courses at the center (במרכז)
-  // externalHourlyRate = rate for external courses (בחוץ/חיצוני)
-  const pendingSum = useMemo(() => {
+  // Calculate total salary payments to teacher (from payments table, type = salary/שכר)
+  const paidSum = useMemo(() => {
+    return (payments || [])
+      .filter((p: any) => p.type === "salary" || p.type === "שכר" || p.description?.includes("שכר"))
+      .reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0)
+  }, [payments])
+  
+  // Calculate total owed to teacher based on hours worked and rates per course location
+  // This is the GROSS amount owed (שעות × תעריף)
+  const owedToTeacher = useMemo(() => {
     const centerRate = teacher?.centerHourlyRate || 0
     const externalRate = teacher?.externalHourlyRate || 0
     
-    // Calculate owed amount by summing hours * appropriate rate for each attendance
-    const owedAmount = attendance.reduce((sum, a: any) => {
+    return attendance.reduce((sum, a: any) => {
       const status = a.status?.toLowerCase()
       const isPresent = status === "נוכח" || status === "present"
       if (!isPresent) return sum
@@ -297,16 +302,18 @@ export default function TeacherViewPage() {
       }
       
       // Determine rate based on course location
-      // "במרכז" or "center" = center rate, anything else = external rate
       const location = a.courseLocation?.toLowerCase() || ""
       const isCenter = location.includes("מרכז") || location === "center" || location === ""
       const rate = isCenter ? centerRate : externalRate
       
       return sum + (hours * rate)
     }, 0)
-    
-    return Math.max(0, owedAmount - paidSum)
-  }, [attendance, teacher?.centerHourlyRate, teacher?.externalHourlyRate, paidSum])
+  }, [attendance, teacher?.centerHourlyRate, teacher?.externalHourlyRate])
+  
+  // Pending/debt = total owed minus what was paid as salary
+  const pendingSum = useMemo(() => {
+    return Math.max(0, owedToTeacher - paidSum)
+  }, [owedToTeacher, paidSum])
   // Calculate hours based on course start/end time for each "present" attendance
   const totalHours = useMemo(() => {
     return attendance.reduce((sum, a: any) => {
@@ -584,15 +591,15 @@ export default function TeacherViewPage() {
                   <span className="text-orange-600 font-bold">₪</span>
                   <span className="text-xs text-orange-700 dark:text-orange-400">חוב למורה</span>
                 </div>
-                <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">{pendingSum.toLocaleString("he-IL")} ₪</div>
+                <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">{owedToTeacher.toLocaleString("he-IL")} ₪</div>
               </Card>
-              <Card className={`p-4 ${pendingSum <= 0 ? "bg-green-50 dark:bg-green-950/20" : "bg-blue-50 dark:bg-blue-950/20"}`}>
+              <Card className="p-4 bg-green-50 dark:bg-green-950/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className={`font-bold ${pendingSum <= 0 ? "text-green-600" : "text-blue-600"}`}>₪</span>
-                  <span className={`text-xs ${pendingSum <= 0 ? "text-green-700 dark:text-green-400" : "text-blue-700 dark:text-blue-400"}`}>סה״כ הוצאות</span>
+                  <span className="text-green-600 font-bold">₪</span>
+                  <span className="text-xs text-green-700 dark:text-green-400">סה״כ הוצאות</span>
                 </div>
-                <div className={`text-2xl font-bold ${pendingSum <= 0 ? "text-green-700 dark:text-green-400" : "text-blue-700 dark:text-blue-400"}`}>
-                  {paidSum.toLocaleString("he-IL")} ₪
+                <div className="text-2xl font-bold text-green-700 dark:text-green-400">
+                  {expensesSum.toLocaleString("he-IL")} ₪
                 </div>
               </Card>
             </div>
