@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -59,11 +59,18 @@ const schoolTypeLabels: Record<string, string> = {
 
 export default function SchoolViewPage() {
   const params = useParams()
+  const router = useRouter()
   const id = params.id as string
+  const isNewPage = id === "new"
   const [school, setSchool] = useState<School | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isNewPage) {
+      router.replace("/dashboard/schools/new")
+      return
+    }
+    
     const fetchSchool = async () => {
       try {
         const res = await fetch(`/api/schools/${id}`)
@@ -78,7 +85,15 @@ export default function SchoolViewPage() {
       }
     }
     fetchSchool()
-  }, [id])
+  }, [id, isNewPage, router])
+
+  if (isNewPage) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (loading) {
     return (
