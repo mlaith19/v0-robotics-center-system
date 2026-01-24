@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -30,7 +30,7 @@ export default function EditGafanProgramPage() {
     }
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [dataLoaded, setDataLoaded] = useState(false)
+  const dataLoadedRef = useRef(false)
   const [formData, setFormData] = useState({
     programNumber: "",
     name: "",
@@ -49,6 +49,7 @@ export default function EditGafanProgramPage() {
     providerType: "internal",
     notes: "",
   })
+  const [dataLoaded, setDataLoaded] = useState(false)
 
   const israeliBanks = [
     { name: "בנק לאומי", code: "10" },
@@ -63,8 +64,9 @@ export default function EditGafanProgramPage() {
   ]
 
   useEffect(() => {
-    if (program && !program.error && !dataLoaded) {
-      const newFormData = {
+    if (program && !program.error && !dataLoadedRef.current) {
+      dataLoadedRef.current = true
+      setFormData({
         programNumber: program.programNumber || "",
         name: program.name || "",
         validYear: program.validYear?.toString() || "",
@@ -81,11 +83,9 @@ export default function EditGafanProgramPage() {
         status: program.status || "מתעניין",
         providerType: program.provider_type || "internal",
         notes: program.notes || "",
-      }
-      setFormData(newFormData)
-      setDataLoaded(true)
+      })
     }
-  }, [program, dataLoaded])
+  }, [program])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
