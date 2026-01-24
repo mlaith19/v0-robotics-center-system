@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,89 +15,93 @@ import useSWR from "swr"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
+interface FormData {
+  programNumber: string
+  name: string
+  validYear: string
+  companyName: string
+  companyId: string
+  companyAddress: string
+  bankName: string
+  bankCode: string
+  branchNumber: string
+  accountNumber: string
+  operatorName: string
+  priceMin: string
+  priceMax: string
+  status: string
+  providerType: string
+  notes: string
+}
+
+// פונקציה לבניית formData מהנתונים שמגיעים מהשרת
+function buildFormData(program: any): FormData {
+  return {
+    programNumber: program?.programNumber || "",
+    name: program?.name || "",
+    validYear: program?.validYear?.toString() || "",
+    companyName: program?.companyName || "",
+    companyId: program?.companyId || "",
+    companyAddress: program?.companyAddress || "",
+    bankName: program?.bankName || "",
+    bankCode: program?.bankCode || "",
+    branchNumber: program?.branchNumber || "",
+    accountNumber: program?.accountNumber || "",
+    operatorName: program?.operatorName || "",
+    priceMin: program?.priceMin?.toString() || "",
+    priceMax: program?.priceMax?.toString() || "",
+    status: program?.status || "מתעניין",
+    providerType: program?.provider_type || "internal",
+    notes: program?.notes || "",
+  }
+}
+
+const israeliBanks = [
+  { name: "בנק לאומי", code: "10" },
+  { name: "בנק הפועלים", code: "12" },
+  { name: "בנק דיסקונט", code: "11" },
+  { name: "בנק מזרחי טפחות", code: "20" },
+  { name: "בנק איגוד", code: "13" },
+  { name: "הבנק הבינלאומי", code: "31" },
+  { name: "בנק מרכנתיל", code: "17" },
+  { name: "בנק ירושלים", code: "54" },
+  { name: "בנק אוצר החייל", code: "14" },
+]
+
 export default function EditGafanProgramPage() {
   const router = useRouter()
   const params = useParams()
   const programId = params.id as string
-  const dataLoadedRef = useRef(false)
+  
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formData, setFormData] = useState<FormData | null>(null)
+  
+  // שימוש ב-onSuccess callback כדי לאתחל את הטופס פעם אחת כשהנתונים מגיעים
   const { data: program, error, isLoading } = useSWR(
     programId ? `/api/gafan/${programId}` : null, 
     fetcher,
     { 
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 60000,
+      onSuccess: (data) => {
+        // אתחול הטופס רק אם עדיין לא אותחל
+        if (data && !data.error && formData === null) {
+          setFormData(buildFormData(data))
+        }
+      }
     }
   )
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [loadedProgramId, setLoadedProgramId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    programNumber: "",
-    name: "",
-    validYear: "",
-    companyName: "",
-    companyId: "",
-    companyAddress: "",
-    bankName: "",
-    bankCode: "",
-    branchNumber: "",
-    accountNumber: "",
-    operatorName: "",
-    priceMin: "",
-    priceMax: "",
-    status: "מתעניין",
-    providerType: "internal",
-    notes: "",
-  })
-
-  const israeliBanks = [
-    { name: "בנק לאומי", code: "10" },
-    { name: "בנק הפועלים", code: "12" },
-    { name: "בנק דיסקונט", code: "11" },
-    { name: "בנק מזרחי טפחות", code: "20" },
-    { name: "בנק איגוד", code: "13" },
-    { name: "הבנק הבינלאומי", code: "31" },
-    { name: "בנק מרכנתיל", code: "17" },
-    { name: "בנק ירושלים", code: "54" },
-    { name: "בנק אוצר החייל", code: "14" },
-  ]
-
-  useEffect(() => {
-    // רק טוען את הנתונים אם יש program ועדיין לא טענו את התוכנית הזו
-    if (program && !program.error && program.id && loadedProgramId !== program.id) {
-      console.log("[v0] Loading data into form for program:", program.id)
-      setLoadedProgramId(program.id)
-      setFormData({
-        programNumber: program.programNumber || "",
-        name: program.name || "",
-        validYear: program.validYear?.toString() || "",
-        companyName: program.companyName || "",
-        companyId: program.companyId || "",
-        companyAddress: program.companyAddress || "",
-        bankName: program.bankName || "",
-        bankCode: program.bankCode || "",
-        branchNumber: program.branchNumber || "",
-        accountNumber: program.accountNumber || "",
-        operatorName: program.operatorName || "",
-        priceMin: program.priceMin?.toString() || "",
-        priceMax: program.priceMax?.toString() || "",
-        status: program.status || "מתעניין",
-        providerType: program.provider_type || "internal",
-        notes: program.notes || "",
-      })
-    }
-  }, [program, loadedProgramId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData) return
+    
     setIsSubmitting(true)
 
     try {
       const response = await fetch(`/api/gafan/${programId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           programNumber: formData.programNumber,
           name: formData.name,
@@ -132,6 +135,7 @@ export default function EditGafanProgramPage() {
   }
 
   const handleBankChange = (bankName: string) => {
+    if (!formData) return
     const bank = israeliBanks.find((b) => b.name === bankName)
     setFormData({
       ...formData,
@@ -140,6 +144,12 @@ export default function EditGafanProgramPage() {
     })
   }
 
+  const updateField = (field: keyof FormData, value: string) => {
+    if (!formData) return
+    setFormData({ ...formData, [field]: value })
+  }
+
+  // טעינה
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -148,10 +158,30 @@ export default function EditGafanProgramPage() {
     )
   }
 
+  // שגיאה
   if (error) {
     return (
       <div className="text-center py-12">
         <p className="text-destructive">שגיאה בטעינת הנתונים</p>
+      </div>
+    )
+  }
+
+  // הטופס עדיין לא אותחל - נאתחל אותו כאן
+  if (formData === null && program && !program.error) {
+    setFormData(buildFormData(program))
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  // אין נתונים או הטופס לא אותחל
+  if (!formData) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">לא נמצאו נתונים</p>
       </div>
     )
   }
@@ -171,6 +201,7 @@ export default function EditGafanProgramPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Status Card */}
         <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -178,12 +209,10 @@ export default function EditGafanProgramPage() {
                 <Rocket className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <Label htmlFor="status" className="text-base font-semibold">
-                  סטטוס התוכנית
-                </Label>
+                <Label htmlFor="status" className="text-base font-semibold">סטטוס התוכנית</Label>
                 <p className="text-sm text-muted-foreground">בחר את סטטוס תוכנית גפ"ן הנוכחי</p>
               </div>
-              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+              <Select value={formData.status} onValueChange={(value) => updateField("status", value)}>
                 <SelectTrigger id="status" className="w-[200px] bg-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -195,15 +224,12 @@ export default function EditGafanProgramPage() {
               </Select>
             </div>
             
-            {/* Provider Type Field */}
             <div className="flex items-center gap-4 mt-4 pt-4 border-t border-blue-200">
               <div className="flex-1">
-                <Label htmlFor="providerType" className="text-base font-semibold">
-                  סוג ספק
-                </Label>
+                <Label htmlFor="providerType" className="text-base font-semibold">סוג ספק</Label>
                 <p className="text-sm text-muted-foreground">האם התוכנית מופעלת על ידי החברה או ספק חיצוני</p>
               </div>
-              <Select value={formData.providerType} onValueChange={(value) => setFormData({ ...formData, providerType: value })}>
+              <Select value={formData.providerType} onValueChange={(value) => updateField("providerType", value)}>
                 <SelectTrigger id="providerType" className="w-[200px] bg-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -216,6 +242,7 @@ export default function EditGafanProgramPage() {
           </CardContent>
         </Card>
 
+        {/* Basic Info Card */}
         <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-green-100/50">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -229,42 +256,34 @@ export default function EditGafanProgramPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="programNumber" className="text-base">
-                  מס' תוכנית *
-                </Label>
+                <Label htmlFor="programNumber" className="text-base">מס' תוכנית *</Label>
                 <Input
                   id="programNumber"
                   value={formData.programNumber}
-                  onChange={(e) => setFormData({ ...formData, programNumber: e.target.value })}
+                  onChange={(e) => updateField("programNumber", e.target.value)}
                   placeholder="לדוגמה: GP2024-001"
                   className="h-11 bg-white"
                   required
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="validYear" className="text-base">
-                  תוקף לשנה *
-                </Label>
+                <Label htmlFor="validYear" className="text-base">תוקף לשנה *</Label>
                 <Input
                   id="validYear"
                   type="number"
                   value={formData.validYear}
-                  onChange={(e) => setFormData({ ...formData, validYear: e.target.value })}
+                  onChange={(e) => updateField("validYear", e.target.value)}
                   placeholder="2024"
                   className="h-11 bg-white"
                   required
                 />
               </div>
-
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="name" className="text-base">
-                  שם התוכנית *
-                </Label>
+                <Label htmlFor="name" className="text-base">שם התוכנית *</Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => updateField("name", e.target.value)}
                   placeholder='לדוגמה: תוכנית גפ"ן - רובוטיקה מתקדמת'
                   className="h-11 bg-white"
                   required
@@ -274,6 +293,7 @@ export default function EditGafanProgramPage() {
           </CardContent>
         </Card>
 
+        {/* Company Info Card */}
         <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100/50">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -287,41 +307,33 @@ export default function EditGafanProgramPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="companyName" className="text-base">
-                  שם חברה *
-                </Label>
+                <Label htmlFor="companyName" className="text-base">שם חברה *</Label>
                 <Input
                   id="companyName"
                   value={formData.companyName}
-                  onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                  onChange={(e) => updateField("companyName", e.target.value)}
                   placeholder="לדוגמה: מרכז הרובוטיקה בע״מ"
                   className="h-11 bg-white"
                   required
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="companyId" className="text-base">
-                  ח"פ חברה *
-                </Label>
+                <Label htmlFor="companyId" className="text-base">ח"פ חברה *</Label>
                 <Input
                   id="companyId"
                   value={formData.companyId}
-                  onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
+                  onChange={(e) => updateField("companyId", e.target.value)}
                   placeholder="512345678"
                   className="h-11 bg-white"
                   required
                 />
               </div>
-
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="companyAddress" className="text-base">
-                  כתובת חברה *
-                </Label>
+                <Label htmlFor="companyAddress" className="text-base">כתובת חברה *</Label>
                 <Input
                   id="companyAddress"
                   value={formData.companyAddress}
-                  onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
+                  onChange={(e) => updateField("companyAddress", e.target.value)}
                   placeholder="רחוב, מספר, עיר, מיקוד"
                   className="h-11 bg-white"
                   required
@@ -331,6 +343,7 @@ export default function EditGafanProgramPage() {
           </CardContent>
         </Card>
 
+        {/* Bank Info Card */}
         <Card className="border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100/50">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -344,27 +357,20 @@ export default function EditGafanProgramPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="bankName" className="text-base">
-                  בנק
-                </Label>
+                <Label htmlFor="bankName" className="text-base">בנק</Label>
                 <Select value={formData.bankName} onValueChange={handleBankChange}>
                   <SelectTrigger id="bankName" className="h-11 bg-white">
                     <SelectValue placeholder="בחר בנק" />
                   </SelectTrigger>
                   <SelectContent>
                     {israeliBanks.map((bank) => (
-                      <SelectItem key={bank.code} value={bank.name}>
-                        {bank.name}
-                      </SelectItem>
+                      <SelectItem key={bank.code} value={bank.name}>{bank.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="bankCode" className="text-base">
-                  קוד בנק
-                </Label>
+                <Label htmlFor="bankCode" className="text-base">קוד בנק</Label>
                 <Input
                   id="bankCode"
                   value={formData.bankCode}
@@ -373,28 +379,22 @@ export default function EditGafanProgramPage() {
                   className="h-11 bg-white/60"
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="branchNumber" className="text-base">
-                  סניף
-                </Label>
+                <Label htmlFor="branchNumber" className="text-base">סניף</Label>
                 <Input
                   id="branchNumber"
                   value={formData.branchNumber}
-                  onChange={(e) => setFormData({ ...formData, branchNumber: e.target.value })}
+                  onChange={(e) => updateField("branchNumber", e.target.value)}
                   placeholder="מספר סניף"
                   className="h-11 bg-white"
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="accountNumber" className="text-base">
-                  מס' חשבון
-                </Label>
+                <Label htmlFor="accountNumber" className="text-base">מס' חשבון</Label>
                 <Input
                   id="accountNumber"
                   value={formData.accountNumber}
-                  onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                  onChange={(e) => updateField("accountNumber", e.target.value)}
                   placeholder="מספר חשבון"
                   className="h-11 bg-white"
                 />
@@ -403,6 +403,7 @@ export default function EditGafanProgramPage() {
           </CardContent>
         </Card>
 
+        {/* Operator Card */}
         <Card className="border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100/50">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -415,13 +416,11 @@ export default function EditGafanProgramPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="operatorName" className="text-base">
-                שם מפעיל התוכנית *
-              </Label>
+              <Label htmlFor="operatorName" className="text-base">שם מפעיל התוכנית *</Label>
               <Input
                 id="operatorName"
                 value={formData.operatorName}
-                onChange={(e) => setFormData({ ...formData, operatorName: e.target.value })}
+                onChange={(e) => updateField("operatorName", e.target.value)}
                 placeholder="שם מלא"
                 className="h-11 bg-white"
                 required
@@ -430,6 +429,7 @@ export default function EditGafanProgramPage() {
           </CardContent>
         </Card>
 
+        {/* Pricing Card */}
         <Card className="border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100/50">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -443,29 +443,24 @@ export default function EditGafanProgramPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="priceMin" className="text-base">
-                  מחיר מינימום (₪) *
-                </Label>
+                <Label htmlFor="priceMin" className="text-base">מחיר מינימום (₪) *</Label>
                 <Input
                   id="priceMin"
                   type="number"
                   value={formData.priceMin}
-                  onChange={(e) => setFormData({ ...formData, priceMin: e.target.value })}
+                  onChange={(e) => updateField("priceMin", e.target.value)}
                   placeholder="0"
                   className="h-11 bg-white"
                   required
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="priceMax" className="text-base">
-                  מחיר מקסימום (₪)
-                </Label>
+                <Label htmlFor="priceMax" className="text-base">מחיר מקסימום (₪)</Label>
                 <Input
                   id="priceMax"
                   type="number"
                   value={formData.priceMax}
-                  onChange={(e) => setFormData({ ...formData, priceMax: e.target.value })}
+                  onChange={(e) => updateField("priceMax", e.target.value)}
                   placeholder="השאר ריק למחיר קבוע"
                   className="h-11 bg-white"
                 />
@@ -474,16 +469,15 @@ export default function EditGafanProgramPage() {
           </CardContent>
         </Card>
 
+        {/* Notes Card */}
         <Card className="border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100/50">
           <CardContent className="p-6">
             <div className="space-y-2">
-              <Label htmlFor="notes" className="text-base">
-                הערות
-              </Label>
+              <Label htmlFor="notes" className="text-base">הערות</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                onChange={(e) => updateField("notes", e.target.value)}
                 placeholder="הערות או מידע נוסף על התוכנית..."
                 rows={4}
                 className="resize-none bg-white"
@@ -492,6 +486,7 @@ export default function EditGafanProgramPage() {
           </CardContent>
         </Card>
 
+        {/* Submit Buttons */}
         <div className="flex gap-3 pt-2">
           <Button type="submit" size="lg" className="gap-2 h-12 px-8" disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
