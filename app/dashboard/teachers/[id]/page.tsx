@@ -267,14 +267,46 @@ export default function TeacherViewPage() {
     [teacherExpenses],
   )
   
-  // Calculate pending/owed amount based on hours worked and rates
-  // For now, just show what's been paid - pending can be calculated from attendance * rate
+  // Calculate pending/owed amount based on hours worked and rates per course location
+  // centerHourlyRate = rate for courses at the center (במרכז)
+  // externalHourlyRate = rate for external courses (בחוץ/חיצוני)
   const pendingSum = useMemo(() => {
-    const hourlyRate = teacher?.centerHourlyRate || 0
-    const hoursWorked = attendance.reduce((s, a) => s + (a.hours ?? 0), 0)
-    const owedAmount = hoursWorked * hourlyRate
+    const centerRate = teacher?.centerHourlyRate || 0
+    const externalRate = teacher?.externalHourlyRate || 0
+    
+    // Calculate owed amount by summing hours * appropriate rate for each attendance
+    const owedAmount = attendance.reduce((sum, a: any) => {
+      const status = a.status?.toLowerCase()
+      const isPresent = status === "נוכח" || status === "present"
+      if (!isPresent) return sum
+      
+      // Calculate hours for this attendance
+      let hours = 0
+      if (a.hours) {
+        hours = Number(a.hours)
+      } else if (a.courseStartTime && a.courseEndTime) {
+        const parseTime = (timeStr: string) => {
+          const parts = timeStr.split(":")
+          return Number(parts[0]) + Number(parts[1]) / 60
+        }
+        const startHours = parseTime(a.courseStartTime)
+        const endHours = parseTime(a.courseEndTime)
+        hours = endHours - startHours > 0 ? endHours - startHours : 0
+      } else if (a.courseDuration) {
+        hours = Number(a.courseDuration) / 60
+      }
+      
+      // Determine rate based on course location
+      // "במרכז" or "center" = center rate, anything else = external rate
+      const location = a.courseLocation?.toLowerCase() || ""
+      const isCenter = location.includes("מרכז") || location === "center" || location === ""
+      const rate = isCenter ? centerRate : externalRate
+      
+      return sum + (hours * rate)
+    }, 0)
+    
     return Math.max(0, owedAmount - paidSum)
-  }, [attendance, teacher?.centerHourlyRate, paidSum])
+  }, [attendance, teacher?.centerHourlyRate, teacher?.externalHourlyRate, paidSum])
   // Calculate hours based on course start/end time for each "present" attendance
   const totalHours = useMemo(() => {
     return attendance.reduce((sum, a: any) => {
