@@ -833,30 +833,28 @@ export function StudentTabs({
       </TabsContent>
 
       <TabsContent value="attendance" className="space-y-4 mt-6">
-        {/* Course Selection Buttons */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <Button
-            variant={selectedCourseId === null ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedCourseId(null)}
-            className={selectedCourseId === null ? "" : "bg-transparent"}
+        {/* Course Selection Dropdown */}
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-sm text-muted-foreground">סנן לפי קורס:</span>
+          <Select 
+            value={selectedCourseId || "all"} 
+            onValueChange={(value) => setSelectedCourseId(value === "all" ? null : value)}
           >
-            כל הקורסים
-          </Button>
-          {enrollments.map((enr: any) => {
-            const courseId = enr.courseId || enr.courseIdRef
-            return (
-              <Button
-                key={courseId || enr.id}
-                variant={selectedCourseId === courseId ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCourseId(courseId || null)}
-                className={selectedCourseId === courseId ? "" : "bg-transparent"}
-              >
-                {enr.courseName || "קורס"}
-              </Button>
-            )
-          })}
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="כל הקורסים" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">כל הקורסים</SelectItem>
+              {enrollments.map((enr: any) => {
+                const courseId = enr.courseId || enr.courseIdRef
+                return (
+                  <SelectItem key={courseId || enr.id} value={courseId || enr.id}>
+                    {enr.courseName || "קורס"}
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Course Info Header */}
