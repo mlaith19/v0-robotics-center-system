@@ -53,11 +53,8 @@ export default function EditGafanProgramPage() {
   ]
 
   useEffect(() => {
-    if (program) {
-      console.log("[v0] Program data received:", program)
-      console.log("[v0] programNumber:", program.programNumber)
-      console.log("[v0] companyName:", program.companyName)
-      setFormData({
+    if (program && !program.error) {
+      const newFormData = {
         programNumber: program.programNumber || "",
         name: program.name || "",
         validYear: program.validYear?.toString() || "",
@@ -74,7 +71,9 @@ export default function EditGafanProgramPage() {
         status: program.status || "מתעניין",
         providerType: program.provider_type || "internal",
         notes: program.notes || "",
-      })
+      }
+      console.log("[v0] Setting formData to:", newFormData)
+      setFormData(newFormData)
     }
   }, [program])
 
