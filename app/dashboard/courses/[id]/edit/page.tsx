@@ -215,7 +215,14 @@ export default function EditCoursePage() {
             </div>
             <div className="space-y-2">
               <Label className="text-right block">סוג קורס</Label>
-              <Select value={formData.courseType} onValueChange={(value) => setFormData({...formData, courseType: value, schoolId: "", gafanProgramId: ""})}>
+              <Select value={formData.courseType} onValueChange={(value) => {
+                const updates: any = { courseType: value, schoolId: "", gafanProgramId: "" }
+                // כשנבחר גפ"ן, מספר המפגשים הופך ל-30 כברירת מחדל
+                if (value === "gafan" && !formData.duration) {
+                  updates.duration = "30"
+                }
+                setFormData({...formData, ...updates})
+              }}>
                 <SelectTrigger className="text-right" dir="rtl">
                   <SelectValue placeholder="בחר סוג" />
                 </SelectTrigger>
@@ -486,19 +493,28 @@ export default function EditCoursePage() {
             <span className="text-emerald-600 font-bold text-lg">₪</span>
             תמחור
           </CardTitle>
-          <CardDescription className="text-right">הגדר את מחיר הקורס</CardDescription>
+          <CardDescription className="text-right">
+            {formData.courseType === "gafan" ? "הגדר את מחיר השעה לקורס גפ\"ן" : "הגדר את מחיר הקורס"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label className="text-right block">מחיר הקורס (ש"ח) *</Label>
+            <Label className="text-right block">
+              {formData.courseType === "gafan" ? "מחיר לשעה (ש\"ח) *" : "מחיר הקורס (ש\"ח) *"}
+            </Label>
             <Input 
               type="number"
               value={formData.price} 
               onChange={(e) => setFormData({...formData, price: e.target.value})} 
-              placeholder="לדוגמה: 2500"
+              placeholder={formData.courseType === "gafan" ? "לדוגמה: 50" : "לדוגמה: 2500"}
               className="text-right"
               dir="rtl"
             />
+            {formData.courseType === "gafan" && (
+              <p className="text-xs text-muted-foreground text-right mt-1">
+                * בקורסי גפ"ן התמחור הוא לפי שעה ולא לפי קורס שלם
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
