@@ -173,11 +173,29 @@ export function StudentTabs({
     return Math.max(0, totalSessions - presentCount)
   }
 
-  // Calculate total paid for a specific course
-  const getPaidForCourse = (courseId: string) => {
-    return payments
-      .filter((p: any) => p.courseId === courseId)
-      .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0)
+  // Calculate total paid amount (all payments for this student)
+  const totalPaidAmount = useMemo(() => {
+    return payments.reduce((sum, p) => {
+      if (!p.status || p.status === "PAID") {
+        return sum + Number(p.amount || 0)
+      }
+      return sum
+    }, 0)
+  }, [payments])
+
+  // Calculate total course prices
+  const totalCoursePrices = useMemo(() => {
+    return enrollments.reduce((sum, e: any) => sum + Number(e.coursePrice || 0), 0)
+  }, [enrollments])
+
+  // Calculate paid amount for a specific course (proportionally distributed)
+  const getPaidForCourse = (coursePrice: number) => {
+    if (totalCoursePrices === 0) return 0
+    // If only one course, all payments go to it
+    if (enrollments.length === 1) return totalPaidAmount
+    // Otherwise distribute proportionally based on course price
+    const proportion = coursePrice / totalCoursePrices
+    return Math.round(totalPaidAmount * proportion)
   }
 
   // Get selected course details from enrollment (flat structure)
@@ -313,8 +331,8 @@ export function StudentTabs({
                     const courseId = enr.courseId || enr.courseIdRef
                     const totalSessions = enr.courseDuration || 0
                     const remainingSessions = getRemainingSessions(courseId, totalSessions)
-                    const coursePrice = enr.coursePrice || 0
-                    const paidAmount = getPaidForCourse(courseId)
+                    const coursePrice = Number(enr.coursePrice || 0)
+                    const paidAmount = getPaidForCourse(coursePrice)
                     const balance = coursePrice - paidAmount
                     
                     return (
