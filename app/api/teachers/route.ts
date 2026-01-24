@@ -30,7 +30,7 @@ export async function GET() {
                 ) * COALESCE(
                   CASE 
                     WHEN LOWER(c.location) LIKE '%מרכז%' OR c.location IS NULL OR c.location = '' THEN t."centerHourlyRate"
-                    ELSE t."externalHourlyRate"
+                    ELSE t."externalCourseRate"
                   END,
                   0
                 )

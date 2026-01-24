@@ -326,7 +326,7 @@ export default function TeacherViewPage() {
   // Calculate total owed to teacher based on hours worked - filtered by period
   const owedToTeacher = useMemo(() => {
     const centerRate = teacher?.centerHourlyRate || 0
-    const externalRate = teacher?.externalHourlyRate || 0
+    const externalRate = teacher?.externalCourseRate || 0
     
     return filteredAttendanceForPayments.reduce((sum, a: any) => {
       const status = a.status?.toLowerCase()
@@ -356,7 +356,7 @@ export default function TeacherViewPage() {
       
       return sum + (hours * rate)
     }, 0)
-  }, [filteredAttendanceForPayments, teacher?.centerHourlyRate, teacher?.externalHourlyRate])
+  }, [filteredAttendanceForPayments, teacher?.centerHourlyRate, teacher?.externalCourseRate])
   
   // Pending/debt = total owed minus what was paid as salary
   const pendingSum = useMemo(() => {
