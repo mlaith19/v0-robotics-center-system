@@ -53,6 +53,10 @@ export async function PUT(req: Request, { params }: Ctx) {
   const endTime = body.endTime || null
   const daysOfWeek = Array.isArray(body.daysOfWeek) ? body.daysOfWeek : []
   const teacherIds = Array.isArray(body.teacherIds) ? body.teacherIds : []
+  
+  // GAFAN fields
+  const schoolId = cleanStr(body.schoolId)
+  const gafanProgramId = cleanStr(body.gafanProgramId)
 
   try {
     const now = new Date().toISOString()
@@ -74,6 +78,8 @@ export async function PUT(req: Request, { params }: Ctx) {
           "endTime" = ${endTime},
           "daysOfWeek" = ${daysOfWeek},
           "teacherIds" = ${teacherIds},
+          "schoolId" = ${schoolId},
+          "gafanProgramId" = ${gafanProgramId},
           "updatedAt" = ${now}
       WHERE id = ${id}
       RETURNING *

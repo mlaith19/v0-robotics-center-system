@@ -63,20 +63,24 @@ export async function POST(req: Request) {
     const endTime = body.endTime || null
     const daysOfWeek = Array.isArray(body.daysOfWeek) ? body.daysOfWeek : []
     const teacherIds = Array.isArray(body.teacherIds) ? body.teacherIds : []
+    
+    // GAFAN fields
+    const schoolId = body.schoolId ? String(body.schoolId).trim() : null
+    const gafanProgramId = body.gafanProgramId ? String(body.gafanProgramId).trim() : null
 
     const result = await sql`
       INSERT INTO "Course" (
         id, name, description, level, duration, price, status, 
         "courseNumber", category, "courseType", location,
         "startDate", "endDate", "startTime", "endTime",
-        "daysOfWeek", "teacherIds",
+        "daysOfWeek", "teacherIds", "schoolId", "gafanProgramId",
         "createdAt", "updatedAt"
       )
       VALUES (
         ${id}, ${name}, ${description}, ${level}, ${duration}, ${price}, ${status},
         ${courseNumber}, ${category}, ${courseType}, ${location},
         ${startDate}, ${endDate}, ${startTime}, ${endTime},
-        ${daysOfWeek}, ${teacherIds},
+        ${daysOfWeek}, ${teacherIds}, ${schoolId}, ${gafanProgramId},
         ${now}, ${now}
       )
       RETURNING *

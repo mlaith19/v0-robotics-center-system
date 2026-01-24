@@ -17,6 +17,18 @@ interface Teacher {
   name: string
 }
 
+interface School {
+  id: string
+  name: string
+  city?: string
+}
+
+interface GafanProgram {
+  id: string
+  name: string
+  schoolId?: string
+}
+
 const DAYS_OF_WEEK = [
   { value: "sunday", label: "ראשון" },
   { value: "monday", label: "שני" },
@@ -32,6 +44,8 @@ export default function NewCoursePage() {
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [schools, setSchools] = useState<School[]>([])
+  const [gafanPrograms, setGafanPrograms] = useState<GafanProgram[]>([])
   
   const [formData, setFormData] = useState({
     name: "",
@@ -50,13 +64,32 @@ export default function NewCoursePage() {
     endTime: "",
     daysOfWeek: [] as string[],
     teacherIds: [] as string[],
+    schoolId: "",
+    gafanProgramId: "",
   })
 
   useEffect(() => {
+    // Fetch teachers
     fetch("/api/teachers")
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) setTeachers(data)
+      })
+      .catch(console.error)
+    
+    // Fetch schools
+    fetch("/api/schools")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setSchools(data)
+      })
+      .catch(console.error)
+    
+    // Fetch Gafan programs
+    fetch("/api/gafan")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setGafanPrograms(data)
       })
       .catch(console.error)
   }, [])
@@ -155,7 +188,7 @@ export default function NewCoursePage() {
             </div>
             <div className="space-y-2">
               <Label className="text-right block">סוג קורס</Label>
-              <Select value={formData.courseType} onValueChange={(value) => setFormData({...formData, courseType: value})}>
+              <Select value={formData.courseType} onValueChange={(value) => setFormData({...formData, courseType: value, schoolId: "", gafanProgramId: ""})}>
                 <SelectTrigger className="text-right" dir="rtl">
                   <SelectValue placeholder="בחר סוג" />
                 </SelectTrigger>
@@ -164,6 +197,7 @@ export default function NewCoursePage() {
                   <SelectItem value="workshop">סדנה</SelectItem>
                   <SelectItem value="camp">קייטנה</SelectItem>
                   <SelectItem value="private">שיעור פרטי</SelectItem>
+                  <SelectItem value="gafan">גפ"ן</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -182,6 +216,48 @@ export default function NewCoursePage() {
               </Select>
             </div>
           </div>
+          
+          {/* שדות גפ"ן - מוצגים רק כאשר סוג הקורס הוא גפ"ן */}
+          {formData.courseType === "gafan" && (
+            <div className="grid grid-cols-2 gap-4 mt-4 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="space-y-2">
+                <Label className="text-right block text-amber-700 dark:text-amber-400">בית ספר *</Label>
+                <Select value={formData.schoolId} onValueChange={(value) => setFormData({...formData, schoolId: value})}>
+                  <SelectTrigger className="text-right" dir="rtl">
+                    <SelectValue placeholder="בחר בית ספר" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {schools.map((school) => (
+                      <SelectItem key={school.id} value={school.id}>
+                        {school.name} {school.city ? `- ${school.city}` : ""}
+                      </SelectItem>
+                    ))}
+                    {schools.length === 0 && (
+                      <SelectItem value="" disabled>לא נמצאו בתי ספר</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-right block text-amber-700 dark:text-amber-400">תוכנית גפ"ן *</Label>
+                <Select value={formData.gafanProgramId} onValueChange={(value) => setFormData({...formData, gafanProgramId: value})}>
+                  <SelectTrigger className="text-right" dir="rtl">
+                    <SelectValue placeholder="בחר תוכנית" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gafanPrograms.map((program) => (
+                      <SelectItem key={program.id} value={program.id}>
+                        {program.name}
+                      </SelectItem>
+                    ))}
+                    {gafanPrograms.length === 0 && (
+                      <SelectItem value="" disabled>לא נמצאו תוכניות גפ"ן</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
