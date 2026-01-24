@@ -78,6 +78,7 @@ export default function TeacherViewPage() {
   const [error, setError] = useState<string | null>(null)
   const [teacherExpenses, setTeacherExpenses] = useState<any[]>([])
   const [teacherAttendance, setTeacherAttendance] = useState<any[]>([])
+  const [selectedAttendanceCourse, setSelectedAttendanceCourse] = useState<string>("all")
   const [payments, setPayments] = useState<any[]>([]) // Declare payments variable
 
   // Payment dialog state
@@ -226,6 +227,39 @@ export default function TeacherViewPage() {
   const courses = useMemo(() => teacher?.teacherCourses?.map((x) => x.course) ?? [], [teacher])
   // Use teacherAttendance from API instead of teacher?.attendance
   const attendance = teacherAttendance
+  
+  // Get unique courses from attendance records for the filter dropdown
+  const attendanceCourses = useMemo(() => {
+    const uniqueCourses = new Map<string, string>()
+    teacherAttendance.forEach((a: any) => {
+      if (a.courseId && a.courseName) {
+        uniqueCourses.set(a.courseId, a.courseName)
+      }
+    })
+    return Array.from(uniqueCourses, ([id, name]) => ({ id, name }))
+  }, [teacherAttendance])
+  
+  // Filter attendance by selected course
+  const filteredAttendance = useMemo(() => {
+    if (selectedAttendanceCourse === "all") return attendance
+    return attendance.filter((a: any) => a.courseId === selectedAttendanceCourse)
+  }, [attendance, selectedAttendanceCourse])
+  
+  // Helper to translate status to Hebrew
+  const getStatusLabel = (status: string) => {
+    const statusMap: Record<string, string> = {
+      "present": "נוכח",
+      "absent": "חיסור",
+      "late": "איחור",
+      "נוכח": "נוכח",
+      "חיסור": "חיסור",
+      "לא נוכח": "חיסור",
+      "איחור": "איחור",
+      "חולה": "חולה",
+      "חופש": "חופש",
+    }
+    return statusMap[status] || status
+  }
 
   // Calculate total paid to teacher from expenses
   const paidSum = useMemo(
@@ -521,56 +555,98 @@ export default function TeacherViewPage() {
           </TabsContent>
 
           <TabsContent value="attendance" className="mt-6 space-y-4">
+            {/* Stats Cards with Colors */}
             <div className="grid grid-cols-3 gap-4">
-              <Card className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400 mb-2">
                   <CalendarCheck className="h-4 w-4" />
                   נוכחות
                 </div>
-                <div className="text-2xl font-bold">{attendancePct}%</div>
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{attendancePct}%</div>
               </Card>
-              <Card className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <Card className="p-4 bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-400 mb-2">
                   <CalendarCheck className="h-4 w-4" />
                   מפגשים
                 </div>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">
                   {presentCount}/{totalCount}
                 </div>
               </Card>
-              <Card className="p-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+              <Card className="p-4 bg-teal-50 dark:bg-teal-950/20 border-teal-200 dark:border-teal-800">
+                <div className="flex items-center gap-2 text-sm text-teal-700 dark:text-teal-400 mb-2">
                   <CalendarCheck className="h-4 w-4" />
                   שעות
                 </div>
-                <div className="text-2xl font-bold">{totalHours}</div>
+                <div className="text-2xl font-bold text-teal-700 dark:text-teal-400">{totalHours}</div>
               </Card>
             </div>
 
-            {attendance.length ? (
+            {/* Course Filter Dropdown */}
+            {attendanceCourses.length > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">סנן לפי קורס:</span>
+                <Select value={selectedAttendanceCourse} onValueChange={setSelectedAttendanceCourse}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="כל הקורסים" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">כל הקורסים</SelectItem>
+                    {attendanceCourses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Attendance Records */}
+            {filteredAttendance.length ? (
               <div className="space-y-3">
-                {attendance.map((a: any) => (
-                  <Card key={a.id} className="p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <div className="font-medium">{fmtDate(a.date)}</div>
-                        <div className="text-sm text-muted-foreground">{a.courseName ?? "-"}</div>
+                {filteredAttendance.map((a: any) => {
+                  const statusLabel = getStatusLabel(a.status)
+                  const isPresent = statusLabel === "נוכח"
+                  const isAbsent = statusLabel === "חיסור"
+                  
+                  return (
+                    <Card key={a.id} className={`p-4 border-r-4 ${
+                      isPresent ? "border-r-green-500 bg-green-50/50 dark:bg-green-950/10" :
+                      isAbsent ? "border-r-red-500 bg-red-50/50 dark:bg-red-950/10" :
+                      "border-r-orange-500 bg-orange-50/50 dark:bg-orange-950/10"
+                    }`}>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                            isPresent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                            isAbsent ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                            "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                          }`}>{statusLabel}</span>
+                          {a.hours && (
+                            <span className="text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-muted-foreground">
+                              {a.hours} שעות
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium">{fmtDate(a.date)}</div>
+                          <div className="text-sm text-muted-foreground">{a.courseName ?? "-"}</div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        {a.hours && <div className="text-sm text-muted-foreground">{a.hours} שעות</div>}
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          a.status === "נוכח" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                          a.status === "חיסור" || a.status === "לא נוכח" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                          "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                        }`}>{a.status}</span>
-                      </div>
-                    </div>
-                    {a.notes ? <div className="text-sm text-muted-foreground mt-2">{a.notes}</div> : null}
-                  </Card>
-                ))}
+                      {a.notes && <div className="text-sm text-muted-foreground mt-2 pt-2 border-t">{a.notes}</div>}
+                    </Card>
+                  )
+                })}
               </div>
             ) : (
-              <Card className="p-6 text-center text-muted-foreground">אין רשומות נוכחות למורה</Card>
+              <Card className="p-8 text-center bg-gray-50 dark:bg-gray-900/20">
+                <CalendarCheck className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                <div className="text-muted-foreground">אין רשומות נוכחות למורה</div>
+                <div className="text-sm text-muted-foreground/70 mt-1">
+                  נוכחות המורה תוצג כאן לאחר רישום בדף הנוכחות
+                </div>
+              </Card>
             )}
           </TabsContent>
         </Tabs>
