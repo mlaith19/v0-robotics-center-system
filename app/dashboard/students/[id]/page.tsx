@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -11,7 +12,9 @@ import {
   MapPin, Calendar, CreditCard, Users, Heart, BookOpen 
 } from "lucide-react"
 import { StudentTabs } from "@/components/student/student-tabs"
-import { mutate } from "swr"
+import useSWR, { mutate } from "swr"
+
+const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 interface Student {
   id: string
@@ -60,53 +63,45 @@ function formatDate(dateStr: string | null) {
 export default function StudentViewPage() {
   const params = useParams()
   const id = params.id as string
-  const [student, setStudent] = useState<Student | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [courses, setCourses] = useState<any[]>([])
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [studentRes, coursesRes] = await Promise.all([
-          fetch(`/api/students/${id}`),
-          fetch("/api/courses")
-        ])
-        
-        if (studentRes.ok) {
-          const data = await studentRes.json()
-          
-          // Fetch related data
-          const [enrollmentsRes, paymentsRes, attendanceRes] = await Promise.all([
-            fetch(`/api/enrollments?studentId=${id}`),
-            fetch(`/api/payments?studentId=${id}`),
-            fetch(`/api/attendance?studentId=${id}`)
-          ])
-          
-          const enrollments = enrollmentsRes.ok ? await enrollmentsRes.json() : []
-          const payments = paymentsRes.ok ? await paymentsRes.json() : []
-          const attendances = attendanceRes.ok ? await attendanceRes.json() : []
-          
-          setStudent({
-            ...data,
-            courseIds: data.courseIds || [],
-            enrollments: Array.isArray(enrollments) ? enrollments : [],
-            payments: Array.isArray(payments) ? payments : [],
-            attendances: Array.isArray(attendances) ? attendances : []
-          })
-        }
-        
-        if (coursesRes.ok) {
-          const coursesData = await coursesRes.json()
-          setCourses(Array.isArray(coursesData) ? coursesData : [])
-        }
-      } catch (err) {
-        console.error("Failed to fetch student:", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [id])
+  // Use SWR for all data fetching
+  const { data: studentData, isLoading: studentLoading, mutate: mutateStudent } = useSWR(
+    id ? `/api/students/${id}` : null,
+    fetcher
+  )
+  const { data: coursesData } = useSWR("/api/courses", fetcher)
+  const { data: enrollmentsData, mutate: mutateEnrollments } = useSWR(
+    id ? `/api/enrollments?studentId=${id}` : null,
+    fetcher
+  )
+  const { data: paymentsData, mutate: mutatePayments } = useSWR(
+    id ? `/api/payments?studentId=${id}` : null,
+    fetcher
+  )
+  const { data: attendancesData, mutate: mutateAttendances } = useSWR(
+    id ? `/api/attendance?studentId=${id}` : null,
+    fetcher
+  )
+
+  const loading = studentLoading
+  const courses = Array.isArray(coursesData) ? coursesData : []
+  
+  // Combine student data with related data
+  const student = studentData ? {
+    ...studentData,
+    courseIds: studentData.courseIds || [],
+    enrollments: Array.isArray(enrollmentsData) ? enrollmentsData : [],
+    payments: Array.isArray(paymentsData) ? paymentsData : [],
+    attendances: Array.isArray(attendancesData) ? attendancesData : []
+  } : null
+
+  // Function to refresh all data
+  const refreshAllData = () => {
+    mutateStudent()
+    mutateEnrollments()
+    mutatePayments()
+    mutateAttendances()
+  }
 
   if (loading) {
     return (
@@ -183,7 +178,7 @@ export default function StudentViewPage() {
             payments={student.payments}
             attendances={student.attendances}
             enrolledCourseNames={enrolledCourseNames}
-            onPaymentAdded={() => mutate()}
+            onPaymentAdded={refreshAllData}
           />
         </Card>
 
