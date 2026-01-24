@@ -446,7 +446,7 @@ export default function UsersPage() {
             if (!open) resetForm()
           }}
         >
-          <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogContent className="max-w-[1400px] w-[98vw] max-h-[90vh] overflow-y-auto" dir="rtl">
             <DialogHeader>
               <DialogTitle>{editingUser ? "עריכת משתמש" : "משתמש חדש"}</DialogTitle>
               <DialogDescription>
@@ -493,7 +493,7 @@ export default function UsersPage() {
                   <Badge variant="outline">{selectedPermissions.length} הרשאות נבחרו</Badge>
                 </div>
 
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {PERMISSION_CATEGORIES.map((category) => {
                     const Icon = categoryIcons[category.id]
                     const allSelected = category.permissions.every((p) => selectedPermissions.includes(p.id))
@@ -501,37 +501,37 @@ export default function UsersPage() {
                     return (
                       <Card
                         key={category.id}
-                        className={`${colorClasses[category.color] || "bg-gray-50 border-gray-200"} border-2`}
+                        className={`${colorClasses[category.color] || "bg-gray-50 border-gray-200"} border-2 min-w-[200px]`}
                       >
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
+                        <CardHeader className="pb-4 px-5">
+                          <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-3">
-                              <Icon className="h-5 w-5 flex-shrink-0" />
-                              <CardTitle className="text-base font-semibold">{category.name}</CardTitle>
+                              <Icon className="h-6 w-6 flex-shrink-0" />
+                              <CardTitle className="text-lg font-semibold">{category.name}</CardTitle>
                             </div>
                             <Badge
                               variant="secondary"
-                              className="text-xs cursor-pointer flex-shrink-0"
+                              className="text-sm cursor-pointer flex-shrink-0 px-3 py-1"
                               onClick={() => toggleCategoryAll(category)}
                             >
                               {allSelected ? "ביטול" : "הכל"}
                             </Badge>
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-5 px-5">
                           {category.permissions.map((perm) => (
-                            <div key={perm.id} className="flex items-start gap-3">
+                            <div key={perm.id} className="flex items-start gap-4 p-2 rounded-lg hover:bg-black/5 transition-colors">
                               <Checkbox
                                 id={perm.id}
                                 checked={selectedPermissions.includes(perm.id)}
                                 onCheckedChange={() => togglePermission(perm.id)}
-                                className="mt-0.5 flex-shrink-0"
+                                className="mt-1 flex-shrink-0 h-5 w-5"
                               />
-                              <div className="grid gap-1.5 leading-none min-w-0">
-                                <label htmlFor={perm.id} className="text-sm font-medium leading-tight cursor-pointer">
+                              <div className="grid gap-2 leading-none min-w-0 flex-1">
+                                <label htmlFor={perm.id} className="text-base font-medium leading-tight cursor-pointer">
                                   {perm.name}
                                 </label>
-                                <p className="text-xs text-muted-foreground leading-relaxed">{perm.description}</p>
+                                <p className="text-sm text-muted-foreground leading-relaxed">{perm.description}</p>
                               </div>
                             </div>
                           ))}
