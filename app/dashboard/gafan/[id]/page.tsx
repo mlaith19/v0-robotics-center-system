@@ -5,14 +5,26 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowRight, Rocket, Building2, User, DollarSign, BookOpen, Users, TrendingUp, Edit, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, redirect } from "next/navigation"
 import useSWR from "swr"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function GafanProgramViewPage() {
   const params = useParams()
-  const { data: program, error, isLoading } = useSWR(`/api/gafan/${params.id}`, fetcher)
+  
+  // אם ה-ID הוא "new", זו לא תוכנית קיימת - לא נטען נתונים
+  const isNewPage = params.id === "new"
+  
+  const { data: program, error, isLoading } = useSWR(
+    isNewPage ? null : `/api/gafan/${params.id}`, 
+    fetcher
+  )
+
+  // אם זה דף new, לא נציג את דף הצפייה
+  if (isNewPage) {
+    return null
+  }
 
   if (isLoading) {
     return (
