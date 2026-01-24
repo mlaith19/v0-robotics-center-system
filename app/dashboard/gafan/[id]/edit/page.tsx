@@ -19,7 +19,16 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 export default function EditGafanProgramPage() {
   const router = useRouter()
   const params = useParams()
-  const { data: program, error, isLoading } = useSWR(`/api/gafan/${params.id}`, fetcher)
+  const programId = params.id as string
+  const { data: program, error, isLoading } = useSWR(
+    programId ? `/api/gafan/${programId}` : null, 
+    fetcher,
+    { 
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000,
+    }
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
   const [formData, setFormData] = useState({
@@ -73,7 +82,6 @@ export default function EditGafanProgramPage() {
         providerType: program.provider_type || "internal",
         notes: program.notes || "",
       }
-      console.log("[v0] Setting formData to:", newFormData)
       setFormData(newFormData)
       setDataLoaded(true)
     }
@@ -84,7 +92,7 @@ export default function EditGafanProgramPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch(`/api/gafan/${params.id}`, {
+      const response = await fetch(`/api/gafan/${programId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -110,7 +118,7 @@ export default function EditGafanProgramPage() {
       })
 
       if (response.ok) {
-        router.push(`/dashboard/gafan/${params.id}`)
+        router.push(`/dashboard/gafan/${programId}`)
       } else {
         console.error("Failed to update gafan program")
       }
@@ -129,8 +137,6 @@ export default function EditGafanProgramPage() {
       bankCode: bank?.code || "",
     })
   }
-
-  console.log("[v0] Render - formData.programNumber:", formData.programNumber, "dataLoaded:", dataLoaded)
 
   if (isLoading) {
     return (
@@ -152,7 +158,7 @@ export default function EditGafanProgramPage() {
     <div className="container mx-auto max-w-5xl p-6" dir="rtl">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <Link href={`/dashboard/gafan/${params.id}`}>
+          <Link href={`/dashboard/gafan/${programId}`}>
             <Button variant="ghost" size="icon" className="hover:bg-primary/10">
               <ArrowRight className="h-5 w-5" />
             </Button>
@@ -489,7 +495,7 @@ export default function EditGafanProgramPage() {
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
             שמור שינויים
           </Button>
-          <Link href={`/dashboard/gafan/${params.id}`}>
+          <Link href={`/dashboard/gafan/${programId}`}>
             <Button type="button" variant="outline" size="lg" className="h-12 px-8 bg-transparent">
               ביטול
             </Button>

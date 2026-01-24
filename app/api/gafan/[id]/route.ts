@@ -37,7 +37,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return Response.json({ error: "Gafan program not found" }, { status: 404 })
     }
     
-    console.log("[v0] Gafan program fetched:", result[0])
     return Response.json(result[0])
   } catch (err) {
     console.error("GET /api/gafan/[id] error:", err)
