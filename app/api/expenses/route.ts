@@ -8,10 +8,14 @@ export async function GET(req: Request) {
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
     const category = searchParams.get("category")
+    const teacherId = searchParams.get("teacherId")
 
     // Build query using tagged template literals
     let result
-    if (startDate && endDate && category) {
+    if (teacherId) {
+      // Get expenses for a specific teacher
+      result = await sql`SELECT * FROM "Expense" WHERE "teacherId" = ${teacherId} ORDER BY date DESC`
+    } else if (startDate && endDate && category) {
       result = await sql`SELECT * FROM "Expense" WHERE date >= ${startDate} AND date <= ${endDate} AND category = ${category} ORDER BY date DESC`
     } else if (startDate && endDate) {
       result = await sql`SELECT * FROM "Expense" WHERE date >= ${startDate} AND date <= ${endDate} ORDER BY date DESC`
@@ -39,7 +43,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { description, amount, date, category, paymentMethod, isRecurring, recurringDay } = body
+    const { description, amount, date, category, paymentMethod, isRecurring, recurringDay, teacherId } = body
 
     if (!description || !amount || !date || !category || !paymentMethod) {
       return Response.json({ error: "description, amount, date, category, and paymentMethod are required" }, { status: 400 })
@@ -49,8 +53,8 @@ export async function POST(req: Request) {
     const now = new Date().toISOString()
 
     const result = await sql`
-      INSERT INTO "Expense" (id, description, amount, date, category, "paymentMethod", "isRecurring", "recurringDay", "createdAt")
-      VALUES (${id}, ${description}, ${amount}, ${date}, ${category}, ${paymentMethod}, ${isRecurring || false}, ${recurringDay || null}, ${now})
+      INSERT INTO "Expense" (id, description, amount, date, category, "paymentMethod", "isRecurring", "recurringDay", "teacherId", "createdAt")
+      VALUES (${id}, ${description}, ${amount}, ${date}, ${category}, ${paymentMethod}, ${isRecurring || false}, ${recurringDay || null}, ${teacherId || null}, ${now})
       RETURNING *
     `
 

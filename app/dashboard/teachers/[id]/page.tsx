@@ -76,6 +76,8 @@ export default function TeacherViewPage() {
   const [teacher, setTeacher] = useState<Teacher | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [teacherExpenses, setTeacherExpenses] = useState<any[]>([])
+  const [payments, setPayments] = useState<any[]>([]) // Declare payments variable
 
   // Payment dialog state
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
@@ -131,12 +133,22 @@ export default function TeacherViewPage() {
         setLoading(true)
         setError(null)
 
-        // Requires the API to return including relations (explained below if missing)
-        const res = await fetch(`/api/teachers/${id}?include=1`, { cache: "no-store" })
-        if (!res.ok) throw new Error(`Failed to load teacher (${res.status})`)
+        // Fetch teacher data and expenses in parallel
+        const [teacherRes, expensesRes] = await Promise.all([
+          fetch(`/api/teachers/${id}?include=1`, { cache: "no-store" }),
+          fetch(`/api/expenses?teacherId=${id}`, { cache: "no-store" })
+        ])
+        
+        if (!teacherRes.ok) throw new Error(`Failed to load teacher (${teacherRes.status})`)
 
-        const data = (await res.json()) as Teacher | null
-        if (!cancelled) setTeacher(data)
+        const data = (await teacherRes.json()) as Teacher | null
+        const expensesData = expensesRes.ok ? await expensesRes.json() : []
+        
+        if (!cancelled) {
+          setTeacher(data)
+          setTeacherExpenses(Array.isArray(expensesData) ? expensesData : [])
+          setPayments(data?.payments ?? []) // Initialize payments state
+        }
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "שגיאה בטעינת מורה")
       } finally {
@@ -149,6 +161,7 @@ export default function TeacherViewPage() {
     }
   }, [id])
 
+  // Teacher payments are expenses for the center (paying the teacher for their work)
   const handleAddPayment = async () => {
     if (!paymentAmount || Number(paymentAmount) <= 0) return
     if (paymentMethod === "credit" && cardLastDigits.length !== 4) return
@@ -156,19 +169,17 @@ export default function TeacherViewPage() {
 
     setIsAddingPayment(true)
     try {
-      const res = await fetch("/api/payments", {
+      // Save as expense since paying a teacher is an expense for the center
+      const res = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: Number(paymentAmount),
           date: paymentDate,
           paymentMethod,
-          description: paymentDescription,
+          description: paymentDescription || `תשלום למורה ${teacher?.name}`,
+          category: "משכורת מורה",
           teacherId: id,
-          cardLastDigits: paymentMethod === "credit" ? cardLastDigits : undefined,
-          bankName: (paymentMethod === "transfer" || paymentMethod === "check") ? bankName : undefined,
-          bankBranch: (paymentMethod === "transfer" || paymentMethod === "check") ? bankBranch : undefined,
-          accountNumber: (paymentMethod === "transfer" || paymentMethod === "check") ? accountNumber : undefined,
         }),
       })
 
@@ -187,24 +198,29 @@ export default function TeacherViewPage() {
         window.location.reload()
       }
     } catch (err) {
-      console.error("Failed to add payment:", err)
+      console.error("Failed to add expense:", err)
     } finally {
       setIsAddingPayment(false)
     }
   }
 
   const courses = useMemo(() => teacher?.teacherCourses?.map((x) => x.course) ?? [], [teacher])
-  const payments = useMemo(() => teacher?.payments ?? [], [teacher])
   const attendance = useMemo(() => teacher?.attendance ?? [], [teacher])
 
+  // Calculate total paid to teacher from expenses
   const paidSum = useMemo(
-    () => payments.filter((p) => p.status === "שולם").reduce((s, p) => s + (p.amount ?? 0), 0),
-    [payments],
+    () => teacherExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0),
+    [teacherExpenses],
   )
-  const pendingSum = useMemo(
-    () => payments.filter((p) => p.status !== "שולם").reduce((s, p) => s + (p.amount ?? 0), 0),
-    [payments],
-  )
+  
+  // Calculate pending/owed amount based on hours worked and rates
+  // For now, just show what's been paid - pending can be calculated from attendance * rate
+  const pendingSum = useMemo(() => {
+    const hourlyRate = teacher?.centerHourlyRate || 0
+    const hoursWorked = attendance.reduce((s, a) => s + (a.hours ?? 0), 0)
+    const owedAmount = hoursWorked * hourlyRate
+    return Math.max(0, owedAmount - paidSum)
+  }, [attendance, teacher?.centerHourlyRate, paidSum])
   const totalHours = useMemo(() => attendance.reduce((s, a) => s + (a.hours ?? 0), 0), [attendance])
   const presentCount = useMemo(() => attendance.filter((a) => a.status === "נוכח").length, [attendance])
   const totalCount = useMemo(() => attendance.length, [attendance])
@@ -386,60 +402,60 @@ export default function TeacherViewPage() {
 
           <TabsContent value="payments" className="mt-6 space-y-4">
             <div className="grid grid-cols-3 gap-4">
-              <Card className="p-4 bg-green-50 dark:bg-green-950/20">
+              <Card className="p-4 bg-red-50 dark:bg-red-950/20">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-green-600 font-bold">₪</span>
-                    <span className="text-xs text-green-700 dark:text-green-400">שולם</span>
+                    <span className="text-red-600 font-bold">₪</span>
+                    <span className="text-xs text-red-700 dark:text-red-400">שולם למורה</span>
                   </div>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="h-6 w-6 p-0 text-green-600 hover:bg-green-100"
+                    className="h-6 w-6 p-0 text-red-600 hover:bg-red-100"
                     onClick={() => setIsPaymentDialogOpen(true)}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="text-2xl font-bold text-green-700 dark:text-green-400">{paidSum.toLocaleString("he-IL")} ₪</div>
+                <div className="text-2xl font-bold text-red-700 dark:text-red-400">{paidSum.toLocaleString("he-IL")} ₪</div>
               </Card>
               <Card className="p-4 bg-orange-50 dark:bg-orange-950/20">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-orange-600 font-bold">₪</span>
-                  <span className="text-xs text-orange-700 dark:text-orange-400">חיובים</span>
+                  <span className="text-xs text-orange-700 dark:text-orange-400">חוב למורה</span>
                 </div>
                 <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">{pendingSum.toLocaleString("he-IL")} ₪</div>
               </Card>
-              <Card className={`p-4 ${(paidSum - pendingSum) >= 0 ? "bg-green-50 dark:bg-green-950/20" : "bg-red-50 dark:bg-red-950/20"}`}>
+              <Card className={`p-4 ${pendingSum <= 0 ? "bg-green-50 dark:bg-green-950/20" : "bg-blue-50 dark:bg-blue-950/20"}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className={`font-bold ${(paidSum - pendingSum) >= 0 ? "text-green-600" : "text-red-600"}`}>₪</span>
-                  <span className={`text-xs ${(paidSum - pendingSum) >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>יתרה</span>
+                  <span className={`font-bold ${pendingSum <= 0 ? "text-green-600" : "text-blue-600"}`}>₪</span>
+                  <span className={`text-xs ${pendingSum <= 0 ? "text-green-700 dark:text-green-400" : "text-blue-700 dark:text-blue-400"}`}>סה״כ הוצאות</span>
                 </div>
-                <div className={`text-2xl font-bold ${(paidSum - pendingSum) >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
-                  {(paidSum - pendingSum).toLocaleString("he-IL")} ₪
+                <div className={`text-2xl font-bold ${pendingSum <= 0 ? "text-green-700 dark:text-green-400" : "text-blue-700 dark:text-blue-400"}`}>
+                  {paidSum.toLocaleString("he-IL")} ₪
                 </div>
               </Card>
             </div>
 
-            {payments.length ? (
+            {teacherExpenses.length ? (
               <div className="space-y-3">
-                {payments.map((p) => (
-                  <Card key={p.id} className="p-4">
+                {teacherExpenses.map((e) => (
+                  <Card key={e.id} className="p-4 border-red-100 dark:border-red-900">
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <div className="text-sm text-muted-foreground">{fmtDate(p.date)}</div>
+                        <div className="text-sm text-muted-foreground">{fmtDate(e.date)}</div>
                         <div className="text-sm text-muted-foreground">
-                          {p.method ? `שיטה: ${p.method}` : "שיטה: -"}
+                          {e.paymentMethod ? `אמצעי תשלום: ${e.paymentMethod === "cash" ? "מזומן" : e.paymentMethod === "transfer" ? "העברה" : e.paymentMethod === "check" ? "שיק" : e.paymentMethod === "bit" ? "ביט" : e.paymentMethod}` : ""}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="font-bold">{p.amount.toLocaleString("he-IL")} ₪</div>
-                        <span className="text-xs px-2 py-1 rounded-full border">
-                          {p.status}
+                        <div className="font-bold text-red-600">{Number(e.amount).toLocaleString("he-IL")} ₪</div>
+                        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                          הוצאה
                         </span>
                       </div>
                     </div>
-                    {p.note ? <div className="text-sm text-muted-foreground mt-2">{p.note}</div> : null}
+                    {e.description ? <div className="text-sm text-muted-foreground mt-2">{e.description}</div> : null}
                   </Card>
                 ))}
               </div>
@@ -504,8 +520,8 @@ export default function TeacherViewPage() {
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
         <DialogContent className="max-w-md" dir="rtl">
           <DialogHeader>
-            <DialogTitle>הוספת תשלום חדש</DialogTitle>
-            <DialogDescription>הזן את פרטי התשלום</DialogDescription>
+            <DialogTitle>תשלום למורה (הוצאה)</DialogTitle>
+            <DialogDescription>הזן את פרטי התשלום למורה - יירשם כהוצאה במערכת</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
@@ -617,7 +633,7 @@ export default function TeacherViewPage() {
                   מוסיף...
                 </>
               ) : (
-                "הוסף תשלום"
+                "שלם למורה"
               )}
             </Button>
           </div>
@@ -641,9 +657,7 @@ export default function TeacherViewPage() {
                 <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
                   <div className="text-xs text-muted-foreground mb-1">שעות</div>
                   <div className="font-semibold text-sm">
-                    {selectedCourse.startTime && selectedCourse.endTime 
-                      ? `${selectedCourse.startTime} - ${selectedCourse.endTime}` 
-                      : "-"}
+                    {selectedCourse.startTime && selectedCourse.endTime ? `${selectedCourse.startTime} - ${selectedCourse.endTime}` : "-"}
                   </div>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
@@ -660,7 +674,7 @@ export default function TeacherViewPage() {
                 </div>
                 <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                   <div className="text-xs text-blue-600 mb-1">מחיר</div>
-                  <div className="font-semibold text-lg text-blue-700 dark:text-blue-400">{selectedCourse.price?.toLocaleString() || 0} ₪</div>
+                  <div className="font-semibold text-lg text-blue-700 dark:text-blue-400">{selectedCourse.price?.toLocaleString("he-IL") || 0} ₪</div>
                 </div>
               </div>
               
