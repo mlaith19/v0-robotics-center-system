@@ -173,6 +173,13 @@ export function StudentTabs({
     return Math.max(0, totalSessions - presentCount)
   }
 
+  // Calculate total paid for a specific course
+  const getPaidForCourse = (courseId: string) => {
+    return payments
+      .filter((p: any) => p.courseId === courseId)
+      .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0)
+  }
+
   // Get selected course details from enrollment (flat structure)
   const selectedCourse = useMemo(() => {
     if (!selectedCourseId) return null
@@ -293,6 +300,9 @@ export function StudentTabs({
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <TableHead className="text-right font-bold text-foreground">שם הקורס</TableHead>
                     <TableHead className="text-right font-bold text-foreground">תאריך הצטרפות</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">מחיר</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">שולם</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">יתרה</TableHead>
                     <TableHead className="text-right font-bold text-foreground">סה״כ מפגשים</TableHead>
                     <TableHead className="text-right font-bold text-foreground">יתרת מפגשים</TableHead>
                     <TableHead className="text-right font-bold text-foreground">סטטוס</TableHead>
@@ -303,11 +313,29 @@ export function StudentTabs({
                     const courseId = enr.courseId || enr.courseIdRef
                     const totalSessions = enr.courseDuration || 0
                     const remainingSessions = getRemainingSessions(courseId, totalSessions)
+                    const coursePrice = enr.coursePrice || 0
+                    const paidAmount = getPaidForCourse(courseId)
+                    const balance = coursePrice - paidAmount
                     
                     return (
                       <TableRow key={enr.id} className="hover:bg-muted/30">
                         <TableCell className="font-semibold">{enr.courseName || "קורס לא ידוע"}</TableCell>
                         <TableCell>{formatDate(enr.enrollmentDate || enr.joinedAt)}</TableCell>
+                        <TableCell className="font-medium">{coursePrice.toLocaleString()} ₪</TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            {paidAmount.toLocaleString()} ₪
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+                            balance > 0 
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                              : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          }`}>
+                            {balance.toLocaleString()} ₪
+                          </span>
+                        </TableCell>
                         <TableCell className="font-medium">{totalSessions}</TableCell>
                         <TableCell>
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
