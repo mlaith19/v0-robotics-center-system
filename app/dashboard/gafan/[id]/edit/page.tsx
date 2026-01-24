@@ -20,6 +20,7 @@ export default function EditGafanProgramPage() {
   const router = useRouter()
   const params = useParams()
   const programId = params.id as string
+  const dataLoadedRef = useRef(false)
   const { data: program, error, isLoading } = useSWR(
     programId ? `/api/gafan/${programId}` : null, 
     fetcher,
@@ -30,7 +31,7 @@ export default function EditGafanProgramPage() {
     }
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const dataLoadedRef = useRef(false)
+  const [loadedProgramId, setLoadedProgramId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     programNumber: "",
     name: "",
@@ -63,10 +64,10 @@ export default function EditGafanProgramPage() {
   ]
 
   useEffect(() => {
-    console.log("[v0] useEffect running - program:", program, "dataLoadedRef:", dataLoadedRef.current)
-    if (program && !program.error && !dataLoadedRef.current) {
-      console.log("[v0] Loading data into form - programNumber:", program.programNumber)
-      dataLoadedRef.current = true
+    // רק טוען את הנתונים אם יש program ועדיין לא טענו את התוכנית הזו
+    if (program && !program.error && program.id && loadedProgramId !== program.id) {
+      console.log("[v0] Loading data into form for program:", program.id)
+      setLoadedProgramId(program.id)
       setFormData({
         programNumber: program.programNumber || "",
         name: program.name || "",
@@ -86,7 +87,7 @@ export default function EditGafanProgramPage() {
         notes: program.notes || "",
       })
     }
-  }, [program])
+  }, [program, loadedProgramId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -138,8 +139,6 @@ export default function EditGafanProgramPage() {
       bankCode: bank?.code || "",
     })
   }
-
-  console.log("[v0] Render - formData:", formData.programNumber, formData.name, "isLoading:", isLoading, "program:", program?.name)
 
   if (isLoading) {
     return (
