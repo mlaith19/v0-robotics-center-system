@@ -23,6 +23,7 @@ interface Course {
   teachers?: { id: string; name: string }[]
   teacherIds?: string[]
   students?: number
+  enrollmentCount?: number
 }
 
 interface Student {
@@ -567,7 +568,7 @@ export default function SchedulePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">תלמידים</div>
-                  <div className="font-medium">{selectedCourse.students || 0}</div>
+                  <div className="font-medium">{selectedCourse.enrollmentCount || selectedCourse.students || 0}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">מחיר</div>
