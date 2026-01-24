@@ -138,3 +138,162 @@ export function getAllPermissions(): Permission[] {
 export function hasPermission(userPermissions: string[], permission: string): boolean {
   return userPermissions.includes(permission)
 }
+
+// תפקידים מוגדרים מראש עם הרשאות ברירת מחדל
+export type RoleType = "admin" | "secretary" | "teacher" | "student" | "coordinator" | "other"
+
+export interface RolePreset {
+  id: RoleType
+  name: string
+  description: string
+  permissions: string[]
+  visiblePages: string[] // דפים שהתפקיד רואה בסרגל הצדדי
+}
+
+export const ROLE_PRESETS: RolePreset[] = [
+  {
+    id: "admin",
+    name: "מנהל",
+    description: "גישה מלאה לכל המערכת",
+    permissions: getAllPermissions().map(p => p.id), // כל ההרשאות
+    visiblePages: [
+      "/dashboard",
+      "/dashboard/registration",
+      "/dashboard/courses",
+      "/dashboard/students",
+      "/dashboard/teachers",
+      "/dashboard/schools",
+      "/dashboard/gafan",
+      "/dashboard/users",
+      "/dashboard/cashier",
+      "/dashboard/reports",
+      "/dashboard/attendance",
+      "/dashboard/schedule",
+      "/dashboard/settings",
+    ],
+  },
+  {
+    id: "secretary",
+    name: "מזכירה",
+    description: "צפייה בכל + עריכת תלמידים וקורסים",
+    permissions: [
+      "courses.view", "courses.edit",
+      "students.view", "students.edit",
+      "schools.view",
+      "teachers.view",
+      "registration.view", "registration.send",
+      "gafan.view",
+      "reports.view",
+      "cashier.view", "cashier.income",
+      "schedule.view",
+      "attendance.view", "attendance.edit",
+      "settings.home",
+    ],
+    visiblePages: [
+      "/dashboard",
+      "/dashboard/registration",
+      "/dashboard/courses",
+      "/dashboard/students",
+      "/dashboard/teachers",
+      "/dashboard/schools",
+      "/dashboard/gafan",
+      "/dashboard/cashier",
+      "/dashboard/reports",
+      "/dashboard/attendance",
+      "/dashboard/schedule",
+    ],
+  },
+  {
+    id: "teacher",
+    name: "מורה",
+    description: "צפייה בקורסים שלו, נוכחות ולוח זמנים",
+    permissions: [
+      "courses.view",
+      "students.view",
+      "teachers.view",
+      "schedule.view",
+      "attendance.view", "attendance.edit",
+      "settings.home",
+    ],
+    visiblePages: [
+      "/dashboard",
+      "/dashboard/courses",
+      "/dashboard/students",
+      "/dashboard/teachers",
+      "/dashboard/attendance",
+      "/dashboard/schedule",
+    ],
+  },
+  {
+    id: "student",
+    name: "תלמיד",
+    description: "צפייה בפרטים האישיים בלבד",
+    permissions: [
+      "settings.home",
+      "schedule.view",
+    ],
+    visiblePages: [
+      "/dashboard",
+      "/dashboard/schedule",
+    ],
+  },
+  {
+    id: "coordinator",
+    name: "רכז",
+    description: "ניהול קורסים, תוכניות גפ\"ן ובתי ספר",
+    permissions: [
+      "courses.view", "courses.edit",
+      "students.view", "students.edit",
+      "schools.view", "schools.edit",
+      "teachers.view",
+      "gafan.view", "gafan.edit",
+      "reports.view",
+      "schedule.view", "schedule.edit",
+      "attendance.view", "attendance.edit",
+      "settings.home",
+    ],
+    visiblePages: [
+      "/dashboard",
+      "/dashboard/courses",
+      "/dashboard/students",
+      "/dashboard/teachers",
+      "/dashboard/schools",
+      "/dashboard/gafan",
+      "/dashboard/reports",
+      "/dashboard/attendance",
+      "/dashboard/schedule",
+    ],
+  },
+  {
+    id: "other",
+    name: "אחר",
+    description: "הרשאות מותאמות אישית",
+    permissions: ["settings.home"],
+    visiblePages: ["/dashboard"],
+  },
+]
+
+export function getRoleById(roleId: RoleType): RolePreset | undefined {
+  return ROLE_PRESETS.find(r => r.id === roleId)
+}
+
+export function getPermissionsForRole(roleId: RoleType): string[] {
+  const role = getRoleById(roleId)
+  return role?.permissions || []
+}
+
+export function getVisiblePagesForRole(roleId: RoleType): string[] {
+  const role = getRoleById(roleId)
+  return role?.visiblePages || ["/dashboard"]
+}
+
+// בדיקה האם למשתמש יש גישה לדף מסוים
+export function canAccessPage(userPermissions: string[], userRole: RoleType, pagePath: string): boolean {
+  // מנהל תמיד רואה הכל
+  if (userRole === "admin") return true
+  
+  const role = getRoleById(userRole)
+  if (!role) return false
+  
+  return role.visiblePages.some(page => pagePath === page || pagePath.startsWith(page + "/"))
+}

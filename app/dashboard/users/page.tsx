@@ -42,7 +42,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { PERMISSION_CATEGORIES, type PermissionCategory } from "@/lib/permissions"
+import { PERMISSION_CATEGORIES, type PermissionCategory, ROLE_PRESETS, type RoleType, getRoleById } from "@/lib/permissions"
 
 type User = {
   id: string
@@ -50,6 +50,7 @@ type User = {
   email: string
   phone?: string | null
   status: "active" | "disabled"
+  role?: RoleType
   permissions?: string[]
   createdAt: string
 }
@@ -105,7 +106,17 @@ export default function UsersPage() {
     phone: "",
   })
 
+  const [selectedRole, setSelectedRole] = useState<RoleType>("other")
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
+
+  // פונקציה לשינוי תפקיד ומילוי הרשאות אוטומטי
+  const handleRoleChange = (roleId: RoleType) => {
+    setSelectedRole(roleId)
+    const role = getRoleById(roleId)
+    if (role) {
+      setSelectedPermissions([...role.permissions])
+    }
+  }
 
   const isAdminUser = (u: User) => u.email === "admin@test.com"
 
@@ -144,6 +155,7 @@ export default function UsersPage() {
 
   function resetForm() {
     setFormData({ name: "", email: "", phone: "" })
+    setSelectedRole("other")
     setSelectedPermissions([])
     setEditingUser(null)
   }
@@ -160,6 +172,7 @@ export default function UsersPage() {
       email: user.email || "",
       phone: user.phone || "",
     })
+    setSelectedRole(user.role || "other")
     setSelectedPermissions(user.permissions || [])
     setIsDialogOpen(true)
   }
@@ -179,6 +192,7 @@ export default function UsersPage() {
         name,
         email,
         phone: formData.phone.trim() || null,
+        role: selectedRole,
         permissions: selectedPermissions,
         status: "active",
       }),
@@ -204,6 +218,7 @@ export default function UsersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         phone: formData.phone.trim() || null,
+        role: selectedRole,
         permissions: selectedPermissions,
       }),
     })
@@ -484,6 +499,30 @@ export default function UsersPage() {
                     onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))}
                     placeholder="מספר טלפון"
                   />
+                </div>
+              </div>
+
+              {/* בחירת תפקיד */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-lg font-semibold">תפקיד</Label>
+                  <span className="text-sm text-muted-foreground">בחירת תפקיד תמלא הרשאות אוטומטית</span>
+                </div>
+                <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
+                  {ROLE_PRESETS.map((role) => (
+                    <div
+                      key={role.id}
+                      onClick={() => handleRoleChange(role.id)}
+                      className={`cursor-pointer rounded-xl border-2 p-4 text-center transition-all hover:shadow-md ${
+                        selectedRole === role.id
+                          ? "border-primary bg-primary/10 shadow-md"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="font-semibold text-base">{role.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{role.description}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

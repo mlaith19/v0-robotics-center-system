@@ -24,6 +24,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       paramIndex++
     }
 
+    if (body.role !== undefined) {
+      updates.push(`role = $${paramIndex}`)
+      values.push(body.role)
+      paramIndex++
+    }
+
     if (body.permissions !== undefined) {
       updates.push(`permissions = $${paramIndex}`)
       values.push(JSON.stringify(body.permissions))

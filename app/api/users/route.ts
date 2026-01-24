@@ -48,8 +48,8 @@ export async function POST(req: Request) {
     const now = new Date().toISOString()
 
     const result = await sql`
-      INSERT INTO "User" (id, name, email, phone, status, permissions, "createdAt", "updatedAt")
-      VALUES (${id}, ${body.name.trim()}, ${body.email.trim()}, ${body.phone?.trim() || null}, ${body.status || "active"}, ${JSON.stringify(body.permissions || [])}, ${now}, ${now})
+      INSERT INTO "User" (id, name, email, phone, status, role, permissions, "createdAt", "updatedAt")
+      VALUES (${id}, ${body.name.trim()}, ${body.email.trim()}, ${body.phone?.trim() || null}, ${body.status || "active"}, ${body.role || "other"}, ${JSON.stringify(body.permissions || [])}, ${now}, ${now})
       RETURNING *
     `
 
