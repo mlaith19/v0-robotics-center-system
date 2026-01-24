@@ -6,7 +6,28 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params
     const result = await sql`
-      SELECT g.*, s.name as "schoolName"
+      SELECT 
+        g.id,
+        g.name,
+        g."programNumber",
+        g."validYear",
+        g."companyName",
+        g."companyId",
+        g."companyAddress",
+        g."bankName",
+        g."bankCode",
+        g."branchNumber",
+        g."accountNumber",
+        g."operatorName",
+        g."priceMin",
+        g."priceMax",
+        g.status,
+        g.provider_type,
+        g.notes,
+        g."schoolId",
+        g."createdAt",
+        g."updatedAt",
+        s.name as "schoolName"
       FROM "Gafan" g
       LEFT JOIN "School" s ON g."schoolId" = s.id
       WHERE g.id = ${id}
@@ -16,6 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return Response.json({ error: "Gafan program not found" }, { status: 404 })
     }
     
+    console.log("[v0] Gafan program fetched:", result[0])
     return Response.json(result[0])
   } catch (err) {
     console.error("GET /api/gafan/[id] error:", err)

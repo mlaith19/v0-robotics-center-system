@@ -54,6 +54,9 @@ export default function EditGafanProgramPage() {
 
   useEffect(() => {
     if (program) {
+      console.log("[v0] Program data received:", program)
+      console.log("[v0] programNumber:", program.programNumber)
+      console.log("[v0] companyName:", program.companyName)
       setFormData({
         programNumber: program.programNumber || "",
         name: program.name || "",
