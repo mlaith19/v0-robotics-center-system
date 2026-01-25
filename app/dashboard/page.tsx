@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card"
 import { BookOpen, Users, Calendar, TrendingUp, GraduationCap, Building2, Banknote, Loader2, Clock, User, ClipboardCheck } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { PageHeader } from "@/components/page-header"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -108,9 +108,14 @@ export default function DashboardPage() {
   }, [userTypeData, router])
 
   // Fetch data based on user type
+  const dataFetchedRef = useRef(false)
+  
   useEffect(() => {
     if (!currentUser || userTypeLoading) return
     if (userTypeData?.isTeacher) return // Teacher will be redirected
+    if (dataFetchedRef.current) return // Prevent duplicate fetch
+    
+    dataFetchedRef.current = true
 
     const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
     
