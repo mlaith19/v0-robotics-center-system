@@ -231,10 +231,14 @@ export const ROLE_PRESETS: RolePreset[] = [
     permissions: [
       "settings.home",
       "schedule.view",
+      "courses.view",
+      "students.view",
     ],
     visiblePages: [
       "/dashboard",
       "/dashboard/schedule",
+      "/dashboard/courses",
+      "/dashboard/students",
     ],
   },
   {
@@ -288,12 +292,39 @@ export function getVisiblePagesForRole(roleId: RoleType): string[] {
 }
 
 // בדיקה האם למשתמש יש גישה לדף מסוים
-export function canAccessPage(userPermissions: string[], userRole: RoleType, pagePath: string): boolean {
+export function canAccessPage(userPermissions: string[], userRole: RoleType, pagePath: string, studentId?: string, studentCourseIds?: string[]): boolean {
   // מנהל תמיד רואה הכל
   if (userRole === "admin") return true
   
   const role = getRoleById(userRole)
   if (!role) return false
+  
+  // For students, check if they're accessing their own data
+  if (userRole === "student") {
+    // Allow access to main dashboard
+    if (pagePath === "/dashboard") return true
+    
+    // Allow access to schedule
+    if (pagePath === "/dashboard/schedule") return true
+    
+    // Allow access only to their own student page
+    if (pagePath.startsWith("/dashboard/students/") && studentId) {
+      const pathStudentId = pagePath.split("/")[3]
+      if (pathStudentId === studentId) return true
+      return false
+    }
+    
+    // Allow access only to their enrolled courses
+    if (pagePath.startsWith("/dashboard/courses/") && studentCourseIds) {
+      const pathCourseId = pagePath.split("/")[3]
+      if (studentCourseIds.includes(pathCourseId)) return true
+      return false
+    }
+    
+    // Block access to courses list (they can only see their specific courses)
+    if (pagePath === "/dashboard/courses") return false
+    if (pagePath === "/dashboard/students") return false
+  }
   
   return role.visiblePages.some(page => pagePath === page || pagePath.startsWith(page + "/"))
 }

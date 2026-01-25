@@ -1,9 +1,31 @@
 "use client"
 
 import { Card } from "@/components/ui/card"
-import { BookOpen, Users, Calendar, TrendingUp, GraduationCap, Building2, Banknote, Loader2 } from "lucide-react"
+import { BookOpen, Users, Calendar, TrendingUp, GraduationCap, Building2, Banknote, Loader2, Clock, User } from "lucide-react"
 import { useEffect, useState } from "react"
 import { PageHeader } from "@/components/page-header"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+
+interface CurrentUser {
+  id: number
+  username: string
+  full_name: string
+  role: string
+  permissions?: string[]
+}
+
+interface StudentData {
+  id: string
+  name: string
+  courseIds: string[]
+  courses: {
+    id: string
+    name: string
+    description?: string
+    schedule?: { day: string; time: string }[]
+  }[]
+}
 
 interface DashboardStats {
   totalCourses: number
@@ -38,21 +60,126 @@ function formatTimeAgo(dateStr: string) {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [studentData, setStudentData] = useState<StudentData | null>(null)
 
+  // Get current user from cookie
   useEffect(() => {
-    fetch("/api/dashboard/stats")
-      .then((res) => res.json())
-      .then((data) => {
-        setStats(data)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    const cookies = document.cookie.split(";")
+    const sessionCookie = cookies.find((c) => c.trim().startsWith("robotics-session="))
+    if (sessionCookie) {
+      try {
+        const sessionValue = sessionCookie.split("=")[1]
+        const user = JSON.parse(decodeURIComponent(sessionValue))
+        setCurrentUser(user)
+      } catch (e) {
+        console.error("Failed to parse session cookie")
+      }
+    }
   }, [])
 
-  if (loading) {
+  // Fetch student data if user is a student
+  useEffect(() => {
+    if (currentUser?.role === "student") {
+      fetch(`/api/students/by-user/${currentUser.id}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data) setStudentData(data)
+          setLoading(false)
+        })
+        .catch(() => setLoading(false))
+    } else if (currentUser) {
+      // Regular dashboard stats for non-students
+      fetch("/api/dashboard/stats")
+        .then((res) => res.json())
+        .then((data) => {
+          setStats(data)
+          setLoading(false)
+        })
+        .catch(() => setLoading(false))
+    }
+  }, [currentUser])
+
+  if (loading || !currentUser) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  // Student Dashboard View
+  if (currentUser.role === "student" && studentData) {
+    return (
+      <div className="space-y-8" dir="rtl">
+        <PageHeader 
+          title={`שלום ${studentData.name}`}
+          description="ברוך הבא למערכת"
+          showLogo={true}
+          centered={true}
+        />
+
+        {/* Quick Links */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Link href={`/dashboard/students/${studentData.id}`}>
+            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-500/20">
+                  <User className="h-7 w-7 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-700">הפרופיל שלי</h3>
+                  <p className="text-sm text-blue-600/70">צפייה בפרטים האישיים</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/schedule">
+            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-green-50 to-green-100/50 border-green-200">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-green-500/20">
+                  <Calendar className="h-7 w-7 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-green-700">לוח זמנים</h3>
+                  <p className="text-sm text-green-600/70">צפייה בלוח המפגשים</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+        </div>
+
+        {/* My Courses */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-primary" />
+            הקורסים שלי
+          </h2>
+          
+          {studentData.courses && studentData.courses.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {studentData.courses.map((course) => (
+                <Link key={course.id} href={`/dashboard/courses/${course.id}`}>
+                  <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer border-primary/20 hover:border-primary/40">
+                    <h3 className="font-semibold text-foreground">{course.name}</h3>
+                    {course.description && (
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{course.description}</p>
+                    )}
+                    {course.schedule && course.schedule.length > 0 && (
+                      <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{course.schedule.map(s => `${s.day} ${s.time}`).join(", ")}</span>
+                      </div>
+                    )}
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">אין קורסים רשומים</p>
+          )}
+        </Card>
       </div>
     )
   }

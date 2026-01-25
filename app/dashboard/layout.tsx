@@ -23,6 +23,7 @@ import {
   FileText,
   ClipboardCheck,
   UserPlus,
+  User, // Import User icon
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { canAccessPage, type RoleType } from "@/lib/permissions"
@@ -87,6 +88,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setIsLoading(false)
   }, [router])
 
+  // Student data for permission checks
+  const [studentData, setStudentData] = useState<{ id: string; courseIds: string[] } | null>(null)
+
+  // Fetch student data if user is a student
+  useEffect(() => {
+    if (currentUser?.role === "student") {
+      fetch(`/api/students/by-user/${currentUser.id}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data) {
+            setStudentData({ id: data.id, courseIds: data.courseIds || [] })
+          }
+        })
+        .catch(() => {})
+    }
+  }, [currentUser])
+
   // Check page access permissions
   useEffect(() => {
     if (currentUser && pathname) {
@@ -94,12 +112,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const userPermissions = currentUser.permissions || []
       
       // Check if user can access current page
-      if (!canAccessPage(userPermissions, userRole, pathname)) {
+      const hasAccess = canAccessPage(
+        userPermissions, 
+        userRole, 
+        pathname, 
+        studentData?.id, 
+        studentData?.courseIds
+      )
+      
+      if (!hasAccess) {
         // Redirect to dashboard if no access
         router.push("/dashboard")
       }
     }
-  }, [currentUser, pathname, router])
+  }, [currentUser, pathname, router, studentData])
 
   // Fetch center settings
   useEffect(() => {
@@ -166,31 +192,75 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-            {navItems
-              .filter((item) => {
-                // Filter navigation items based on user permissions
-                const userRole = (currentUser?.role as RoleType) || "other"
-                const userPermissions = currentUser?.permissions || []
-                return canAccessPage(userPermissions, userRole, item.href)
-              })
-              .map((item) => {
-                const isActive = pathname === item.href
-                return (
+            {currentUser?.role === "student" ? (
+              // Student-specific navigation
+              <>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                    pathname === "/dashboard"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Home className="h-5 w-5" />
+                  דף הבית
+                </Link>
+                {studentData && (
                   <Link
-                    key={item.href}
-                    href={item.href}
+                    href={`/dashboard/students/${studentData.id}`}
                     onClick={() => setSidebarOpen(false)}
                     className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                      isActive
+                      pathname.includes(`/dashboard/students/${studentData.id}`)
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
+                    <User className="h-5 w-5" /> // Use User icon here
+                    הפרופיל שלי
                   </Link>
-                )
-              })}
+                )}
+                <Link
+                  href="/dashboard/schedule"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                    pathname === "/dashboard/schedule"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Calendar className="h-5 w-5" />
+                  לוח זמנים
+                </Link>
+              </>
+            ) : (
+              // Regular navigation for non-students
+              navItems
+                .filter((item) => {
+                  const userRole = (currentUser?.role as RoleType) || "other"
+                  const userPermissions = currentUser?.permissions || []
+                  return canAccessPage(userPermissions, userRole, item.href, studentData?.id, studentData?.courseIds)
+                })
+                .map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      {item.label}
+                    </Link>
+                  )
+                })
+            )}
           </nav>
 
           {/* User info */}
