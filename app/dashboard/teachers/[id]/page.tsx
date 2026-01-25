@@ -445,6 +445,12 @@ export default function TeacherViewPage() {
     }
   }
 
+  // If ID is "new", return null - let the static route handle it
+  // This prevents the dynamic route from showing loading/error for "new"
+  if (id === "new") {
+    return null
+  }
+
   if (loading) return <div className="p-6">טוען...</div>
 
   if (error)
