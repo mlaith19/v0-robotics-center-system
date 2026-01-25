@@ -184,7 +184,7 @@ export default function StudentViewPage() {
 
         {/* Created Date */}
         <div className="text-center text-sm text-muted-foreground">
-          נוצר בתאריך: {new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short" }).format(new Date(student.createdAt))}
+          נוצר בתאריך: {student.createdAt ? formatDate(student.createdAt) : "—"}
         </div>
       </div>
     </div>
