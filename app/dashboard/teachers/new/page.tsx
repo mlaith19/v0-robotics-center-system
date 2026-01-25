@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { CityCombobox } from "@/components/ui/combobox-city"
-import { ArrowRight, User, Mail, Phone, GraduationCap, FileText, Banknote, Calendar, Award as IdCard, MapPin } from "lucide-react"
+import { ArrowRight, User, Mail, Phone, GraduationCap, FileText, Banknote, Calendar, Award as IdCard, MapPin, KeyRound } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function NewTeacherPage() {
   const router = useRouter()
@@ -32,10 +33,25 @@ export default function NewTeacherPage() {
     externalCourseRate: 80,
   })
 
+  // User account fields
+  const [createUserAccount, setCreateUserAccount] = useState(false)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+
   const handleAddTeacher = async () => {
     try {
       setError(null)
       setSubmitting(true)
+
+      // Validate user account fields if creating account
+      if (createUserAccount) {
+        if (!username.trim()) {
+          throw new Error("יש להזין שם משתמש")
+        }
+        if (!password || password.length < 4) {
+          throw new Error("הסיסמה חייבת להכיל לפחות 4 תווים")
+        }
+      }
 
       const res = await fetch("/api/teachers", {
         method: "POST",
@@ -53,6 +69,10 @@ export default function NewTeacherPage() {
           centerHourlyRate: newTeacher.centerHourlyRate || null,
           travelRate: newTeacher.travelRate || null,
           externalCourseRate: newTeacher.externalCourseRate || null,
+          // User account data
+          createUserAccount,
+          username: createUserAccount ? username.trim() : null,
+          password: createUserAccount ? password : null,
         }),
       })
 
@@ -261,6 +281,59 @@ export default function NewTeacherPage() {
                 placeholder="050-1234567"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* User Account */}
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <KeyRound className="h-5 w-5 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <CardTitle>חשבון משתמש</CardTitle>
+                <CardDescription>יצירת חשבון התחברות למורה במערכת</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Checkbox 
+                id="createUserAccount"
+                checked={createUserAccount}
+                onCheckedChange={(checked) => setCreateUserAccount(checked === true)}
+              />
+              <Label htmlFor="createUserAccount" className="cursor-pointer">
+                צור חשבון משתמש למורה (יאפשר למורה להתחבר למערכת)
+              </Label>
+            </div>
+
+            {createUserAccount && (
+              <div className="grid gap-4 pt-2 border-t">
+                <div className="grid gap-2">
+                  <Label htmlFor="username">שם משתמש *</Label>
+                  <Input
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="שם משתמש להתחברות"
+                    dir="ltr"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">סיסמה *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="לפחות 4 תווים"
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

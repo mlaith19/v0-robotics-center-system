@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowRight, User, Award as IdCard, Phone, Users, Heart, BookOpen, X } from "lucide-react"
+import { ArrowRight, User, Award as IdCard, Phone, Users, Heart, BookOpen, X, KeyRound } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { CityCombobox } from "@/components/ui/combobox-city"
@@ -48,6 +48,11 @@ export default function NewStudentPage() {
     courseSessions: {} as Record<string, number>,
   })
 
+  // User account fields
+  const [createUserAccount, setCreateUserAccount] = useState(false)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+
   const toggleCourse = (courseId: string) => {
     setNewStudent((prev) => ({
       ...prev,
@@ -67,6 +72,16 @@ export default function NewStudentPage() {
     setSubmitError(null)
 
     try {
+      // Validate user account fields if creating account
+      if (createUserAccount) {
+        if (!username.trim()) {
+          throw new Error("יש להזין שם משתמש")
+        }
+        if (!password || password.length < 4) {
+          throw new Error("הסיסמה חייבת להכיל לפחות 4 תווים")
+        }
+      }
+
       // Build session balance for each course
       const courseSessions: Record<string, number> = {}
       newStudent.courseIds.forEach((courseId) => {
@@ -79,6 +94,10 @@ export default function NewStudentPage() {
         body: JSON.stringify({
           ...newStudent,
           courseSessions,
+          // User account data
+          createUserAccount,
+          username: createUserAccount ? username.trim() : null,
+          password: createUserAccount ? password : null,
         }),
       })
 
@@ -337,6 +356,60 @@ export default function NewStudentPage() {
                 className="text-base h-12 bg-white"
               />
             </div>
+          </div>
+        </Card>
+
+        {/* User Account */}
+        <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100/50 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-purple-500 text-white p-2.5 rounded-lg">
+              <KeyRound className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">חשבון משתמש</h3>
+              <p className="text-sm text-muted-foreground">יצירת חשבון התחברות לתלמיד במערכת</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Checkbox 
+                id="createUserAccount"
+                checked={createUserAccount}
+                onCheckedChange={(checked) => setCreateUserAccount(checked === true)}
+              />
+              <Label htmlFor="createUserAccount" className="cursor-pointer text-base">
+                צור חשבון משתמש לתלמיד (יאפשר לתלמיד להתחבר למערכת)
+              </Label>
+            </div>
+
+            {createUserAccount && (
+              <div className="grid gap-4 pt-4 border-t">
+                <div className="grid gap-2">
+                  <Label htmlFor="username" className="text-base font-medium">שם משתמש *</Label>
+                  <Input
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="שם משתמש להתחברות"
+                    dir="ltr"
+                    className="text-base h-12 bg-white"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password" className="text-base font-medium">סיסמה *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="לפחות 4 תווים"
+                    dir="ltr"
+                    className="text-base h-12 bg-white"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 

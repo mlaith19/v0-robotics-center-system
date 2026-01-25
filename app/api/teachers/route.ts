@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless"
+import bcrypt from "bcryptjs"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -68,21 +69,66 @@ export async function POST(req: Request) {
     const travelRate = body.travelRate ?? null
     const externalCourseRate = body.externalCourseRate ?? null
 
+    // User account fields
+    const createUserAccount = body.createUserAccount === true
+    const username = body.username ? String(body.username).trim() : null
+    const password = body.password ? String(body.password) : null
+
     if (!name) {
       return Response.json({ error: "name is required" }, { status: 400 })
     }
 
-    const id = crypto.randomUUID()
+    // Validate user account fields if creating account
+    if (createUserAccount) {
+      if (!username) {
+        return Response.json({ error: "username is required for user account" }, { status: 400 })
+      }
+      if (!password || password.length < 4) {
+        return Response.json({ error: "password must be at least 4 characters" }, { status: 400 })
+      }
+
+      // Check if username already exists
+      const existingUser = await sql`SELECT id FROM "User" WHERE username = ${username}`
+      if (existingUser.length > 0) {
+        return Response.json({ error: "שם המשתמש כבר קיים במערכת" }, { status: 409 })
+      }
+    }
+
+    const teacherId = crypto.randomUUID()
     const now = new Date().toISOString()
+
+    let userId = null
+
+    // Create user account if requested
+    if (createUserAccount && username && password) {
+      userId = crypto.randomUUID()
+      const hashedPassword = await bcrypt.hash(password, 10)
+
+      // Get teacher role permissions
+      const teacherPermissions = [
+        "courses.view",
+        "students.view",
+        "teachers.view",
+        "schedule.view",
+        "attendance.view",
+        "attendance.edit",
+        "settings.home",
+      ]
+
+      await sql`
+        INSERT INTO "User" (id, name, email, username, password, phone, status, role, permissions, "createdAt", "updatedAt")
+        VALUES (${userId}, ${name}, ${email}, ${username}, ${hashedPassword}, ${phone}, 'active', 'teacher', ${JSON.stringify(teacherPermissions)}, ${now}, ${now})
+      `
+    }
 
     const result = await sql`
       INSERT INTO "Teacher" (
         id, name, email, phone, "idNumber", "birthDate", city, specialty, status, bio,
-        "centerHourlyRate", "travelRate", "externalCourseRate", "createdAt", "updatedAt"
+        "centerHourlyRate", "travelRate", "externalCourseRate", "userId", "createdAt", "updatedAt"
       )
       VALUES (
-        ${id}, ${name}, ${email}, ${phone}, ${idNumber}, ${birthDate}, ${city}, ${specialty}, ${status}, ${bio},
-        ${centerHourlyRate}, ${travelRate}, ${externalCourseRate}, ${now}, ${now}
+        ${teacherId}, ${name}, ${email}, ${phone}, ${idNumber}, ${birthDate}, ${city}, ${specialty}, ${status}, ${bio},
+        ${centerHourlyRate}, ${travelRate}, ${externalCourseRate}, ${userId}, ${now}, ${now}
       )
       RETURNING *
     `
