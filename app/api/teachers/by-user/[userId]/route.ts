@@ -17,8 +17,7 @@ export async function GET(_req: Request, { params }: Ctx) {
             'name', c.name,
             'description', c.description,
             'startTime', c."startTime",
-            'endTime', c."endTime",
-            'days', c.days
+            'endTime', c."endTime"
           ))
           FROM "Course" c
           WHERE c."teacherId" = t.id),
