@@ -78,19 +78,42 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Fetch student data - check if user is linked to a student
+  // Fetch data based on user role
   useEffect(() => {
     if (currentUser) {
-      // First try to find if this user is linked to a student
-      fetch(`/api/students/by-user/${currentUser.id}`)
-        .then((res) => res.ok ? res.json() : null)
-        .then((data) => {
-          if (data) {
-            // User is linked to a student
-            setStudentData(data)
+      const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
+      
+      if (userIsAdmin) {
+        // Admin always sees dashboard stats
+        fetch("/api/dashboard/stats")
+          .then((res) => res.json())
+          .then((statsData) => {
+            setStats(statsData)
             setLoading(false)
-          } else {
-            // Not a student, fetch regular dashboard stats
+          })
+          .catch(() => setLoading(false))
+      } else {
+        // For non-admin users, check if they're linked to a student
+        fetch(`/api/students/by-user/${currentUser.id}`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => {
+            if (data) {
+              // User is linked to a student
+              setStudentData(data)
+              setLoading(false)
+            } else {
+              // Not a student, fetch regular dashboard stats
+              fetch("/api/dashboard/stats")
+                .then((res) => res.json())
+                .then((statsData) => {
+                  setStats(statsData)
+                  setLoading(false)
+                })
+                .catch(() => setLoading(false))
+            }
+          })
+          .catch(() => {
+            // Error fetching student data, try regular stats
             fetch("/api/dashboard/stats")
               .then((res) => res.json())
               .then((statsData) => {
@@ -98,18 +121,8 @@ export default function DashboardPage() {
                 setLoading(false)
               })
               .catch(() => setLoading(false))
-          }
-        })
-        .catch(() => {
-          // Error fetching student data, try regular stats
-          fetch("/api/dashboard/stats")
-            .then((res) => res.json())
-            .then((statsData) => {
-              setStats(statsData)
-              setLoading(false)
-            })
-            .catch(() => setLoading(false))
-        })
+          })
+      }
     }
   }, [currentUser])
 
@@ -121,8 +134,11 @@ export default function DashboardPage() {
     )
   }
 
-  // Student Dashboard View - show if user is linked to a student
-  if (studentData) {
+  // Check if user is admin (should always see admin dashboard)
+  const isAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
+
+  // Student Dashboard View - show if user is linked to a student AND not an admin
+  if (studentData && !isAdmin) {
     return (
       <div className="space-y-8" dir="rtl">
         <PageHeader 

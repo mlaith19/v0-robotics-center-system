@@ -294,7 +294,7 @@ export function getVisiblePagesForRole(roleId: RoleType): string[] {
 // בדיקה האם למשתמש יש גישה לדף מסוים
 export function canAccessPage(userPermissions: string[], userRole: RoleType, pagePath: string, studentId?: string, studentCourseIds?: string[]): boolean {
   // מנהל תמיד רואה הכל
-  if (userRole === "admin") return true
+  if (userRole === "admin" || userRole === "Administrator" || (userRole as string)?.toLowerCase() === "admin") return true
   
   const role = getRoleById(userRole)
   if (!role) return false
