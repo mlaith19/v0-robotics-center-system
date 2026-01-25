@@ -152,7 +152,8 @@ export default function TeacherViewPage() {
   }
 
   useEffect(() => {
-    if (!id) return
+    // Skip fetch if ID is "new" - will be redirected
+    if (!id || id === "new") return
     let cancelled = false
 
     ;(async () => {
@@ -450,6 +451,9 @@ export default function TeacherViewPage() {
       setIsAddingAttendance(false)
     }
   }
+
+  // If ID is "new", show loading while redirect happens
+  if (id === "new") return <div className="p-6">מעביר לדף הוספת מורה...</div>
 
   if (loading) return <div className="p-6">טוען...</div>
 
