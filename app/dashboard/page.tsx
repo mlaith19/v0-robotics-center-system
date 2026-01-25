@@ -81,8 +81,9 @@ export default function DashboardPage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [studentData, setStudentData] = useState<StudentData | null>(null)
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
+  const [redirecting, setRedirecting] = useState(false)
 
-  // Teacher - redirect to profile page (no home page for teachers)
+  // Get current user from cookie and check role
   useEffect(() => {
     const cookies = document.cookie.split(";")
     const sessionCookie = cookies.find((c) => c.trim().startsWith("robotics-session="))
@@ -91,15 +92,36 @@ export default function DashboardPage() {
         const sessionValue = sessionCookie.split("=")[1]
         const user = JSON.parse(decodeURIComponent(sessionValue))
         setCurrentUser(user)
+        
+        // If user role is teacher, redirect immediately to their profile without API calls
+        if (user.role === "teacher") {
+          setRedirecting(true)
+          // Fetch teacher ID and redirect
+          fetch(`/api/teachers/by-user/${user.id}`)
+            .then((res) => res.ok ? res.json() : null)
+            .then((data) => {
+              if (data?.id) {
+                router.replace(`/dashboard/teachers/${data.id}`)
+              } else {
+                setRedirecting(false)
+              }
+            })
+            .catch(() => setRedirecting(false))
+        }
       } catch (e) {
         console.error("Failed to parse session cookie")
       }
     }
-  }, [])
+  }, [router])
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !redirecting) {
       const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
+      
+      // Skip if teacher - already handled by redirect logic above
+      if (currentUser.role === "teacher") {
+        return
+      }
       
       if (userIsAdmin) {
         // Admin always sees dashboard stats
@@ -111,7 +133,7 @@ export default function DashboardPage() {
           })
           .catch(() => setLoading(false))
       } else {
-        // For non-admin users, check if they're linked to a student first
+        // For non-admin users, check if they're linked to a student
         fetch(`/api/students/by-user/${currentUser.id}`)
           .then((res) => res.ok ? res.json() : null)
           .then((studentResult) => {
@@ -120,24 +142,12 @@ export default function DashboardPage() {
               setStudentData(studentResult)
               setLoading(false)
             } else {
-              // Not a student, check if linked to a teacher
-              fetch(`/api/teachers/by-user/${currentUser.id}`)
-                .then((res) => res.ok ? res.json() : null)
-                .then((teacherResult) => {
-                  if (teacherResult) {
-                    // User is linked to a teacher
-                    setTeacherData(teacherResult)
-                    setLoading(false)
-                  } else {
-                    // Not a teacher either, fetch regular dashboard stats
-                    fetch("/api/dashboard/stats")
-                      .then((res) => res.json())
-                      .then((statsData) => {
-                        setStats(statsData)
-                        setLoading(false)
-                      })
-                      .catch(() => setLoading(false))
-                  }
+              // Not a student, fetch regular dashboard stats
+              fetch("/api/dashboard/stats")
+                .then((res) => res.json())
+                .then((statsData) => {
+                  setStats(statsData)
+                  setLoading(false)
                 })
                 .catch(() => setLoading(false))
             }
@@ -145,13 +155,16 @@ export default function DashboardPage() {
           .catch(() => setLoading(false))
       }
     }
-  }, [currentUser])
+  }, [currentUser, redirecting])
 
-  useEffect(() => {
-    if (teacherData && !loading) {
-      router.replace(`/dashboard/teachers/${teacherData.id}`)
-    }
-  }, [teacherData, loading, router])
+  // If redirecting (teacher user), show loading
+  if (redirecting) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (loading || !currentUser) {
     return (

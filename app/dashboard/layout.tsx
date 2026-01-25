@@ -99,6 +99,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Fetch student/teacher data - check if user is linked to a student or teacher
   useEffect(() => {
     if (currentUser) {
+      // First check role - if teacher, fetch teacher data
+      if (currentUser.role === "teacher") {
+        fetch(`/api/teachers/by-user/${currentUser.id}`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => {
+            if (data) {
+              setTeacherData({ id: data.id, courseIds: data.courseIds || [] })
+              setIsLinkedToTeacher(true)
+            }
+          })
+          .catch(() => {})
+        return // Don't check student if role is teacher
+      }
+      
       // Check if linked to student
       fetch(`/api/students/by-user/${currentUser.id}`)
         .then((res) => res.ok ? res.json() : null)
@@ -111,19 +125,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
         })
         .catch(() => setIsLinkedToStudent(false))
-
-      // Check if linked to teacher
-      fetch(`/api/teachers/by-user/${currentUser.id}`)
-        .then((res) => res.ok ? res.json() : null)
-        .then((data) => {
-          if (data) {
-            setTeacherData({ id: data.id, courseIds: data.courseIds || [] })
-            setIsLinkedToTeacher(true)
-          } else {
-            setIsLinkedToTeacher(false)
-          }
-        })
-        .catch(() => setIsLinkedToTeacher(false))
     }
   }, [currentUser])
 
@@ -269,10 +270,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   לוח זמנים
                 </Link>
               </>
-            ) : isLinkedToTeacher && currentUser?.role !== "admin" && currentUser?.role !== "Administrator" ? (
+            ) : currentUser?.role === "teacher" ? (
               // Teacher-specific navigation
               <>
-                {teacherData && (
+                {teacherData ? (
                   <Link
                     href={`/dashboard/teachers/${teacherData.id}`}
                     onClick={() => setSidebarOpen(false)}
@@ -285,6 +286,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <User className="h-5 w-5" />
                     הפרופיל שלי
                   </Link>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground">
+                    <User className="h-5 w-5" />
+                    טוען...
+                  </div>
                 )}
                 <Link
                   href="/dashboard/schedule"
