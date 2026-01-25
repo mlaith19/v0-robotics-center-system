@@ -272,18 +272,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             ) : isLinkedToTeacher && currentUser?.role !== "admin" && currentUser?.role !== "Administrator" ? (
               // Teacher-specific navigation
               <>
-                <Link
-                  href="/dashboard"
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                    pathname === "/dashboard"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <Home className="h-5 w-5" />
-                  דף הבית
-                </Link>
                 {teacherData && (
                   <Link
                     href={`/dashboard/teachers/${teacherData.id}`}
