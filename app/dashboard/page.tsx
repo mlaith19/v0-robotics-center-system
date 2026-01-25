@@ -1,11 +1,10 @@
 "use client"
 
 import { Card } from "@/components/ui/card"
-import { BookOpen, Users, Calendar, TrendingUp, GraduationCap, Building2, Banknote, Loader2, Clock, User, ClipboardCheck } from "lucide-react"
+import { BookOpen, Users, Calendar, TrendingUp, GraduationCap, Building2, Banknote, Loader2, Clock, User } from "lucide-react"
 import { useEffect, useState } from "react"
 import { PageHeader } from "@/components/page-header"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 
 interface CurrentUser {
@@ -25,22 +24,6 @@ interface StudentData {
     name: string
     description?: string
     schedule?: { day: string; time: string }[]
-  }[]
-}
-
-interface TeacherData {
-  id: string
-  name: string
-  email?: string
-  specialization?: string
-  courseIds: string[]
-  courses: {
-    id: string
-    name: string
-    description?: string
-    startTime?: string
-    endTime?: string
-    days?: string[]
   }[]
 }
 
@@ -75,13 +58,11 @@ function formatTimeAgo(dateStr: string) {
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [studentData, setStudentData] = useState<StudentData | null>(null)
-  const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
-  const [redirecting, setRedirecting] = useState(false)
+  const [redirecting, setRedirecting] = useState(false) // Declare redirecting variable
 
   // Get current user from cookie
   useEffect(() => {
@@ -98,42 +79,38 @@ export default function DashboardPage() {
     }
   }, [])
 
+  const [dataFetched, setDataFetched] = useState(false)
+  
   useEffect(() => {
-    if (currentUser) {
-      const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
-      
-      if (userIsAdmin) {
-        // Admin sees dashboard stats
-        fetch("/api/dashboard/stats")
-          .then((res) => res.ok ? res.json() : null)
-          .then((statsData) => {
-            if (statsData) setStats(statsData)
-            setLoading(false)
-          })
-          .catch(() => setLoading(false))
-      } else {
-        // For non-admin, check if linked to student only (teacher check is done in layout)
-        fetch(`/api/students/by-user/${currentUser.id}`)
-          .then((res) => res.ok ? res.json() : null)
-          .then((studentResult) => {
-            if (studentResult) {
-              setStudentData(studentResult)
-            }
-            setLoading(false)
-          })
-          .catch(() => setLoading(false))
-      }
+    // Prevent duplicate calls
+    if (!currentUser || dataFetched) return
+    
+    const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
+    
+    setDataFetched(true)
+    
+    if (userIsAdmin) {
+      // Admin sees dashboard stats
+      fetch("/api/dashboard/stats")
+        .then((res) => res.ok ? res.json() : null)
+        .then((statsData) => {
+          if (statsData) setStats(statsData)
+          setLoading(false)
+        })
+        .catch(() => setLoading(false))
+    } else {
+      // For non-admin, check if linked to student only (teacher check is done in layout)
+      fetch(`/api/students/by-user/${currentUser.id}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((studentResult) => {
+          if (studentResult) {
+            setStudentData(studentResult)
+          }
+          setLoading(false)
+        })
+        .catch(() => setLoading(false))
     }
-  }, [currentUser])
-
-  // If redirecting (teacher user), show loading
-  if (redirecting) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
+  }, [currentUser, dataFetched])
 
   if (loading || !currentUser) {
     return (

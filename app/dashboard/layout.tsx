@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { canAccessPage, type RoleType } from "@/lib/permissions"
+import { useUserType, clearUserTypeCache } from "@/lib/use-user-type"
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "דף הבית" },
@@ -97,49 +98,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isLinkedToTeacher, setIsLinkedToTeacher] = useState(false)
 
   // Fetch student/teacher data - check if user is linked to a student or teacher
+  const [dataFetched, setDataFetched] = useState(false)
+  
   useEffect(() => {
-    if (currentUser) {
-      const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
-      
-      // Skip checks for admin
-      if (userIsAdmin) return
-      
-      // Check if linked to teacher first (by API, not by role)
-      fetch(`/api/teachers/by-user/${currentUser.id}`)
-        .then((res) => res.ok ? res.json() : null)
-        .then((data) => {
-          if (data?.id) {
-            setTeacherData({ id: data.id, courseIds: data.courseIds || [] })
-            setIsLinkedToTeacher(true)
-          } else {
-            // Not a teacher, check if linked to student
-            fetch(`/api/students/by-user/${currentUser.id}`)
-              .then((res) => res.ok ? res.json() : null)
-              .then((studentData) => {
-                if (studentData) {
-                  setStudentData({ id: studentData.id, courseIds: studentData.courseIds || [] })
-                  setIsLinkedToStudent(true)
-                } else {
-                  setIsLinkedToStudent(false)
-                }
-              })
-              .catch(() => setIsLinkedToStudent(false))
-          }
-        })
-        .catch(() => {
-          // Error checking teacher, continue to check student
+    // Prevent duplicate calls
+    if (!currentUser || dataFetched) return
+    
+    const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
+    
+    // Skip checks for admin
+    if (userIsAdmin) {
+      setDataFetched(true)
+      return
+    }
+    
+    setDataFetched(true)
+    
+    // Check if linked to teacher first (by API, not by role)
+    fetch(`/api/teachers/by-user/${currentUser.id}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.id) {
+          setTeacherData({ id: data.id, courseIds: data.courseIds || [] })
+          setIsLinkedToTeacher(true)
+        } else {
+          // Not a teacher, check if linked to student
           fetch(`/api/students/by-user/${currentUser.id}`)
             .then((res) => res.ok ? res.json() : null)
-            .then((studentData) => {
-              if (studentData) {
-                setStudentData({ id: studentData.id, courseIds: studentData.courseIds || [] })
+            .then((studentDataResult) => {
+              if (studentDataResult) {
+                setStudentData({ id: studentDataResult.id, courseIds: studentDataResult.courseIds || [] })
                 setIsLinkedToStudent(true)
               }
             })
             .catch(() => {})
-        })
-    }
-  }, [currentUser])
+        }
+      })
+      .catch(() => {})
+  }, [currentUser, dataFetched])
 
   // Check page access permissions
   useEffect(() => {
