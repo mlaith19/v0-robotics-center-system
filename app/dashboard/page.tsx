@@ -59,7 +59,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8" dir="rtl">
-      <PageHeader title="דף הבית" description="סקירה כללית של מרכז הרובוטיקה" />
+      <PageHeader 
+        title="דף הבית" 
+        description="סקירה כללית של" 
+        showLogo={true}
+        useCenterNameInDescription={true}
+      />
 
       {/* Stats Row 1 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

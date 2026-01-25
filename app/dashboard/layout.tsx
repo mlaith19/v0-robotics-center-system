@@ -144,17 +144,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }`}
       >
         <div className="flex h-full flex-col">
-          {/* Logo */}
+          {/* Header */}
           <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-            {centerSettings.logo ? (
-              <img 
-                src={centerSettings.logo || "/placeholder.svg"} 
-                alt={centerSettings.center_name} 
-                className="h-10 w-10 object-contain rounded"
-              />
-            ) : (
-              <Bot className="h-8 w-8 text-primary flex-shrink-0" />
-            )}
+            <Bot className="h-8 w-8 text-primary flex-shrink-0" />
             <span className="text-lg font-bold text-foreground truncate">{centerSettings.center_name}</span>
           </div>
 
