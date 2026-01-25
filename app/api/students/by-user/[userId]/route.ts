@@ -24,7 +24,7 @@ export async function GET(req: Request, { params }: Ctx) {
     let courses: any[] = []
     if (courseIds.length > 0) {
       courses = await sql`
-        SELECT id, name, description, schedule FROM "Course" WHERE id = ANY(${courseIds}::text[])
+        SELECT id, name, description FROM "Course" WHERE id = ANY(${courseIds}::text[])
       `
     }
 
