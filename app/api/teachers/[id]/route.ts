@@ -1,7 +1,5 @@
-import { neon } from "@neondatabase/serverless"
+import { sql, handleDbError } from "@/lib/db"
 import bcrypt from "bcryptjs"
-
-const sql = neon(process.env.DATABASE_URL!)
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -61,8 +59,7 @@ export async function GET(req: Request, { params }: Ctx) {
 
     return Response.json(teacher)
   } catch (err) {
-    console.error("GET /api/teachers/[id] error:", err)
-    return Response.json({ error: "Failed to load teacher" }, { status: 500 })
+    return handleDbError(err, "GET /api/teachers/[id]")
   }
 }
 
@@ -147,8 +144,7 @@ export async function PUT(req: Request, { params }: Ctx) {
 
     return Response.json(result[0])
   } catch (err) {
-    console.error("PUT /api/teachers/[id] error:", err)
-    return Response.json({ error: "Failed to update teacher" }, { status: 500 })
+    return handleDbError(err, "PUT /api/teachers/[id]")
   }
 }
 
@@ -159,7 +155,6 @@ export async function DELETE(_: Request, { params }: Ctx) {
     await sql`DELETE FROM "Teacher" WHERE id = ${id}`
     return new Response(null, { status: 204 })
   } catch (err) {
-    console.error("DELETE /api/teachers/[id] error:", err)
-    return Response.json({ error: "Failed to delete teacher" }, { status: 500 })
+    return handleDbError(err, "DELETE /api/teachers/[id]")
   }
 }

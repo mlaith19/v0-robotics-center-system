@@ -1,6 +1,4 @@
-import { neon } from "@neondatabase/serverless"
-
-const sql = neon(process.env.DATABASE_URL!)
+import { sql, handleDbError } from "@/lib/db"
 
 export async function GET(req: Request) {
   try {
@@ -92,8 +90,7 @@ export async function GET(req: Request) {
 
     return Response.json(result)
   } catch (err) {
-    console.error("GET /api/attendance error:", err)
-    return Response.json({ error: "Failed to load attendance" }, { status: 500 })
+    return handleDbError(err, "GET /api/attendance")
   }
 }
 
@@ -189,8 +186,7 @@ export async function POST(req: Request) {
 
     return Response.json(result[0], { status: 201 })
   } catch (err) {
-    console.error("POST /api/attendance error:", err)
-    return Response.json({ error: "Failed to save attendance" }, { status: 500 })
+    return handleDbError(err, "POST /api/attendance")
   }
 }
 
@@ -233,7 +229,6 @@ export async function DELETE(req: Request) {
 
     return Response.json({ error: "id or (studentId/teacherId + courseId + date) required" }, { status: 400 })
   } catch (err) {
-    console.error("DELETE /api/attendance error:", err)
-    return Response.json({ error: "Failed to delete attendance" }, { status: 500 })
+    return handleDbError(err, "DELETE /api/attendance")
   }
 }

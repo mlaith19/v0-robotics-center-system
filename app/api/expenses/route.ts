@@ -1,6 +1,4 @@
-import { neon } from "@neondatabase/serverless"
-
-const sql = neon(process.env.DATABASE_URL!)
+import { sql, handleDbError } from "@/lib/db"
 
 export async function GET(req: Request) {
   try {
@@ -35,8 +33,7 @@ export async function GET(req: Request) {
 
     return Response.json(result)
   } catch (err) {
-    console.error("GET /api/expenses error:", err)
-    return Response.json({ error: "Failed to load expenses" }, { status: 500 })
+    return handleDbError(err, "GET /api/expenses")
   }
 }
 
@@ -60,7 +57,6 @@ export async function POST(req: Request) {
 
     return Response.json(result[0], { status: 201 })
   } catch (err) {
-    console.error("POST /api/expenses error:", err)
-    return Response.json({ error: "Failed to create expense" }, { status: 500 })
+    return handleDbError(err, "POST /api/expenses")
   }
 }

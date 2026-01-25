@@ -1,6 +1,4 @@
-import { neon } from "@neondatabase/serverless"
-
-const sql = neon(process.env.DATABASE_URL!)
+import { sql, handleDbError } from "@/lib/db"
 
 type Ctx = { params: Promise<{ userId: string }> }
 
@@ -45,14 +43,7 @@ export async function GET(_req: Request, { params }: Ctx) {
       courseIds,
       courses
     })
-  } catch (error: any) {
-    console.error("Error fetching teacher by user:", error)
-    
-    // Handle rate limiting
-    if (error.message?.includes("Too Many") || error.message?.includes("rate limit")) {
-      return Response.json({ error: "Too many requests" }, { status: 429 })
-    }
-    
-    return Response.json({ error: "Failed to fetch teacher" }, { status: 500 })
+  } catch (error) {
+    return handleDbError(error, "Error fetching teacher by user")
   }
 }
