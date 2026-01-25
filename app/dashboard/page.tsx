@@ -83,7 +83,7 @@ export default function DashboardPage() {
   const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
   const [redirecting, setRedirecting] = useState(false)
 
-  // Get current user from cookie and check role
+  // Get current user from cookie
   useEffect(() => {
     const cookies = document.cookie.split(";")
     const sessionCookie = cookies.find((c) => c.trim().startsWith("robotics-session="))
@@ -92,36 +92,15 @@ export default function DashboardPage() {
         const sessionValue = sessionCookie.split("=")[1]
         const user = JSON.parse(decodeURIComponent(sessionValue))
         setCurrentUser(user)
-        
-        // If user role is teacher, redirect immediately to their profile without API calls
-        if (user.role === "teacher") {
-          setRedirecting(true)
-          // Fetch teacher ID and redirect
-          fetch(`/api/teachers/by-user/${user.id}`)
-            .then((res) => res.ok ? res.json() : null)
-            .then((data) => {
-              if (data?.id) {
-                router.replace(`/dashboard/teachers/${data.id}`)
-              } else {
-                setRedirecting(false)
-              }
-            })
-            .catch(() => setRedirecting(false))
-        }
       } catch (e) {
         console.error("Failed to parse session cookie")
       }
     }
-  }, [router])
+  }, [])
 
   useEffect(() => {
     if (currentUser && !redirecting) {
       const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
-      
-      // Skip if teacher - already handled by redirect logic above
-      if (currentUser.role === "teacher") {
-        return
-      }
       
       if (userIsAdmin) {
         // Admin always sees dashboard stats
@@ -133,29 +112,60 @@ export default function DashboardPage() {
           })
           .catch(() => setLoading(false))
       } else {
-        // For non-admin users, check if they're linked to a student
-        fetch(`/api/students/by-user/${currentUser.id}`)
+        // For non-admin users, first check if they're linked to a teacher
+        fetch(`/api/teachers/by-user/${currentUser.id}`)
           .then((res) => res.ok ? res.json() : null)
-          .then((studentResult) => {
-            if (studentResult) {
-              // User is linked to a student
-              setStudentData(studentResult)
-              setLoading(false)
+          .then((teacherResult) => {
+            if (teacherResult?.id) {
+              // User is linked to a teacher - redirect to their profile
+              setRedirecting(true)
+              router.replace(`/dashboard/teachers/${teacherResult.id}`)
             } else {
-              // Not a student, fetch regular dashboard stats
-              fetch("/api/dashboard/stats")
-                .then((res) => res.json())
-                .then((statsData) => {
-                  setStats(statsData)
-                  setLoading(false)
+              // Not a teacher, check if linked to a student
+              fetch(`/api/students/by-user/${currentUser.id}`)
+                .then((res) => res.ok ? res.json() : null)
+                .then((studentResult) => {
+                  if (studentResult) {
+                    // User is linked to a student
+                    setStudentData(studentResult)
+                    setLoading(false)
+                  } else {
+                    // Not a student either, fetch regular dashboard stats
+                    fetch("/api/dashboard/stats")
+                      .then((res) => res.json())
+                      .then((statsData) => {
+                        setStats(statsData)
+                        setLoading(false)
+                      })
+                      .catch(() => setLoading(false))
+                  }
                 })
                 .catch(() => setLoading(false))
             }
           })
-          .catch(() => setLoading(false))
+          .catch(() => {
+            // Error checking teacher, continue to check student
+            fetch(`/api/students/by-user/${currentUser.id}`)
+              .then((res) => res.ok ? res.json() : null)
+              .then((studentResult) => {
+                if (studentResult) {
+                  setStudentData(studentResult)
+                  setLoading(false)
+                } else {
+                  fetch("/api/dashboard/stats")
+                    .then((res) => res.json())
+                    .then((statsData) => {
+                      setStats(statsData)
+                      setLoading(false)
+                    })
+                    .catch(() => setLoading(false))
+                }
+              })
+              .catch(() => setLoading(false))
+          })
       }
     }
-  }, [currentUser, redirecting])
+  }, [currentUser, redirecting, router])
 
   // If redirecting (teacher user), show loading
   if (redirecting) {

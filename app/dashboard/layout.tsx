@@ -99,32 +99,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Fetch student/teacher data - check if user is linked to a student or teacher
   useEffect(() => {
     if (currentUser) {
-      // First check role - if teacher, fetch teacher data
-      if (currentUser.role === "teacher") {
-        fetch(`/api/teachers/by-user/${currentUser.id}`)
-          .then((res) => res.ok ? res.json() : null)
-          .then((data) => {
-            if (data) {
-              setTeacherData({ id: data.id, courseIds: data.courseIds || [] })
-              setIsLinkedToTeacher(true)
-            }
-          })
-          .catch(() => {})
-        return // Don't check student if role is teacher
-      }
+      const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
       
-      // Check if linked to student
-      fetch(`/api/students/by-user/${currentUser.id}`)
+      // Skip checks for admin
+      if (userIsAdmin) return
+      
+      // Check if linked to teacher first (by API, not by role)
+      fetch(`/api/teachers/by-user/${currentUser.id}`)
         .then((res) => res.ok ? res.json() : null)
         .then((data) => {
-          if (data) {
-            setStudentData({ id: data.id, courseIds: data.courseIds || [] })
-            setIsLinkedToStudent(true)
+          if (data?.id) {
+            setTeacherData({ id: data.id, courseIds: data.courseIds || [] })
+            setIsLinkedToTeacher(true)
           } else {
-            setIsLinkedToStudent(false)
+            // Not a teacher, check if linked to student
+            fetch(`/api/students/by-user/${currentUser.id}`)
+              .then((res) => res.ok ? res.json() : null)
+              .then((studentData) => {
+                if (studentData) {
+                  setStudentData({ id: studentData.id, courseIds: studentData.courseIds || [] })
+                  setIsLinkedToStudent(true)
+                } else {
+                  setIsLinkedToStudent(false)
+                }
+              })
+              .catch(() => setIsLinkedToStudent(false))
           }
         })
-        .catch(() => setIsLinkedToStudent(false))
+        .catch(() => {
+          // Error checking teacher, continue to check student
+          fetch(`/api/students/by-user/${currentUser.id}`)
+            .then((res) => res.ok ? res.json() : null)
+            .then((studentData) => {
+              if (studentData) {
+                setStudentData({ id: studentData.id, courseIds: studentData.courseIds || [] })
+                setIsLinkedToStudent(true)
+              }
+            })
+            .catch(() => {})
+        })
     }
   }, [currentUser])
 
@@ -270,7 +283,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   לוח זמנים
                 </Link>
               </>
-            ) : currentUser?.role === "teacher" ? (
+            ) : isLinkedToTeacher ? (
               // Teacher-specific navigation
               <>
                 {teacherData ? (
