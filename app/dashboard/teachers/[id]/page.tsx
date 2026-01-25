@@ -73,6 +73,13 @@ export default function TeacherViewPage() {
   const params = useParams<{ id: string }>()
   const id = params?.id
 
+  // Redirect if "new" is passed as ID (should go to new teacher page)
+  useEffect(() => {
+    if (id === "new") {
+      router.replace("/dashboard/teachers/new")
+    }
+  }, [id, router])
+
   const [teacher, setTeacher] = useState<Teacher | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

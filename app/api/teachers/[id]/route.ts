@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless"
+import bcrypt from "bcryptjs"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -84,6 +85,41 @@ export async function PUT(req: Request, { params }: Ctx) {
     const externalCourseRate = body.externalCourseRate ?? null
     const now = new Date().toISOString()
 
+    // User account fields
+    const createUserAccount = body.createUserAccount === true
+    const username = body.username ? String(body.username).trim() : null
+    const password = body.password ? String(body.password) : null
+
+    let userId = null
+
+    // Create user account if requested
+    if (createUserAccount && username && password) {
+      // Check if username already exists
+      const existingUser = await sql`SELECT id FROM "User" WHERE username = ${username}`
+      if (existingUser.length > 0) {
+        return Response.json({ error: "שם המשתמש כבר קיים במערכת" }, { status: 409 })
+      }
+
+      userId = crypto.randomUUID()
+      const hashedPassword = await bcrypt.hash(password, 10)
+
+      // Get teacher role permissions
+      const teacherPermissions = [
+        "courses.view",
+        "students.view",
+        "teachers.view",
+        "schedule.view",
+        "attendance.view",
+        "attendance.edit",
+        "settings.home",
+      ]
+
+      await sql`
+        INSERT INTO "User" (id, name, email, username, password, phone, status, role, permissions, "createdAt", "updatedAt")
+        VALUES (${userId}, ${name}, ${email}, ${username}, ${hashedPassword}, ${phone}, 'active', 'teacher', ${JSON.stringify(teacherPermissions)}, ${now}, ${now})
+      `
+    }
+
     const result = await sql`
       UPDATE "Teacher"
       SET 
@@ -99,6 +135,7 @@ export async function PUT(req: Request, { params }: Ctx) {
         "centerHourlyRate" = ${centerHourlyRate},
         "travelRate" = ${travelRate},
         "externalCourseRate" = ${externalCourseRate},
+        "userId" = COALESCE(${userId}, "userId"),
         "updatedAt" = ${now}
       WHERE id = ${id}
       RETURNING *

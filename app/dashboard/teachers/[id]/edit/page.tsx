@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { CityCombobox } from "@/components/ui/combobox-city"
-import { ArrowRight, User, Mail, Phone, GraduationCap, FileText, Banknote, Calendar, Award as IdCard, MapPin, Save, Loader2 } from "lucide-react"
+import { ArrowRight, User, Mail, Phone, GraduationCap, FileText, Banknote, Calendar, Award as IdCard, MapPin, Save, Loader2, KeyRound } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 
 type Teacher = {
   id: string
@@ -26,6 +27,7 @@ type Teacher = {
   centerHourlyRate?: number | null
   travelRate?: number | null
   externalCourseRate?: number | null
+  userId?: string | null
 }
 
 export default function EditTeacherPage() {
@@ -36,6 +38,12 @@ export default function EditTeacherPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // User account fields
+  const [hasUserAccount, setHasUserAccount] = useState(false)
+  const [createUserAccount, setCreateUserAccount] = useState(false)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
 
   const [form, setForm] = useState({
     name: "",
@@ -82,6 +90,8 @@ export default function EditTeacherPage() {
             travelRate: t.travelRate ?? 0,
             externalCourseRate: t.externalCourseRate ?? 0,
           })
+          // Check if teacher has user account
+          setHasUserAccount(!!t.userId)
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "שגיאה בטעינת מורה")
@@ -101,6 +111,16 @@ export default function EditTeacherPage() {
       setSaving(true)
       setError(null)
 
+      // Validate user account fields if creating account
+      if (createUserAccount && !hasUserAccount) {
+        if (!username.trim()) {
+          throw new Error("יש להזין שם משתמש")
+        }
+        if (!password || password.length < 4) {
+          throw new Error("הסיסמה חייבת להכיל לפחות 4 תווים")
+        }
+      }
+
       const res = await fetch(`/api/teachers/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -117,6 +137,10 @@ export default function EditTeacherPage() {
           centerHourlyRate: form.centerHourlyRate || null,
           travelRate: form.travelRate || null,
           externalCourseRate: form.externalCourseRate || null,
+          // User account data
+          createUserAccount: createUserAccount && !hasUserAccount,
+          username: createUserAccount && !hasUserAccount ? username.trim() : null,
+          password: createUserAccount && !hasUserAccount ? password : null,
         }),
       })
 
@@ -288,6 +312,67 @@ export default function EditTeacherPage() {
                 rows={3}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* User Account */}
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <KeyRound className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <CardTitle>חשבון משתמש</CardTitle>
+                <CardDescription>יצירת חשבון התחברות למורה במערכת</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {hasUserAccount ? (
+              <div className="text-center py-4 bg-green-100 rounded-lg border border-green-300">
+                <p className="text-green-700 font-medium">למורה זה כבר יש חשבון משתמש במערכת</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="createUserAccount"
+                    checked={createUserAccount}
+                    onCheckedChange={(checked) => setCreateUserAccount(checked === true)}
+                  />
+                  <Label htmlFor="createUserAccount" className="cursor-pointer">
+                    צור חשבון משתמש למורה (יאפשר למורה להתחבר למערכת)
+                  </Label>
+                </div>
+
+                {createUserAccount && (
+                  <div className="grid gap-4 pt-2 border-t">
+                    <div className="grid gap-2">
+                      <Label htmlFor="username">שם משתמש *</Label>
+                      <Input
+                        id="username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="שם משתמש להתחברות"
+                        dir="ltr"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="password">סיסמה *</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="לפחות 4 תווים"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
