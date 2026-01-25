@@ -25,6 +25,7 @@ import {
   UserPlus,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { canAccessPage, type RoleType } from "@/lib/permissions"
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "דף הבית" },
@@ -85,6 +86,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     setIsLoading(false)
   }, [router])
+
+  // Check page access permissions
+  useEffect(() => {
+    if (currentUser && pathname) {
+      const userRole = (currentUser.role as RoleType) || "other"
+      const userPermissions = currentUser.permissions || []
+      
+      // Check if user can access current page
+      if (!canAccessPage(userPermissions, userRole, pathname)) {
+        // Redirect to dashboard if no access
+        router.push("/dashboard")
+      }
+    }
+  }, [currentUser, pathname, router])
 
   // Fetch center settings
   useEffect(() => {
@@ -151,24 +166,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <item.icon className="h-5 w-5" />
-                  {item.label}
-                </Link>
-              )
-            })}
+            {navItems
+              .filter((item) => {
+                // Filter navigation items based on user permissions
+                const userRole = (currentUser?.role as RoleType) || "other"
+                const userPermissions = currentUser?.permissions || []
+                return canAccessPage(userPermissions, userRole, item.href)
+              })
+              .map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.label}
+                  </Link>
+                )
+              })}
           </nav>
 
           {/* User info */}
