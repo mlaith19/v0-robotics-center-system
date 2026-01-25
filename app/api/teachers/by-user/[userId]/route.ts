@@ -20,7 +20,7 @@ export async function GET(_req: Request, { params }: Ctx) {
             'endTime', c."endTime"
           ))
           FROM "Course" c
-          WHERE c."teacherId" = t.id),
+          WHERE t.id = ANY(c."teacherIds")),
           '[]'
         ) as courses
       FROM "Teacher" t
