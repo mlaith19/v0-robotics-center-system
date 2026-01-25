@@ -64,6 +64,7 @@ export default function DashboardPage() {
         description="סקירה כללית של" 
         showLogo={true}
         useCenterNameInDescription={true}
+        centered={true}
       />
 
       {/* Stats Row 1 */}

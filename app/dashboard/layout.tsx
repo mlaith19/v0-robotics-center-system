@@ -145,9 +145,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-            <Bot className="h-8 w-8 text-primary flex-shrink-0" />
-            <span className="text-lg font-bold text-foreground truncate">{centerSettings.center_name}</span>
+          <div className="flex h-16 items-center justify-center border-b border-border px-4">
+            <span className="text-lg font-bold text-foreground text-center">{centerSettings.center_name}</span>
           </div>
 
           {/* Navigation */}

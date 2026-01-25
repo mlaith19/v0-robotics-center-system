@@ -7,6 +7,7 @@ interface PageHeaderProps {
   description?: string
   showLogo?: boolean
   useCenterNameInDescription?: boolean
+  centered?: boolean
 }
 
 interface CenterSettings {
@@ -14,7 +15,7 @@ interface CenterSettings {
   center_name: string
 }
 
-export function PageHeader({ title, description, showLogo = false, useCenterNameInDescription = false }: PageHeaderProps) {
+export function PageHeader({ title, description, showLogo = false, useCenterNameInDescription = false, centered = false }: PageHeaderProps) {
   const [settings, setSettings] = useState<CenterSettings>({ logo: "", center_name: "" })
 
   useEffect(() => {
@@ -41,15 +42,15 @@ export function PageHeader({ title, description, showLogo = false, useCenterName
     : description
 
   return (
-    <div className="flex items-center justify-end gap-4">
+    <div className={`flex items-center gap-4 ${centered ? "justify-center w-full flex-col" : "justify-end"}`}>
       {showLogo && settings.logo && (
         <img 
           src={settings.logo || "/placeholder.svg"} 
           alt="לוגו" 
-          className="h-14 w-14 object-contain rounded"
+          className="h-16 w-16 object-contain rounded"
         />
       )}
-      <div className="text-right">
+      <div className={centered ? "text-center" : "text-right"}>
         <h1 className="text-3xl font-bold">{title}</h1>
         {finalDescription && (
           <p className="text-muted-foreground mt-1">{finalDescription}</p>
