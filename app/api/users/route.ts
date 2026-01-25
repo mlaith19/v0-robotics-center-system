@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
+import bcrypt from "bcryptjs"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -44,20 +45,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "name and email are required" }, { status: 400 })
     }
 
+    if (!body.username || !body.password) {
+      return NextResponse.json({ error: "username and password are required" }, { status: 400 })
+    }
+
+    // Check if username already exists
+    const existingUser = await sql`SELECT id FROM "User" WHERE username = ${body.username.trim()}`
+    if (existingUser.length > 0) {
+      return NextResponse.json({ error: "Username already exists" }, { status: 409 })
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(body.password, 10)
+
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
 
     const result = await sql`
-      INSERT INTO "User" (id, name, email, phone, status, role, permissions, "createdAt", "updatedAt")
-      VALUES (${id}, ${body.name.trim()}, ${body.email.trim()}, ${body.phone?.trim() || null}, ${body.status || "active"}, ${body.role || "other"}, ${JSON.stringify(body.permissions || [])}, ${now}, ${now})
-      RETURNING *
+      INSERT INTO "User" (id, name, email, username, password, phone, status, role, permissions, "createdAt", "updatedAt")
+      VALUES (${id}, ${body.name.trim()}, ${body.email.trim()}, ${body.username.trim()}, ${hashedPassword}, ${body.phone?.trim() || null}, ${body.status || "active"}, ${body.role || "other"}, ${JSON.stringify(body.permissions || [])}, ${now}, ${now})
+      RETURNING id, name, email, username, phone, status, role, permissions, "createdAt", "updatedAt"
     `
 
     return NextResponse.json(result[0], { status: 201 })
   } catch (err: any) {
     console.error("POST /api/users error:", err)
     if (err?.code === "23505") {
-      return NextResponse.json({ error: "Email already exists" }, { status: 409 })
+      return NextResponse.json({ error: "Email or username already exists" }, { status: 409 })
     }
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 })
   }

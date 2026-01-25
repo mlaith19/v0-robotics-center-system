@@ -104,6 +104,8 @@ export default function UsersPage() {
     name: "",
     email: "",
     phone: "",
+    username: "",
+    password: "",
   })
 
   const [selectedRole, setSelectedRole] = useState<RoleType>("other")
@@ -154,7 +156,7 @@ export default function UsersPage() {
   }, [q, statusFilter])
 
   function resetForm() {
-    setFormData({ name: "", email: "", phone: "" })
+    setFormData({ name: "", email: "", phone: "", username: "", password: "" })
     setSelectedRole("other")
     setSelectedPermissions([])
     setEditingUser(null)
@@ -180,8 +182,21 @@ export default function UsersPage() {
   async function createUser() {
     const name = formData.name.trim()
     const email = formData.email.trim()
+    const username = formData.username.trim()
+    const password = formData.password
+
     if (!name || !email) {
       alert("יש למלא שם ואימייל")
+      return
+    }
+
+    if (!username || !password) {
+      alert("יש למלא שם משתמש וסיסמה")
+      return
+    }
+
+    if (password.length < 4) {
+      alert("הסיסמה חייבת להכיל לפחות 4 תווים")
       return
     }
 
@@ -191,6 +206,8 @@ export default function UsersPage() {
       body: JSON.stringify({
         name,
         email,
+        username,
+        password,
         phone: formData.phone.trim() || null,
         role: selectedRole,
         permissions: selectedPermissions,
@@ -470,7 +487,7 @@ export default function UsersPage() {
             </DialogHeader>
 
             <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-2">
                   <Label>שם מלא *</Label>
                   <Input
@@ -498,6 +515,28 @@ export default function UsersPage() {
                     value={formData.phone}
                     onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))}
                     placeholder="מספר טלפון"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>שם משתמש *</Label>
+                  <Input
+                    value={formData.username}
+                    onChange={(e) => setFormData((p) => ({ ...p, username: e.target.value }))}
+                    disabled={!!editingUser}
+                    placeholder="שם משתמש להתחברות"
+                    dir="ltr"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{editingUser ? "סיסמה חדשה" : "סיסמה *"}</Label>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
+                    placeholder={editingUser ? "השאר ריק לשמירת הסיסמה הנוכחית" : "סיסמה (לפחות 4 תווים)"}
+                    dir="ltr"
                   />
                 </div>
               </div>
