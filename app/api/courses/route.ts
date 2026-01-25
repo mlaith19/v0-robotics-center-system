@@ -44,8 +44,14 @@ export async function GET() {
     }))
     
     return Response.json(coursesWithTeachers)
-  } catch (err) {
+  } catch (err: any) {
     console.error("GET /api/courses error:", err)
+    
+    // Handle rate limiting
+    if (err.message?.includes("Too Many Requests") || err.message?.includes("rate limit")) {
+      return Response.json({ error: "Too many requests, please try again" }, { status: 429 })
+    }
+    
     return Response.json({ error: "Failed to load courses" }, { status: 500 })
   }
 }
