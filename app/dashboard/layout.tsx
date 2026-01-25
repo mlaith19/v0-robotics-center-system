@@ -234,7 +234,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
-                    <User className="h-5 w-5" /> // Use User icon here
+                    <User className="h-5 w-5" />
                     הפרופיל שלי
                   </Link>
                 )}
