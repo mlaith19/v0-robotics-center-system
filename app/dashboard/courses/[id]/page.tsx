@@ -69,6 +69,11 @@ const dayLabels: Record<string, string> = {
   saturday: "שבת"
 }
 
+interface CurrentUser {
+  id: number
+  role: string
+}
+
 export default function CourseViewPage() {
   const params = useParams()
   const id = params.id as string
@@ -76,6 +81,26 @@ export default function CourseViewPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [loading, setLoading] = useState(true)
+  const [isStudentUser, setIsStudentUser] = useState(false)
+
+  // Check if user is linked to a student
+  useEffect(() => {
+    const cookies = document.cookie.split(";")
+    const sessionCookie = cookies.find((c) => c.trim().startsWith("robotics-session="))
+    if (sessionCookie) {
+      try {
+        const sessionValue = sessionCookie.split("=")[1]
+        const user = JSON.parse(decodeURIComponent(sessionValue)) as CurrentUser
+        // Check if user is linked to a student
+        fetch(`/api/students/by-user/${user.id}`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => {
+            if (data) setIsStudentUser(true)
+          })
+          .catch(() => {})
+      } catch (e) {}
+    }
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -144,19 +169,21 @@ export default function CourseViewPage() {
           </div>
         </div>
 
-        <Link href={`/dashboard/courses/${course.id}/edit`}>
-          <Button className="gap-2">
-            <Pencil className="h-4 w-4" />
-            ערוך קורס
-          </Button>
-        </Link>
+        {!isStudentUser && (
+          <Link href={`/dashboard/courses/${course.id}/edit`}>
+            <Button className="gap-2">
+              <Pencil className="h-4 w-4" />
+              ערוך קורס
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue="general" className="w-full" dir="rtl">
-        <TabsList className="grid w-full grid-cols-3 mb-6" dir="rtl">
-          <TabsTrigger value="payments">עלות ותשלומים</TabsTrigger>
-          <TabsTrigger value="students">ילדים משויכים</TabsTrigger>
+        <TabsList className={`grid w-full mb-6 ${isStudentUser ? "grid-cols-1" : "grid-cols-3"}`} dir="rtl">
+          {!isStudentUser && <TabsTrigger value="payments">עלות ותשלומים</TabsTrigger>}
+          {!isStudentUser && <TabsTrigger value="students">ילדים משויכים</TabsTrigger>}
           <TabsTrigger value="general">כללי</TabsTrigger>
         </TabsList>
 
@@ -186,10 +213,12 @@ export default function CourseViewPage() {
                     {statusLabels[course.status] || course.status}
                   </Badge>
                 </div>
-                <div className="flex flex-row-reverse justify-between items-center">
-                  <span className="text-muted-foreground">מחיר:</span>
-                  <span className="font-medium text-blue-600 text-xl">₪{course.price || 0}</span>
-                </div>
+                {!isStudentUser && (
+                  <div className="flex flex-row-reverse justify-between items-center">
+                    <span className="text-muted-foreground">מחיר:</span>
+                    <span className="font-medium text-blue-600 text-xl">₪{course.price || 0}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

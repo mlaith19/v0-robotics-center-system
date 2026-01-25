@@ -77,6 +77,11 @@ const courseColors = [
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
+interface CurrentUser {
+  id: number
+  role: string
+}
+
 export default function SchedulePage() {
   const { data: courses = [], isLoading: coursesLoading } = useSWR<Course[]>("/api/courses", fetcher)
   const { data: students = [], isLoading: studentsLoading } = useSWR<Student[]>("/api/students", fetcher)
@@ -89,6 +94,29 @@ export default function SchedulePage() {
   const [filterCourse, setFilterCourse] = useState<string>("all")
   const [filterTeacher, setFilterTeacher] = useState<string>("all")
   const [filterStudent, setFilterStudent] = useState<string>("all")
+  const [isStudentUser, setIsStudentUser] = useState(false)
+
+  // Check if user is linked to a student
+  const checkUser = () => {
+    const cookies = document.cookie.split(";")
+    const sessionCookie = cookies.find((c) => c.trim().startsWith("robotics-session="))
+    if (sessionCookie) {
+      try {
+        const sessionValue = sessionCookie.split("=")[1]
+        const user = JSON.parse(decodeURIComponent(sessionValue)) as CurrentUser
+        fetch(`/api/students/by-user/${user.id}`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => {
+            if (data) setIsStudentUser(true)
+          })
+          .catch(() => {})
+      } catch (e) {}
+    }
+  }
+
+  useEffect(() => {
+    checkUser()
+  }, [])
 
   const courseColorMap = useMemo(() => {
     const colorMap: Record<string, number> = {}
@@ -563,15 +591,19 @@ export default function SchedulePage() {
                   )) || <span className="text-muted-foreground">לא צוין</span>}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">תלמידים</div>
-                  <div className="font-medium">{selectedCourse.enrollmentCount || selectedCourse.students || 0}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">מחיר</div>
-                  <div className="font-medium text-lg text-primary">₪{selectedCourse.price || 0}</div>
-                </div>
+              <div className={`grid gap-4 ${isStudentUser ? "grid-cols-1" : "grid-cols-2"}`}>
+                {!isStudentUser && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">תלמידים</div>
+                    <div className="font-medium">{selectedCourse.enrollmentCount || selectedCourse.students || 0}</div>
+                  </div>
+                )}
+                {!isStudentUser && (
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">מחיר</div>
+                    <div className="font-medium text-lg text-primary">₪{selectedCourse.price || 0}</div>
+                  </div>
+                )}
               </div>
             </div>
           )}
