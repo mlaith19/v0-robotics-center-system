@@ -92,9 +92,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [studentData, setStudentData] = useState<{ id: string; courseIds: string[] } | null>(null)
   const [isLinkedToStudent, setIsLinkedToStudent] = useState(false)
 
-  // Fetch student data - check if user is linked to a student (regardless of role)
+  // Teacher data for permission checks
+  const [teacherData, setTeacherData] = useState<{ id: string; courseIds: string[] } | null>(null)
+  const [isLinkedToTeacher, setIsLinkedToTeacher] = useState(false)
+
+  // Fetch student/teacher data - check if user is linked to a student or teacher
   useEffect(() => {
     if (currentUser) {
+      // Check if linked to student
       fetch(`/api/students/by-user/${currentUser.id}`)
         .then((res) => res.ok ? res.json() : null)
         .then((data) => {
@@ -106,6 +111,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
         })
         .catch(() => setIsLinkedToStudent(false))
+
+      // Check if linked to teacher
+      fetch(`/api/teachers/by-user/${currentUser.id}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data) {
+            setTeacherData({ id: data.id, courseIds: data.courseIds || [] })
+            setIsLinkedToTeacher(true)
+          } else {
+            setIsLinkedToTeacher(false)
+          }
+        })
+        .catch(() => setIsLinkedToTeacher(false))
     }
   }, [currentUser])
 
@@ -249,6 +267,60 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 >
                   <Calendar className="h-5 w-5" />
                   לוח זמנים
+                </Link>
+              </>
+            ) : isLinkedToTeacher && currentUser?.role !== "admin" && currentUser?.role !== "Administrator" ? (
+              // Teacher-specific navigation
+              <>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                    pathname === "/dashboard"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Home className="h-5 w-5" />
+                  דף הבית
+                </Link>
+                {teacherData && (
+                  <Link
+                    href={`/dashboard/teachers/${teacherData.id}`}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                      pathname.includes(`/dashboard/teachers/${teacherData.id}`)
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <User className="h-5 w-5" />
+                    הפרופיל שלי
+                  </Link>
+                )}
+                <Link
+                  href="/dashboard/schedule"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                    pathname === "/dashboard/schedule"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Calendar className="h-5 w-5" />
+                  לוח זמנים
+                </Link>
+                <Link
+                  href="/dashboard/attendance"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                    pathname === "/dashboard/attendance"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <ClipboardCheck className="h-5 w-5" />
+                  נוכחות
                 </Link>
               </>
             ) : (

@@ -1,7 +1,7 @@
 "use client"
 
 import { Card } from "@/components/ui/card"
-import { BookOpen, Users, Calendar, TrendingUp, GraduationCap, Building2, Banknote, Loader2, Clock, User } from "lucide-react"
+import { BookOpen, Users, Calendar, TrendingUp, GraduationCap, Building2, Banknote, Loader2, Clock, User, ClipboardCheck } from "lucide-react"
 import { useEffect, useState } from "react"
 import { PageHeader } from "@/components/page-header"
 import Link from "next/link"
@@ -24,6 +24,22 @@ interface StudentData {
     name: string
     description?: string
     schedule?: { day: string; time: string }[]
+  }[]
+}
+
+interface TeacherData {
+  id: string
+  name: string
+  email?: string
+  specialization?: string
+  courseIds: string[]
+  courses: {
+    id: string
+    name: string
+    description?: string
+    startTime?: string
+    endTime?: string
+    days?: string[]
   }[]
 }
 
@@ -62,6 +78,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [studentData, setStudentData] = useState<StudentData | null>(null)
+  const [teacherData, setTeacherData] = useState<TeacherData | null>(null)
 
   // Get current user from cookie
   useEffect(() => {
@@ -93,35 +110,38 @@ export default function DashboardPage() {
           })
           .catch(() => setLoading(false))
       } else {
-        // For non-admin users, check if they're linked to a student
+        // For non-admin users, check if they're linked to a student first
         fetch(`/api/students/by-user/${currentUser.id}`)
           .then((res) => res.ok ? res.json() : null)
-          .then((data) => {
-            if (data) {
+          .then((studentResult) => {
+            if (studentResult) {
               // User is linked to a student
-              setStudentData(data)
+              setStudentData(studentResult)
               setLoading(false)
             } else {
-              // Not a student, fetch regular dashboard stats
-              fetch("/api/dashboard/stats")
-                .then((res) => res.json())
-                .then((statsData) => {
-                  setStats(statsData)
-                  setLoading(false)
+              // Not a student, check if linked to a teacher
+              fetch(`/api/teachers/by-user/${currentUser.id}`)
+                .then((res) => res.ok ? res.json() : null)
+                .then((teacherResult) => {
+                  if (teacherResult) {
+                    // User is linked to a teacher
+                    setTeacherData(teacherResult)
+                    setLoading(false)
+                  } else {
+                    // Not a teacher either, fetch regular dashboard stats
+                    fetch("/api/dashboard/stats")
+                      .then((res) => res.json())
+                      .then((statsData) => {
+                        setStats(statsData)
+                        setLoading(false)
+                      })
+                      .catch(() => setLoading(false))
+                  }
                 })
                 .catch(() => setLoading(false))
             }
           })
-          .catch(() => {
-            // Error fetching student data, try regular stats
-            fetch("/api/dashboard/stats")
-              .then((res) => res.json())
-              .then((statsData) => {
-                setStats(statsData)
-                setLoading(false)
-              })
-              .catch(() => setLoading(false))
-          })
+          .catch(() => setLoading(false))
       }
     }
   }, [currentUser])
@@ -207,6 +227,96 @@ export default function DashboardPage() {
             </div>
           ) : (
             <p className="text-center text-muted-foreground py-8">אין קורסים רשומים</p>
+          )}
+        </Card>
+      </div>
+    )
+  }
+
+  // Teacher Dashboard View - show if user is linked to a teacher AND not an admin
+  if (teacherData && !isAdmin) {
+    return (
+      <div className="space-y-8" dir="rtl">
+        <PageHeader 
+          title={`שלום ${teacherData.name}`}
+          description="ברוך הבא למערכת"
+          showLogo={true}
+          centered={true}
+        />
+
+        {/* Quick Links */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Link href={`/dashboard/teachers/${teacherData.id}`}>
+            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-purple-500/20">
+                  <User className="h-7 w-7 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-purple-700">הפרופיל שלי</h3>
+                  <p className="text-sm text-purple-600/70">צפייה בפרטים האישיים</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/schedule">
+            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-green-50 to-green-100/50 border-green-200">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-green-500/20">
+                  <Calendar className="h-7 w-7 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-green-700">לוח זמנים</h3>
+                  <p className="text-sm text-green-600/70">צפייה בלוח המפגשים</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/attendance">
+            <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-orange-500/20">
+                  <ClipboardCheck className="h-7 w-7 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-orange-700">נוכחות</h3>
+                  <p className="text-sm text-orange-600/70">ניהול נוכחות תלמידים</p>
+                </div>
+              </div>
+            </Card>
+          </Link>
+        </div>
+
+        {/* My Courses */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-primary" />
+            הקורסים שלי
+          </h2>
+          
+          {teacherData.courses && teacherData.courses.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {teacherData.courses.map((course) => (
+                <Link key={course.id} href={`/dashboard/courses/${course.id}`}>
+                  <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer border-primary/20 hover:border-primary/40">
+                    <h3 className="font-semibold text-foreground">{course.name}</h3>
+                    {course.description && (
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{course.description}</p>
+                    )}
+                    {course.days && course.days.length > 0 && (
+                      <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{course.days.join(", ")} {course.startTime ? `${course.startTime} - ${course.endTime}` : ""}</span>
+                      </div>
+                    )}
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">אין קורסים משויכים</p>
           )}
         </Card>
       </div>

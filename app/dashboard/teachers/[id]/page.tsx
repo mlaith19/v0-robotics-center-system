@@ -80,6 +80,25 @@ export default function TeacherViewPage() {
   const [teacherAttendance, setTeacherAttendance] = useState<any[]>([])
   const [selectedAttendanceCourse, setSelectedAttendanceCourse] = useState<string>("all")
   const [payments, setPayments] = useState<any[]>([]) // Declare payments variable
+  const [isTeacherUser, setIsTeacherUser] = useState(false)
+
+  // Check if user is linked to this teacher (viewing own profile)
+  useEffect(() => {
+    const cookies = document.cookie.split(";")
+    const sessionCookie = cookies.find((c) => c.trim().startsWith("robotics-session="))
+    if (sessionCookie) {
+      try {
+        const sessionValue = sessionCookie.split("=")[1]
+        const user = JSON.parse(decodeURIComponent(sessionValue))
+        fetch(`/api/teachers/by-user/${user.id}`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => {
+            if (data) setIsTeacherUser(true)
+          })
+          .catch(() => {})
+      } catch (e) {}
+    }
+  }, [])
   
   // Period filter for payments tab (default: current month)
   const [paymentsPeriod, setPaymentsPeriod] = useState<"month" | "3months" | "6months" | "year">("month")
@@ -498,20 +517,22 @@ export default function TeacherViewPage() {
           </div>
         </div>
 
-        <Link href={`/dashboard/teachers/${teacher.id}/edit`}>
-          <Button className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-            <Edit className="h-4 w-4" />
-            ערוך
-          </Button>
-        </Link>
+        {!isTeacherUser && (
+          <Link href={`/dashboard/teachers/${teacher.id}/edit`}>
+            <Button className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+              <Edit className="h-4 w-4" />
+              ערוך
+            </Button>
+          </Link>
+        )}
       </div>
 
       <Card className="p-4 border-0 shadow-sm bg-white/50 dark:bg-card/50">
-        <Tabs defaultValue="general" dir="rtl" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 rounded-lg">
-            <TabsTrigger value="general" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">כללי</TabsTrigger>
+        <Tabs defaultValue={isTeacherUser ? "courses" : "general"} dir="rtl" className="w-full">
+          <TabsList className={`grid w-full bg-muted/50 p-1 rounded-lg ${isTeacherUser ? "grid-cols-2" : "grid-cols-4"}`}>
+            {!isTeacherUser && <TabsTrigger value="general" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">כללי</TabsTrigger>}
             <TabsTrigger value="courses" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">קורסים</TabsTrigger>
-            <TabsTrigger value="payments" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">תשלומים</TabsTrigger>
+            {!isTeacherUser && <TabsTrigger value="payments" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">תשלומים</TabsTrigger>}
             <TabsTrigger value="attendance" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-md transition-all">נוכחות</TabsTrigger>
           </TabsList>
 
