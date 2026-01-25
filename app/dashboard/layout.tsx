@@ -51,12 +51,21 @@ interface CurrentUser {
   loginTime: string
 }
 
+interface CenterSettings {
+  center_name: string
+  logo: string
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [centerSettings, setCenterSettings] = useState<CenterSettings>({
+    center_name: "מרכז רובוטיקה",
+    logo: ""
+  })
 
   useEffect(() => {
     // Get user from cookie instead of localStorage
@@ -76,6 +85,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     setIsLoading(false)
   }, [router])
+
+  // Fetch center settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch("/api/settings")
+        if (res.ok) {
+          const data = await res.json()
+          if (data.center_name || data.logo) {
+            setCenterSettings({
+              center_name: data.center_name || "מרכז רובוטיקה",
+              logo: data.logo || ""
+            })
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings:", error)
+      }
+    }
+    fetchSettings()
+  }, [])
 
   const handleLogout = () => {
     // Clear the session cookie
@@ -115,9 +145,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-            <Bot className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">מרכז רובוטיקה</span>
+          <div className="flex h-16 items-center gap-3 border-b border-border px-4">
+            {centerSettings.logo ? (
+              <img 
+                src={centerSettings.logo || "/placeholder.svg"} 
+                alt={centerSettings.center_name} 
+                className="h-10 w-10 object-contain rounded"
+              />
+            ) : (
+              <Bot className="h-8 w-8 text-primary flex-shrink-0" />
+            )}
+            <span className="text-lg font-bold text-foreground truncate">{centerSettings.center_name}</span>
           </div>
 
           {/* Navigation */}
