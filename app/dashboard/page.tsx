@@ -99,73 +99,32 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (currentUser && !redirecting) {
+    if (currentUser) {
       const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
       
       if (userIsAdmin) {
-        // Admin always sees dashboard stats
+        // Admin sees dashboard stats
         fetch("/api/dashboard/stats")
-          .then((res) => res.json())
+          .then((res) => res.ok ? res.json() : null)
           .then((statsData) => {
-            setStats(statsData)
+            if (statsData) setStats(statsData)
             setLoading(false)
           })
           .catch(() => setLoading(false))
       } else {
-        // For non-admin users, first check if they're linked to a teacher
-        fetch(`/api/teachers/by-user/${currentUser.id}`)
+        // For non-admin, check if linked to student only (teacher check is done in layout)
+        fetch(`/api/students/by-user/${currentUser.id}`)
           .then((res) => res.ok ? res.json() : null)
-          .then((teacherResult) => {
-            if (teacherResult?.id) {
-              // User is linked to a teacher - redirect to their profile
-              setRedirecting(true)
-              router.replace(`/dashboard/teachers/${teacherResult.id}`)
-            } else {
-              // Not a teacher, check if linked to a student
-              fetch(`/api/students/by-user/${currentUser.id}`)
-                .then((res) => res.ok ? res.json() : null)
-                .then((studentResult) => {
-                  if (studentResult) {
-                    // User is linked to a student
-                    setStudentData(studentResult)
-                    setLoading(false)
-                  } else {
-                    // Not a student either, fetch regular dashboard stats
-                    fetch("/api/dashboard/stats")
-                      .then((res) => res.json())
-                      .then((statsData) => {
-                        setStats(statsData)
-                        setLoading(false)
-                      })
-                      .catch(() => setLoading(false))
-                  }
-                })
-                .catch(() => setLoading(false))
+          .then((studentResult) => {
+            if (studentResult) {
+              setStudentData(studentResult)
             }
+            setLoading(false)
           })
-          .catch(() => {
-            // Error checking teacher, continue to check student
-            fetch(`/api/students/by-user/${currentUser.id}`)
-              .then((res) => res.ok ? res.json() : null)
-              .then((studentResult) => {
-                if (studentResult) {
-                  setStudentData(studentResult)
-                  setLoading(false)
-                } else {
-                  fetch("/api/dashboard/stats")
-                    .then((res) => res.json())
-                    .then((statsData) => {
-                      setStats(statsData)
-                      setLoading(false)
-                    })
-                    .catch(() => setLoading(false))
-                }
-              })
-              .catch(() => setLoading(false))
-          })
+          .catch(() => setLoading(false))
       }
     }
-  }, [currentUser, redirecting, router])
+  }, [currentUser])
 
   // If redirecting (teacher user), show loading
   if (redirecting) {
