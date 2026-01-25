@@ -145,8 +145,7 @@ export default function TeacherViewPage() {
   }
 
   useEffect(() => {
-    // Skip fetch if ID is "new" - will be redirected
-    if (!id || id === "new") return
+    if (!id) return
     let cancelled = false
 
     ;(async () => {
@@ -443,12 +442,6 @@ export default function TeacherViewPage() {
     } finally {
       setIsAddingAttendance(false)
     }
-  }
-
-  // If ID is "new", return null - let the static route handle it
-  // This prevents the dynamic route from showing loading/error for "new"
-  if (id === "new") {
-    return null
   }
 
   if (loading) return <div className="p-6">טוען...</div>

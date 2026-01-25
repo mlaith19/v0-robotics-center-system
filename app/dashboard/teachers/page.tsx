@@ -119,7 +119,7 @@ export default function TeachersPage() {
             </Button>
           </div>
 
-          <Link href="/dashboard/teachers/new">
+          <Link href="/dashboard/teachers/create">
             <Button className="gap-2 bg-primary">
               <Plus className="h-4 w-4" />
               מורה חדש
@@ -162,7 +162,7 @@ export default function TeachersPage() {
       ) : filtered.length === 0 ? (
         <Card className="p-8 text-center text-muted-foreground">
           <div className="text-lg">אין מורים</div>
-          <Link href="/dashboard/teachers/new">
+          <Link href="/dashboard/teachers/create">
             <Button className="mt-4 gap-2">
               <Plus className="h-4 w-4" />
               הוסף מורה ראשון
