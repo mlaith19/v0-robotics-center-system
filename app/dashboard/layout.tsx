@@ -28,6 +28,7 @@ import {
 import { useRouter } from "next/navigation"
 import { canAccessPage, type RoleType } from "@/lib/permissions"
 import { useUserType, clearUserTypeCache } from "@/lib/use-user-type"
+import { useSettings, clearSettingsCache } from "@/lib/use-settings"
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "דף הבית" },
@@ -65,10 +66,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [centerSettings, setCenterSettings] = useState<CenterSettings>({
-    center_name: "מרכז רובוטיקה",
-    logo: ""
-  })
+  
+  // Use cached settings hook
+  const { settings: centerSettings } = useSettings()
 
   useEffect(() => {
     // Get user from cookie instead of localStorage
@@ -89,53 +89,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setIsLoading(false)
   }, [router])
 
-  // Student data for permission checks
-  const [studentData, setStudentData] = useState<{ id: string; courseIds: string[] } | null>(null)
-  const [isLinkedToStudent, setIsLinkedToStudent] = useState(false)
-
-  // Teacher data for permission checks
-  const [teacherData, setTeacherData] = useState<{ id: string; courseIds: string[] } | null>(null)
-  const [isLinkedToTeacher, setIsLinkedToTeacher] = useState(false)
-
-  // Fetch student/teacher data - check if user is linked to a student or teacher
-  const [dataFetched, setDataFetched] = useState(false)
+  // Use cached user type hook to reduce API calls
+  const { data: userTypeData, loading: userTypeLoading } = useUserType(currentUser?.id)
   
-  useEffect(() => {
-    // Prevent duplicate calls
-    if (!currentUser || dataFetched) return
-    
-    const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
-    
-    // Skip checks for admin
-    if (userIsAdmin) {
-      setDataFetched(true)
-      return
-    }
-    
-    setDataFetched(true)
-    
-    // Check if linked to teacher first (by API, not by role)
-    fetch(`/api/teachers/by-user/${currentUser.id}`)
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (data?.id) {
-          setTeacherData({ id: data.id, courseIds: data.courseIds || [] })
-          setIsLinkedToTeacher(true)
-        } else {
-          // Not a teacher, check if linked to student
-          fetch(`/api/students/by-user/${currentUser.id}`)
-            .then((res) => res.ok ? res.json() : null)
-            .then((studentDataResult) => {
-              if (studentDataResult) {
-                setStudentData({ id: studentDataResult.id, courseIds: studentDataResult.courseIds || [] })
-                setIsLinkedToStudent(true)
-              }
-            })
-            .catch(() => {})
-        }
-      })
-      .catch(() => {})
-  }, [currentUser, dataFetched])
+  // Derive student/teacher data from cached hook
+  const studentData = userTypeData?.isStudent ? { id: userTypeData.studentId!, courseIds: userTypeData.courseIds || [] } : null
+  const teacherData = userTypeData?.isTeacher ? { id: userTypeData.teacherId!, courseIds: userTypeData.courseIds || [] } : null
+  const isLinkedToStudent = userTypeData?.isStudent || false
+  const isLinkedToTeacher = userTypeData?.isTeacher || false
 
   // Check page access permissions
   useEffect(() => {
@@ -172,30 +133,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [currentUser, pathname, router, studentData, isLinkedToStudent])
 
-  // Fetch center settings
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch("/api/settings")
-        if (res.ok) {
-          const data = await res.json()
-          if (data.center_name || data.logo) {
-            setCenterSettings({
-              center_name: data.center_name || "מרכז רובוטיקה",
-              logo: data.logo || ""
-            })
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch settings:", error)
-      }
-    }
-    fetchSettings()
-  }, [])
-
   const handleLogout = () => {
-    // Clear the session cookie
+    // Clear the session cookie and all caches
     document.cookie = "robotics-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    clearUserTypeCache()
+    clearSettingsCache()
     router.push("/login")
   }
 

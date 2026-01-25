@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useSettings } from "@/lib/use-settings"
 
 interface PageHeaderProps {
   title: string
@@ -10,31 +10,9 @@ interface PageHeaderProps {
   centered?: boolean
 }
 
-interface CenterSettings {
-  logo: string
-  center_name: string
-}
-
 export function PageHeader({ title, description, showLogo = false, useCenterNameInDescription = false, centered = false }: PageHeaderProps) {
-  const [settings, setSettings] = useState<CenterSettings>({ logo: "", center_name: "" })
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch("/api/settings")
-        if (res.ok) {
-          const data = await res.json()
-          setSettings({
-            logo: data.logo || "",
-            center_name: data.center_name || ""
-          })
-        }
-      } catch (error) {
-        console.error("Failed to fetch settings:", error)
-      }
-    }
-    fetchSettings()
-  }, [])
+  // Use cached settings hook to reduce API calls
+  const { settings } = useSettings()
 
   // Build description with center name if needed
   const finalDescription = useCenterNameInDescription && settings.center_name
