@@ -73,13 +73,6 @@ export default function TeacherViewPage() {
   const params = useParams<{ id: string }>()
   const id = params?.id
 
-  // Redirect if "new" is passed as ID (should go to new teacher page)
-  useEffect(() => {
-    if (id === "new") {
-      router.replace("/dashboard/teachers/new")
-    }
-  }, [id, router])
-
   const [teacher, setTeacher] = useState<Teacher | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -452,9 +445,6 @@ export default function TeacherViewPage() {
     }
   }
 
-  // If ID is "new", show loading while redirect happens
-  if (id === "new") return <div className="p-6">מעביר לדף הוספת מורה...</div>
-
   if (loading) return <div className="p-6">טוען...</div>
 
   if (error)
@@ -626,45 +616,45 @@ export default function TeacherViewPage() {
             )}
           </TabsContent>
 
-<TabsContent value="payments" className="mt-6 space-y-4">
-  {/* Period Filter Buttons */}
-  <div className="flex items-center gap-2 flex-wrap">
-    <span className="text-sm text-muted-foreground ml-2">תקופה:</span>
-    <Button
-      variant={paymentsPeriod === "month" ? "default" : "outline"}
-      size="sm"
-      onClick={() => setPaymentsPeriod("month")}
-      className={paymentsPeriod === "month" ? "" : "bg-transparent"}
-    >
-      חודש נוכחי
-    </Button>
-    <Button
-      variant={paymentsPeriod === "3months" ? "default" : "outline"}
-      size="sm"
-      onClick={() => setPaymentsPeriod("3months")}
-      className={paymentsPeriod === "3months" ? "" : "bg-transparent"}
-    >
-      3 חודשים
-    </Button>
-    <Button
-      variant={paymentsPeriod === "6months" ? "default" : "outline"}
-      size="sm"
-      onClick={() => setPaymentsPeriod("6months")}
-      className={paymentsPeriod === "6months" ? "" : "bg-transparent"}
-    >
-      6 חודשים
-    </Button>
-    <Button
-      variant={paymentsPeriod === "year" ? "default" : "outline"}
-      size="sm"
-      onClick={() => setPaymentsPeriod("year")}
-      className={paymentsPeriod === "year" ? "" : "bg-transparent"}
-    >
-      שנה
-    </Button>
-  </div>
+          <TabsContent value="payments" className="mt-6 space-y-4">
+            {/* Period Filter Buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground ml-2">תקופה:</span>
+              <Button
+                variant={paymentsPeriod === "month" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPaymentsPeriod("month")}
+                className={paymentsPeriod === "month" ? "" : "bg-transparent"}
+              >
+                חודש נוכחי
+              </Button>
+              <Button
+                variant={paymentsPeriod === "3months" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPaymentsPeriod("3months")}
+                className={paymentsPeriod === "3months" ? "" : "bg-transparent"}
+              >
+                3 חודשים
+              </Button>
+              <Button
+                variant={paymentsPeriod === "6months" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPaymentsPeriod("6months")}
+                className={paymentsPeriod === "6months" ? "" : "bg-transparent"}
+              >
+                6 חודשים
+              </Button>
+              <Button
+                variant={paymentsPeriod === "year" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPaymentsPeriod("year")}
+                className={paymentsPeriod === "year" ? "" : "bg-transparent"}
+              >
+                שנה
+              </Button>
+            </div>
 
-  <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {/* Paid to Teacher - shows expenses sum */}
               <Card className="p-4 bg-green-50 dark:bg-green-950/20">
                 <div className="flex items-center justify-between mb-2">
@@ -995,7 +985,7 @@ export default function TeacherViewPage() {
                   <div className="text-xs text-muted-foreground mb-1">תאריך סיום</div>
                   <div className="font-semibold text-sm">{fmtDate(selectedCourse.endDate)}</div>
                 </div>
-                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
                   <div className="text-xs text-green-600 mb-1">תלמידים רשומים</div>
                   <div className="font-semibold text-lg text-green-700 dark:text-green-400">{selectedCourse.enrollmentCount || 0}</div>
                 </div>
@@ -1034,8 +1024,6 @@ export default function TeacherViewPage() {
           )}
         </DialogContent>
       </Dialog>
-
-
     </div>
   )
 }
