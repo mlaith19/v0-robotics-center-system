@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { Plus, Mail, Phone, LayoutGrid, List, MapPin, Eye, Edit, Users, Trash2, Loader2 } from "lucide-react"
+import { PageHeader } from "@/components/page-header"
 import useSWR, { mutate } from "swr"
 import {
   AlertDialog,
@@ -87,10 +88,7 @@ export default function GafanProgramsPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">תוכניות גפ"ן</h1>
-          <p className="text-muted-foreground mt-2">נהל את כל תוכניות גפ"ן המשתפות פעולה</p>
-        </div>
+        <PageHeader title="תוכניות גפ&quot;ן" description="נהל את כל תוכניות גפ&quot;ן המשתפות פעולה" />
         <div className="flex items-center gap-2">
           <div className="flex items-center border rounded-lg p-1">
             <Button

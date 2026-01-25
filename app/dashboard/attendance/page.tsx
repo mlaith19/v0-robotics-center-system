@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CalendarIcon, Check, X, Thermometer, Plane, ArrowRight, AlertCircle, Trash2 } from "lucide-react"
+import { PageHeader } from "@/components/page-header"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 import { he } from "date-fns/locale"
@@ -266,14 +267,11 @@ export default function AttendancePage() {
       <div className="flex flex-col gap-4 p-4 sm:px-6 sm:py-6 md:gap-8">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.back()}>
-              <ArrowRight className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">נוכחות</h1>
-              <p className="text-sm text-muted-foreground">ניהול נוכחות לקורסים, מורים ותלמידים</p>
-            </div>
-          </div>
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowRight className="h-5 w-5" />
+          </Button>
+          <PageHeader title="נוכחות" description="ניהול נוכחות לקורסים, מורים ותלמידים" />
+        </div>
         </div>
 
         {!hasData && (

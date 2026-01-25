@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Building2, Save, Upload, X, Loader2, Hash, Settings2 } from "lucide-react"
+import { PageHeader } from "@/components/page-header"
 import { useToast } from "@/hooks/use-toast"
 import useSWR from "swr"
 
@@ -145,10 +146,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8" dir="rtl">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">הגדרות</h1>
-          <p className="text-muted-foreground mt-2">הגדרות מערכת ותצורה</p>
-        </div>
+        <PageHeader title="הגדרות" description="הגדרות מערכת ותצורה" />
         <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
           {isSaving ? (
             <>

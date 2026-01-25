@@ -43,6 +43,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { PERMISSION_CATEGORIES, type PermissionCategory, ROLE_PRESETS, type RoleType, getRoleById } from "@/lib/permissions"
+import { PageHeader } from "@/components/page-header"
 
 type User = {
   id: string
@@ -324,16 +325,16 @@ export default function UsersPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="mb-2 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-            >
-              <ArrowRight className="h-4 w-4" />
-              חזרה
-            </button>
-            <h1 className="text-3xl font-bold text-gray-900">משתמשים</h1>
-            <p className="text-gray-600">ניהול משתמשים והרשאות (DB)</p>
-          </div>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="mr-2 inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+          >
+            <ArrowRight className="h-4 w-4" />
+            חזרה
+          </button>
+          <PageHeader title="משתמשים" description="ניהול משתמשים והרשאות" />
+        </div>
 
           <Button className="gap-2" onClick={openCreate}>
             <UserPlus className="h-4 w-4" />

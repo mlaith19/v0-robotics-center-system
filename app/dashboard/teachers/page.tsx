@@ -10,6 +10,7 @@ import {
   Trash2, Pencil, Eye, Plus, RefreshCw, 
   LayoutGrid, List, User, Mail, Phone, MapPin, GraduationCap, Banknote
 } from "lucide-react"
+import { PageHeader } from "@/components/page-header"
 
 type Teacher = {
   id: string
@@ -95,10 +96,7 @@ export default function TeachersPage() {
     <div dir="rtl" className="container mx-auto max-w-7xl p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
-        <div className="text-right">
-          <h1 className="text-3xl font-bold">מורים</h1>
-          <p className="text-muted-foreground mt-1">ניהול צוות ההוראה במרכז</p>
-        </div>
+        <PageHeader title="מורים" description="ניהול צוות ההוראה במרכז" />
 
         <div className="flex gap-2 items-center">
           {/* View Toggle */}

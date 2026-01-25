@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { BookOpen, Users, Calendar, TrendingUp, GraduationCap, Building2, Banknote, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
+import { PageHeader } from "@/components/page-header"
 
 interface DashboardStats {
   totalCourses: number
@@ -58,10 +59,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8" dir="rtl">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">דף הבית</h1>
-        <p className="text-muted-foreground mt-2">סקירה כללית של מרכז הרובוטיקה</p>
-      </div>
+      <PageHeader title="דף הבית" description="סקירה כללית של מרכז הרובוטיקה" />
 
       {/* Stats Row 1 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -10,6 +10,7 @@ import {
   Trash2, Pencil, Eye, Plus, RefreshCw, Users, Clock, Calendar, 
   LayoutGrid, List, User, DollarSign, AlertCircle, CheckCircle2
 } from "lucide-react"
+import { PageHeader } from "@/components/page-header"
 
 type Course = {
   id: string
@@ -144,10 +145,7 @@ export default function CoursesPage() {
     <div dir="rtl" className="container mx-auto max-w-7xl p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
-        <div className="text-right">
-          <h1 className="text-3xl font-bold">קורסים</h1>
-          <p className="text-muted-foreground mt-1">נהל את כל הקורסים במרכז</p>
-        </div>
+        <PageHeader title="קורסים" description="נהל את כל הקורסים במרכז" />
 
         <div className="flex gap-2 items-center">
           {/* View Toggle */}

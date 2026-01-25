@@ -5,6 +5,7 @@ import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ChevronLeft, ChevronRight, Filter, Loader2 } from "lucide-react"
+import { PageHeader } from "@/components/page-header"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -426,10 +427,7 @@ export default function SchedulePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">לוח זמנים</h1>
-          <p className="text-muted-foreground mt-2">צפה ונהל את לוח המפגשים</p>
-        </div>
+        <PageHeader title="לוח זמנים" description="צפה ונהל את לוח המפגשים" />
         <div className="text-xl font-semibold">
           {viewMode === "month"
             ? currentDate.toLocaleDateString("he-IL", { year: "numeric", month: "long" })

@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Plus, Search, List, LayoutGrid, Eye, Pencil, Trash2, Phone, Mail, User, MapPin, Users, Loader2 } from "lucide-react"
+import { PageHeader } from "@/components/page-header"
 
 interface Student {
   id: string
@@ -115,10 +116,7 @@ export default function StudentsPage() {
     <div className="space-y-6" dir="rtl">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="text-right">
-          <h1 className="text-3xl font-bold text-foreground">תלמידים</h1>
-          <p className="text-muted-foreground mt-1">נהל את כל התלמידים במרכז</p>
-        </div>
+        <PageHeader title="תלמידים" description="נהל את כל התלמידים במרכז" />
         <div className="flex items-center gap-2">
           <div className="flex items-center border rounded-lg p-1">
             <Button
