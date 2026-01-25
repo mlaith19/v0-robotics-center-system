@@ -57,8 +57,17 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(userData)
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login error:", error)
+    
+    // Handle rate limiting from database
+    if (error.message?.includes("Too Many") || error.message?.includes("rate limit")) {
+      return NextResponse.json(
+        { error: "יותר מדי בקשות, אנא המתן מספר שניות ונסה שוב" },
+        { status: 429 }
+      )
+    }
+    
     return NextResponse.json(
       { error: "שגיאה בהתחברות" },
       { status: 500 }
