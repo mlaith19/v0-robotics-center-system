@@ -63,6 +63,25 @@ function formatDate(dateStr: string | null) {
 export default function StudentViewPage() {
   const params = useParams()
   const id = params.id as string
+  const [isStudentUser, setIsStudentUser] = useState(false)
+
+  // Check if user is linked to a student
+  useEffect(() => {
+    const cookies = document.cookie.split(";")
+    const sessionCookie = cookies.find((c) => c.trim().startsWith("robotics-session="))
+    if (sessionCookie) {
+      try {
+        const sessionValue = sessionCookie.split("=")[1]
+        const user = JSON.parse(decodeURIComponent(sessionValue))
+        fetch(`/api/students/by-user/${user.id}`)
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => {
+            if (data) setIsStudentUser(true)
+          })
+          .catch(() => {})
+      } catch (e) {}
+    }
+  }, [])
 
   // Use SWR for all data fetching
   const { data: studentData, isLoading: studentLoading, mutate: mutateStudent } = useSWR(
@@ -144,12 +163,14 @@ export default function StudentViewPage() {
             </div>
           </div>
 
-          <Link href={`/dashboard/students/${student.id}/edit`}>
-            <Button className="gap-2">
-              <Edit className="h-4 w-4" />
-              ערוך תלמיד
-            </Button>
-          </Link>
+          {!isStudentUser && (
+            <Link href={`/dashboard/students/${student.id}/edit`}>
+              <Button className="gap-2">
+                <Edit className="h-4 w-4" />
+                ערוך תלמיד
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Student Name Header */}
