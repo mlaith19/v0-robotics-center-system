@@ -78,25 +78,38 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Fetch student data if user is a student
+  // Fetch student data - check if user is linked to a student
   useEffect(() => {
-    if (currentUser?.role === "student") {
+    if (currentUser) {
+      // First try to find if this user is linked to a student
       fetch(`/api/students/by-user/${currentUser.id}`)
         .then((res) => res.ok ? res.json() : null)
         .then((data) => {
-          if (data) setStudentData(data)
-          setLoading(false)
+          if (data) {
+            // User is linked to a student
+            setStudentData(data)
+            setLoading(false)
+          } else {
+            // Not a student, fetch regular dashboard stats
+            fetch("/api/dashboard/stats")
+              .then((res) => res.json())
+              .then((statsData) => {
+                setStats(statsData)
+                setLoading(false)
+              })
+              .catch(() => setLoading(false))
+          }
         })
-        .catch(() => setLoading(false))
-    } else if (currentUser) {
-      // Regular dashboard stats for non-students
-      fetch("/api/dashboard/stats")
-        .then((res) => res.json())
-        .then((data) => {
-          setStats(data)
-          setLoading(false)
+        .catch(() => {
+          // Error fetching student data, try regular stats
+          fetch("/api/dashboard/stats")
+            .then((res) => res.json())
+            .then((statsData) => {
+              setStats(statsData)
+              setLoading(false)
+            })
+            .catch(() => setLoading(false))
         })
-        .catch(() => setLoading(false))
     }
   }, [currentUser])
 
@@ -108,8 +121,8 @@ export default function DashboardPage() {
     )
   }
 
-  // Student Dashboard View
-  if (currentUser.role === "student" && studentData) {
+  // Student Dashboard View - show if user is linked to a student
+  if (studentData) {
     return (
       <div className="space-y-8" dir="rtl">
         <PageHeader 

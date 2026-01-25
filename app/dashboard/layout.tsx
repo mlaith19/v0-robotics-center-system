@@ -90,42 +90,59 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // Student data for permission checks
   const [studentData, setStudentData] = useState<{ id: string; courseIds: string[] } | null>(null)
+  const [isLinkedToStudent, setIsLinkedToStudent] = useState(false)
 
-  // Fetch student data if user is a student
+  // Fetch student data - check if user is linked to a student (regardless of role)
   useEffect(() => {
-    if (currentUser?.role === "student") {
+    if (currentUser) {
       fetch(`/api/students/by-user/${currentUser.id}`)
         .then((res) => res.ok ? res.json() : null)
         .then((data) => {
           if (data) {
             setStudentData({ id: data.id, courseIds: data.courseIds || [] })
+            setIsLinkedToStudent(true)
+          } else {
+            setIsLinkedToStudent(false)
           }
         })
-        .catch(() => {})
+        .catch(() => setIsLinkedToStudent(false))
     }
   }, [currentUser])
 
   // Check page access permissions
   useEffect(() => {
     if (currentUser && pathname) {
-      const userRole = (currentUser.role as RoleType) || "other"
-      const userPermissions = currentUser.permissions || []
-      
-      // Check if user can access current page
-      const hasAccess = canAccessPage(
-        userPermissions, 
-        userRole, 
-        pathname, 
-        studentData?.id, 
-        studentData?.courseIds
-      )
-      
-      if (!hasAccess) {
-        // Redirect to dashboard if no access
-        router.push("/dashboard")
+      // If user is linked to a student, use student permissions
+      if (isLinkedToStudent && studentData) {
+        const hasAccess = canAccessPage(
+          [],
+          "student",
+          pathname,
+          studentData.id,
+          studentData.courseIds
+        )
+        
+        if (!hasAccess) {
+          router.push("/dashboard")
+        }
+      } else {
+        const userRole = (currentUser.role as RoleType) || "other"
+        const userPermissions = currentUser.permissions || []
+        
+        const hasAccess = canAccessPage(
+          userPermissions,
+          userRole,
+          pathname,
+          studentData?.id,
+          studentData?.courseIds
+        )
+        
+        if (!hasAccess) {
+          router.push("/dashboard")
+        }
       }
     }
-  }, [currentUser, pathname, router, studentData])
+  }, [currentUser, pathname, router, studentData, isLinkedToStudent])
 
   // Fetch center settings
   useEffect(() => {
@@ -192,7 +209,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-            {currentUser?.role === "student" ? (
+            {isLinkedToStudent ? (
               // Student-specific navigation
               <>
                 <Link
