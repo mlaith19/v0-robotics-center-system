@@ -1,4 +1,4 @@
-import { sql } from "@/lib/db"
+import { sql, handleDbError } from "@/lib/db"
 
 export async function GET() {
   try {
@@ -52,7 +52,6 @@ export async function GET() {
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5),
     })
   } catch (err) {
-    console.error("GET /api/dashboard/stats error:", err)
-    return Response.json({ error: "Failed to load dashboard stats" }, { status: 500 })
+    return handleDbError(err, "GET /api/dashboard/stats")
   }
 }

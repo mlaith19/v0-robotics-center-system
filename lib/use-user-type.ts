@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 
 interface UserTypeData {
   isTeacher: boolean
@@ -12,58 +12,58 @@ interface UserTypeData {
 }
 
 const CACHE_KEY = "user-type-cache"
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-
-// Global flag to prevent concurrent fetches
-let isFetching = false
-const pendingCallbacks: ((data: UserTypeData | null) => void)[] = []
+const CACHE_DURATION = 10 * 60 * 1000 // 10 minutes - longer cache to reduce API calls
 
 export function useUserType(userId: number | undefined) {
-  const [data, setData] = useState<UserTypeData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const fetchedRef = useRef(false)
+  const [data, setData] = useState<UserTypeData | null>(() => {
+    // Initialize from cache if available
+    if (typeof window === 'undefined' || !userId) return null
+    try {
+      const cached = sessionStorage.getItem(`${CACHE_KEY}-${userId}`)
+      if (cached) {
+        const parsed = JSON.parse(cached) as UserTypeData
+        if (parsed.checkedAt && Date.now() - parsed.checkedAt < CACHE_DURATION) {
+          return parsed
+        }
+      }
+    } catch (e) {}
+    return null
+  })
+  const [loading, setLoading] = useState(() => !data)
+  const fetchStartedRef = useRef(false)
 
   useEffect(() => {
+    // No user ID - nothing to do
     if (!userId) {
       setLoading(false)
       return
     }
-
-    // Prevent double fetching in strict mode
-    if (fetchedRef.current) return
-    fetchedRef.current = true
-
-    // Check cache first
-    const cached = sessionStorage.getItem(`${CACHE_KEY}-${userId}`)
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached) as UserTypeData
-        if (parsed.checkedAt && Date.now() - parsed.checkedAt < CACHE_DURATION) {
-          setData(parsed)
-          setLoading(false)
-          return
-        }
-      } catch (e) {}
-    }
-
-    // If already fetching, wait for result
-    if (isFetching) {
-      pendingCallbacks.push((result) => {
-        setData(result)
-        setLoading(false)
-      })
+    
+    // Already have data from cache
+    if (data) {
+      setLoading(false)
       return
     }
 
-    // Start fetching
-    isFetching = true
+    // Prevent multiple fetch attempts
+    if (fetchStartedRef.current) return
+    fetchStartedRef.current = true
 
     const checkUserType = async () => {
-      let result: UserTypeData = { isTeacher: false, isStudent: false }
+      let result: UserTypeData = { isTeacher: false, isStudent: false, checkedAt: Date.now() }
       
       try {
         // Check teacher first
         const teacherRes = await fetch(`/api/teachers/by-user/${userId}`)
+        
+        // Handle rate limiting - use cached data or default
+        if (teacherRes.status === 429) {
+          console.warn("[v0] Rate limited on teacher check, using default")
+          setData(result)
+          setLoading(false)
+          return
+        }
+        
         if (teacherRes.ok) {
           const teacherData = await teacherRes.json()
           if (teacherData?.id) {
@@ -77,13 +77,21 @@ export function useUserType(userId: number | undefined) {
             sessionStorage.setItem(`${CACHE_KEY}-${userId}`, JSON.stringify(result))
             setData(result)
             setLoading(false)
-            notifyPending(result)
             return
           }
         }
 
         // Check student if not teacher
         const studentRes = await fetch(`/api/students/by-user/${userId}`)
+        
+        // Handle rate limiting
+        if (studentRes.status === 429) {
+          console.warn("[v0] Rate limited on student check, using default")
+          setData(result)
+          setLoading(false)
+          return
+        }
+        
         if (studentRes.ok) {
           const studentData = await studentRes.json()
           if (studentData?.id) {
@@ -97,46 +105,37 @@ export function useUserType(userId: number | undefined) {
             sessionStorage.setItem(`${CACHE_KEY}-${userId}`, JSON.stringify(result))
             setData(result)
             setLoading(false)
-            notifyPending(result)
             return
           }
         }
 
-        // Neither teacher nor student
-        result.checkedAt = Date.now()
+        // Neither teacher nor student - cache this result too
         sessionStorage.setItem(`${CACHE_KEY}-${userId}`, JSON.stringify(result))
         setData(result)
         setLoading(false)
-        notifyPending(result)
       } catch (error) {
-        // On error, set as neither (don't cache errors)
+        console.error("[v0] Error checking user type:", error)
+        // On error, set default (don't cache errors)
         setData(result)
         setLoading(false)
-        notifyPending(result)
-      } finally {
-        isFetching = false
       }
     }
 
     checkUserType()
-  }, [userId])
+  }, [userId, data])
 
   return { data, loading }
 }
 
-function notifyPending(result: UserTypeData | null) {
-  while (pendingCallbacks.length > 0) {
-    const cb = pendingCallbacks.shift()
-    cb?.(result)
-  }
-}
-
 // Clear cache on logout
 export function clearUserTypeCache() {
-  const keys = Object.keys(sessionStorage)
-  keys.forEach(key => {
-    if (key.startsWith(CACHE_KEY)) {
-      sessionStorage.removeItem(key)
-    }
-  })
+  if (typeof window === 'undefined') return
+  try {
+    const keys = Object.keys(sessionStorage)
+    keys.forEach(key => {
+      if (key.startsWith(CACHE_KEY)) {
+        sessionStorage.removeItem(key)
+      }
+    })
+  } catch (e) {}
 }

@@ -1,7 +1,5 @@
-import { neon } from "@neondatabase/serverless"
+import { sql, handleDbError } from "@/lib/db"
 import { NextResponse } from "next/server"
-
-const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
@@ -32,8 +30,7 @@ export async function GET() {
     
     return NextResponse.json(settings[0])
   } catch (error) {
-    console.error("Error fetching settings:", error)
-    return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 })
+    return handleDbError(error, "GET /api/settings")
   }
 }
 
@@ -103,7 +100,6 @@ export async function PUT(request: Request) {
       return NextResponse.json(result[0])
     }
   } catch (error) {
-    console.error("Error saving settings:", error)
-    return NextResponse.json({ error: "Failed to save settings" }, { status: 500 })
+    return handleDbError(error, "PUT /api/settings")
   }
 }

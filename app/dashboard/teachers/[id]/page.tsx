@@ -170,8 +170,11 @@ export default function TeacherViewPage() {
     }
   }, [id, router])
 
+  const [fetchAttempted, setFetchAttempted] = useState(false)
+  
   useEffect(() => {
-    if (!id || id === "create") return
+    if (!id || id === "create" || fetchAttempted) return
+    setFetchAttempted(true)
     let cancelled = false
 
     ;(async () => {
@@ -179,36 +182,47 @@ export default function TeacherViewPage() {
         setLoading(true)
         setError(null)
 
-        // Fetch teacher data, expenses, and attendance in parallel
-        const [teacherRes, expensesRes, attendanceRes] = await Promise.all([
-          fetch(`/api/teachers/${id}?include=1`, { cache: "no-store" }),
+        // Fetch teacher data first
+        const teacherRes = await fetch(`/api/teachers/${id}?include=1`, { cache: "no-store" })
+        
+        if (teacherRes.status === 429) {
+          throw new Error("יותר מדי בקשות, אנא המתן מספר שניות ונסה שוב")
+        }
+        if (!teacherRes.ok) throw new Error(`Failed to load teacher (${teacherRes.status})`)
+
+        const data = (await teacherRes.json()) as Teacher | null
+        
+        if (!cancelled) {
+          setTeacher(data)
+          setPayments(data?.payments ?? [])
+          setLoading(false)
+        }
+        
+        // Fetch expenses and attendance separately (non-blocking)
+        const [expensesRes, attendanceRes] = await Promise.all([
           fetch(`/api/expenses?teacherId=${id}`, { cache: "no-store" }),
           fetch(`/api/attendance?teacherId=${id}`, { cache: "no-store" })
         ])
         
-        if (!teacherRes.ok) throw new Error(`Failed to load teacher (${teacherRes.status})`)
-
-        const data = (await teacherRes.json()) as Teacher | null
         const expensesData = expensesRes.ok ? await expensesRes.json() : []
         const attendanceData = attendanceRes.ok ? await attendanceRes.json() : []
         
         if (!cancelled) {
-          setTeacher(data)
           setTeacherExpenses(Array.isArray(expensesData) ? expensesData : [])
           setTeacherAttendance(Array.isArray(attendanceData) ? attendanceData : [])
-          setPayments(data?.payments ?? []) // Initialize payments state
         }
       } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "שגיאה בטעינת מורה")
-      } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setError(e?.message ?? "שגיאה בטעינת מורה")
+          setLoading(false)
+        }
       }
     })()
 
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, fetchAttempted])
 
   // Teacher payments are expenses for the center (paying the teacher for their work)
   const handleAddPayment = async () => {

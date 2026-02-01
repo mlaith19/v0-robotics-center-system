@@ -1,6 +1,4 @@
-import { neon } from "@neondatabase/serverless"
-
-const sql = neon(process.env.DATABASE_URL!)
+import { sql, handleDbError } from "@/lib/db"
 
 type Ctx = { params: Promise<{ userId: string }> }
 
@@ -33,7 +31,6 @@ export async function GET(req: Request, { params }: Ctx) {
       courses,
     })
   } catch (err) {
-    console.error("GET /api/students/by-user/[userId] error:", err)
-    return Response.json({ error: "Failed to fetch student" }, { status: 500 })
+    return handleDbError(err, "GET /api/students/by-user/[userId]")
   }
 }
