@@ -170,19 +170,16 @@ export default function TeacherViewPage() {
     }
   }, [id, router])
 
-  const [fetchAttempted, setFetchAttempted] = useState(false)
-  
   useEffect(() => {
-    if (!id || id === "create" || fetchAttempted) return
-    setFetchAttempted(true)
+    if (!id || id === "create") return
+    
     let cancelled = false
 
-    ;(async () => {
+    const loadTeacher = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        // Fetch teacher data first
         const teacherRes = await fetch(`/api/teachers/${id}?include=1`, { cache: "no-store" })
         
         if (teacherRes.status === 429) {
@@ -195,37 +192,43 @@ export default function TeacherViewPage() {
         if (!cancelled) {
           setTeacher(data)
           setPayments(data?.payments ?? [])
-          setLoading(false)
-        }
-        
-        // Fetch expenses and attendance sequentially with delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
-        const expensesRes = await fetch(`/api/expenses?teacherId=${id}`, { cache: "no-store" })
-        const expensesData = expensesRes.ok ? await expensesRes.json() : []
-        if (!cancelled) {
-          setTeacherExpenses(Array.isArray(expensesData) ? expensesData : [])
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
-        const attendanceRes = await fetch(`/api/attendance?teacherId=${id}`, { cache: "no-store" })
-        const attendanceData = attendanceRes.ok ? await attendanceRes.json() : []
-        if (!cancelled) {
-          setTeacherAttendance(Array.isArray(attendanceData) ? attendanceData : [])
         }
       } catch (e: any) {
         if (!cancelled) {
           setError(e?.message ?? "שגיאה בטעינת מורה")
+        }
+      } finally {
+        if (!cancelled) {
           setLoading(false)
         }
       }
-    })()
+    }
+
+    loadTeacher()
 
     return () => {
       cancelled = true
     }
-  }, [id, fetchAttempted])
+  }, [id])
+  
+  // Fetch expenses and attendance separately (after main data loads)
+  useEffect(() => {
+    if (!id || id === "create" || loading || !teacher) return
+    
+    // Fetch expenses
+    fetch(`/api/expenses?teacherId=${id}`, { cache: "no-store" })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setTeacherExpenses(Array.isArray(data) ? data : []))
+      .catch(() => {})
+    
+    // Fetch attendance with delay
+    setTimeout(() => {
+      fetch(`/api/attendance?teacherId=${id}`, { cache: "no-store" })
+        .then(res => res.ok ? res.json() : [])
+        .then(data => setTeacherAttendance(Array.isArray(data) ? data : []))
+        .catch(() => {})
+    }, 500)
+  }, [id, loading, teacher])
 
   // Teacher payments are expenses for the center (paying the teacher for their work)
   const handleAddPayment = async () => {
