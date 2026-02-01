@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useState, useRef } from "react"
 
 interface UserTypeData {
   isTeacher: boolean
@@ -81,6 +81,9 @@ export function useUserType(userId: number | undefined) {
           }
         }
 
+        // Add delay before next API call to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
         // Check student if not teacher
         const studentRes = await fetch(`/api/students/by-user/${userId}`)
         

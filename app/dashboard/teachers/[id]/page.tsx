@@ -198,17 +198,20 @@ export default function TeacherViewPage() {
           setLoading(false)
         }
         
-        // Fetch expenses and attendance separately (non-blocking)
-        const [expensesRes, attendanceRes] = await Promise.all([
-          fetch(`/api/expenses?teacherId=${id}`, { cache: "no-store" }),
-          fetch(`/api/attendance?teacherId=${id}`, { cache: "no-store" })
-        ])
+        // Fetch expenses and attendance sequentially with delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 300))
         
+        const expensesRes = await fetch(`/api/expenses?teacherId=${id}`, { cache: "no-store" })
         const expensesData = expensesRes.ok ? await expensesRes.json() : []
-        const attendanceData = attendanceRes.ok ? await attendanceRes.json() : []
-        
         if (!cancelled) {
           setTeacherExpenses(Array.isArray(expensesData) ? expensesData : [])
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        const attendanceRes = await fetch(`/api/attendance?teacherId=${id}`, { cache: "no-store" })
+        const attendanceData = attendanceRes.ok ? await attendanceRes.json() : []
+        if (!cancelled) {
           setTeacherAttendance(Array.isArray(attendanceData) ? attendanceData : [])
         }
       } catch (e: any) {
