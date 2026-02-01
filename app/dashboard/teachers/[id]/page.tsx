@@ -163,13 +163,6 @@ export default function TeacherViewPage() {
     return days.map(d => daysMap[d.toLowerCase()] || d).join(", ")
   }
 
-  // Redirect if id is "create" - this shouldn't happen normally but handles edge cases
-  useEffect(() => {
-    if (id === "create") {
-      router.replace("/dashboard/teachers/create")
-    }
-  }, [id, router])
-
   useEffect(() => {
     if (!id || id === "create") return
     
@@ -490,8 +483,13 @@ export default function TeacherViewPage() {
     }
   }
 
-  // Show loading while redirecting to create page
-  if (id === "create" || loading) return <div className="p-6">טוען...</div>
+  // Redirect immediately if id is "create"
+  if (id === "create") {
+    router.replace("/dashboard/teachers/create")
+    return null
+  }
+  
+  if (loading) return <div className="p-6">טוען...</div>
   
   if (error)
     return (
