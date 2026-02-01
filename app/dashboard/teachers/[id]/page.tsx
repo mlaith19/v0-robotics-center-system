@@ -72,15 +72,26 @@ export default function TeacherViewPage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
   const id = params?.id
-
+  
+  // If id is "create", redirect immediately using window.location
+  // This must happen before hooks but we handle it in render
+  const isCreateRoute = id === "create"
+  
   const [teacher, setTeacher] = useState<Teacher | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!isCreateRoute) // Don't show loading for create route
   const [error, setError] = useState<string | null>(null)
   const [teacherExpenses, setTeacherExpenses] = useState<any[]>([])
   const [teacherAttendance, setTeacherAttendance] = useState<any[]>([])
   const [selectedAttendanceCourse, setSelectedAttendanceCourse] = useState<string>("all")
   const [payments, setPayments] = useState<any[]>([]) // Declare payments variable
   const [isTeacherUser, setIsTeacherUser] = useState(false)
+
+  // Redirect to create page if id is "create"
+  useEffect(() => {
+    if (isCreateRoute) {
+      router.replace("/dashboard/teachers/create")
+    }
+  }, [isCreateRoute, router])
 
   // Check if user is linked to this teacher (viewing own profile)
   useEffect(() => {
@@ -484,8 +495,9 @@ export default function TeacherViewPage() {
   }
 
   // Redirect immediately if id is "create"
-  if (id === "create") {
-    router.replace("/dashboard/teachers/create")
+  if (isCreateRoute) {
+    // Use useEffect for redirect to avoid hydration issues
+    // Meanwhile return null to not show loading
     return null
   }
   
@@ -1035,7 +1047,7 @@ export default function TeacherViewPage() {
                   <div className="text-xs text-green-600 mb-1">תלמידים רשומים</div>
                   <div className="font-semibold text-lg text-green-700 dark:text-green-400">{selectedCourse.enrollmentCount || 0}</div>
                 </div>
-                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
                   <div className="text-xs text-blue-600 mb-1">מחיר</div>
                   <div className="font-semibold text-lg text-blue-700 dark:text-blue-400">{selectedCourse.price?.toLocaleString("he-IL") || 0} ₪</div>
                 </div>
