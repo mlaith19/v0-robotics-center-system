@@ -143,11 +143,25 @@ export default function DashboardPage() {
     }
   }, [currentUser, userTypeData, userTypeLoading])
 
-  // Show loading while checking user type or redirecting
-  if (userTypeLoading || (userTypeData?.isTeacher)) {
+  // Check if user is admin
+  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "Administrator" || currentUser?.role?.toLowerCase() === "admin"
+  
+  // Show loading while checking user type (but not for admins - they always see admin dashboard)
+  if (!isAdmin && (userTypeLoading || !userTypeData)) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="mr-2 text-muted-foreground">בודק הרשאות...</span>
+      </div>
+    )
+  }
+  
+  // Redirect teacher to profile (show loading while redirecting)
+  if (userTypeData?.isTeacher && userTypeData.teacherId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="mr-2 text-muted-foreground">מעביר לפרופיל...</span>
       </div>
     )
   }
@@ -159,9 +173,6 @@ export default function DashboardPage() {
       </div>
     )
   }
-
-  // Check if user is admin (should always see admin dashboard)
-  const isAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
 
   // Student Dashboard View - show if user is linked to a student AND not an admin
   if (studentData && !isAdmin) {

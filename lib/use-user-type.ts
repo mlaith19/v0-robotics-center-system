@@ -12,7 +12,19 @@ interface UserTypeData {
 }
 
 const CACHE_KEY = "user-type-cache"
-const CACHE_DURATION = 10 * 60 * 1000 // 10 minutes - longer cache to reduce API calls
+const CACHE_DURATION = 10 * 60 * 1000 // 10 minutes
+
+// Helper function to fetch with retry on rate limit
+async function fetchWithRetry(url: string, maxRetries = 3, delayMs = 1000): Promise<Response> {
+  for (let i = 0; i < maxRetries; i++) {
+    const res = await fetch(url)
+    if (res.status !== 429) return res
+    // Wait before retry, increasing delay each time
+    await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)))
+  }
+  // Return the last response even if it's still 429
+  return fetch(url)
+}
 
 export function useUserType(userId: number | undefined) {
   const [data, setData] = useState<UserTypeData | null>(() => {
@@ -53,62 +65,54 @@ export function useUserType(userId: number | undefined) {
       let result: UserTypeData = { isTeacher: false, isStudent: false, checkedAt: Date.now() }
       
       try {
-        // Check teacher first
-        const teacherRes = await fetch(`/api/teachers/by-user/${userId}`)
-        
-        // Handle rate limiting - use cached data or default
-        if (teacherRes.status === 429) {
-          console.warn("[v0] Rate limited on teacher check, using default")
-          setData(result)
-          setLoading(false)
-          return
-        }
+        // Check teacher first with retry
+        const teacherRes = await fetchWithRetry(`/api/teachers/by-user/${userId}`)
         
         if (teacherRes.ok) {
-          const teacherData = await teacherRes.json()
-          if (teacherData?.id) {
-            result = {
-              isTeacher: true,
-              isStudent: false,
-              teacherId: teacherData.id,
-              courseIds: teacherData.courseIds || [],
-              checkedAt: Date.now()
+          try {
+            const teacherData = await teacherRes.json()
+            if (teacherData?.id) {
+              result = {
+                isTeacher: true,
+                isStudent: false,
+                teacherId: teacherData.id,
+                courseIds: teacherData.courseIds || [],
+                checkedAt: Date.now()
+              }
+              sessionStorage.setItem(`${CACHE_KEY}-${userId}`, JSON.stringify(result))
+              setData(result)
+              setLoading(false)
+              return
             }
-            sessionStorage.setItem(`${CACHE_KEY}-${userId}`, JSON.stringify(result))
-            setData(result)
-            setLoading(false)
-            return
+          } catch (e) {
+            // JSON parse error - continue to check student
           }
         }
 
-        // Add delay before next API call to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 300))
+        // Wait before checking student
+        await new Promise(resolve => setTimeout(resolve, 500))
         
-        // Check student if not teacher
-        const studentRes = await fetch(`/api/students/by-user/${userId}`)
-        
-        // Handle rate limiting
-        if (studentRes.status === 429) {
-          console.warn("[v0] Rate limited on student check, using default")
-          setData(result)
-          setLoading(false)
-          return
-        }
+        // Check student with retry
+        const studentRes = await fetchWithRetry(`/api/students/by-user/${userId}`)
         
         if (studentRes.ok) {
-          const studentData = await studentRes.json()
-          if (studentData?.id) {
-            result = {
-              isTeacher: false,
-              isStudent: true,
-              studentId: studentData.id,
-              courseIds: studentData.courseIds || [],
-              checkedAt: Date.now()
+          try {
+            const studentData = await studentRes.json()
+            if (studentData?.id) {
+              result = {
+                isTeacher: false,
+                isStudent: true,
+                studentId: studentData.id,
+                courseIds: studentData.courseIds || [],
+                checkedAt: Date.now()
+              }
+              sessionStorage.setItem(`${CACHE_KEY}-${userId}`, JSON.stringify(result))
+              setData(result)
+              setLoading(false)
+              return
             }
-            sessionStorage.setItem(`${CACHE_KEY}-${userId}`, JSON.stringify(result))
-            setData(result)
-            setLoading(false)
-            return
+          } catch (e) {
+            // JSON parse error - use default
           }
         }
 
