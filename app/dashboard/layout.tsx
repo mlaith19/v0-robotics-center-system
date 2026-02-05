@@ -27,7 +27,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { canAccessPage, type RoleType } from "@/lib/permissions"
-import { useUserType, clearUserTypeCache } from "@/lib/use-user-type"
+import { clearUserTypeCache } from "@/lib/use-user-type"
 import { useSettings, clearSettingsCache } from "@/lib/use-settings"
 
 const navItems = [
@@ -53,6 +53,11 @@ interface CurrentUser {
   role: string
   permissions?: string[]
   loginTime: string
+  // מידע על סוג המשתמש - נשמר בזמן ההתחברות
+  teacherId?: string
+  studentId?: string
+  isTeacher?: boolean
+  isStudent?: boolean
 }
 
 interface CenterSettings {
@@ -89,14 +94,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setIsLoading(false)
   }, [router])
 
-  // Use cached user type hook to reduce API calls
-  const { data: userTypeData, loading: userTypeLoading } = useUserType(currentUser?.id)
-  
-  // Derive student/teacher data from cached hook
-  const studentData = userTypeData?.isStudent ? { id: userTypeData.studentId!, courseIds: userTypeData.courseIds || [] } : null
-  const teacherData = userTypeData?.isTeacher ? { id: userTypeData.teacherId!, courseIds: userTypeData.courseIds || [] } : null
-  const isLinkedToStudent = userTypeData?.isStudent || false
-  const isLinkedToTeacher = userTypeData?.isTeacher || false
+  // Derive student/teacher data from login data (stored in cookie)
+  const studentData = currentUser?.isStudent && currentUser.studentId ? { id: currentUser.studentId, courseIds: [] as string[] } : null
+  const teacherData = currentUser?.isTeacher && currentUser.teacherId ? { id: currentUser.teacherId, courseIds: [] as string[] } : null
+  const isLinkedToStudent = currentUser?.isStudent || false
+  const isLinkedToTeacher = currentUser?.isTeacher || false
 
   // Check page access permissions
   useEffect(() => {

@@ -7,14 +7,17 @@ import { PageHeader } from "@/components/page-header"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { useUserType } from "@/lib/use-user-type"
-
 interface CurrentUser {
   id: number
   username: string
   full_name: string
   role: string
   permissions?: string[]
+  // מידע על סוג המשתמש - נשמר בזמן ההתחברות
+  teacherId?: string
+  studentId?: string
+  isTeacher?: boolean
+  isStudent?: boolean
 }
 
 interface StudentData {
@@ -81,6 +84,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [studentData, setStudentData] = useState<StudentData | null>(null)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false)
 
   // Get current user from cookie
   useEffect(() => {
@@ -91,35 +95,31 @@ export default function DashboardPage() {
         const sessionValue = sessionCookie.split("=")[1]
         const user = JSON.parse(decodeURIComponent(sessionValue))
         setCurrentUser(user)
+        setIsAdmin(user.role === "admin" || user.role === "Administrator" || user.role?.toLowerCase() === "admin")
       } catch (e) {
         console.error("Failed to parse session cookie")
       }
     }
   }, [])
 
-  // Use cached user type hook
-  const { data: userTypeData, loading: userTypeLoading } = useUserType(currentUser?.id)
-
-  // Redirect teacher to profile
+  // Redirect teacher to profile immediately based on login data (no API call needed)
   useEffect(() => {
-    if (userTypeData?.isTeacher && userTypeData.teacherId) {
-      router.replace(`/dashboard/teachers/${userTypeData.teacherId}`)
+    if (currentUser?.isTeacher && currentUser.teacherId) {
+      router.replace(`/dashboard/teachers/${currentUser.teacherId}`)
     }
-  }, [userTypeData, router])
+  }, [currentUser, router])
 
   // Fetch data based on user type
   const dataFetchedRef = useRef(false)
   
   useEffect(() => {
-    if (!currentUser || userTypeLoading) return
-    if (userTypeData?.isTeacher) return // Teacher will be redirected
-    if (dataFetchedRef.current) return // Prevent duplicate fetch
+    if (!currentUser) return
+    if (currentUser.isTeacher) return // Teacher will be redirected
+    if (dataFetchedRef.current) return
     
     dataFetchedRef.current = true
 
-    const userIsAdmin = currentUser.role === "admin" || currentUser.role === "Administrator" || currentUser.role?.toLowerCase() === "admin"
-    
-    if (userIsAdmin) {
+    if (isAdmin) {
       // Admin sees dashboard stats
       fetch("/api/dashboard/stats")
         .then((res) => res.ok ? res.json() : null)
@@ -128,9 +128,9 @@ export default function DashboardPage() {
           setLoading(false)
         })
         .catch(() => setLoading(false))
-    } else if (userTypeData?.isStudent && userTypeData.studentId) {
+    } else if (currentUser.isStudent && currentUser.studentId) {
       // Fetch full student data for display
-      fetch(`/api/students/${userTypeData.studentId}`)
+      fetch(`/api/students/${currentUser.studentId}`)
         .then((res) => res.ok ? res.json() : null)
         .then((data) => {
           if (data) setStudentData(data)
@@ -141,23 +141,10 @@ export default function DashboardPage() {
       // Regular user - just stop loading
       setLoading(false)
     }
-  }, [currentUser, userTypeData, userTypeLoading])
+  }, [currentUser, isAdmin])
 
-  // Check if user is admin
-  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "Administrator" || currentUser?.role?.toLowerCase() === "admin"
-  
-  // Show loading while checking user type (but not for admins - they always see admin dashboard)
-  if (!isAdmin && (userTypeLoading || !userTypeData)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="mr-2 text-muted-foreground">בודק הרשאות...</span>
-      </div>
-    )
-  }
-  
-  // Redirect teacher to profile (show loading while redirecting)
-  if (userTypeData?.isTeacher && userTypeData.teacherId) {
+  // Teacher gets redirected - show loading while redirecting
+  if (currentUser?.isTeacher && currentUser.teacherId) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

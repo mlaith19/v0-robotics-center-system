@@ -42,6 +42,18 @@ export async function POST(request: Request) {
       JOIN "RolePermission" rp ON p.id = rp."permissionId"
       WHERE rp."roleId" = ${user.roleId}
     `
+    
+    // בדיקה אם המשתמש הוא מורה - נשמור את זה כדי לא לבדוק שוב בכל טעינת דף
+    const teacherCheck = await sql`
+      SELECT id FROM "Teacher" WHERE "userId" = ${user.id} LIMIT 1
+    `
+    const teacherId = teacherCheck.length > 0 ? teacherCheck[0].id : null
+    
+    // בדיקה אם המשתמש הוא תלמיד
+    const studentCheck = await sql`
+      SELECT id FROM "Student" WHERE "userId" = ${user.id} LIMIT 1
+    `
+    const studentId = studentCheck.length > 0 ? studentCheck[0].id : null
 
     // החזרת פרטי המשתמש
     const userData = {
@@ -53,7 +65,12 @@ export async function POST(request: Request) {
       roleKey: user.role_key,
       roleId: user.roleId,
       permissions: user.permissions || permissions.map((p: { name: string; description: string }) => p.name),
-      loginTime: new Date().toISOString()
+      loginTime: new Date().toISOString(),
+      // מידע על סוג המשתמש - נשמר בזמן ההתחברות
+      teacherId: teacherId,
+      studentId: studentId,
+      isTeacher: !!teacherId,
+      isStudent: !!studentId
     }
 
     return NextResponse.json(userData)
