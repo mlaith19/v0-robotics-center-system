@@ -72,10 +72,7 @@ export default function TeacherViewPage() {
   const router = useRouter()
   const params = useParams<{ id: string }>()
   const id = params?.id
-  
-  // If id is "create", redirect immediately using window.location
-  // This must happen before hooks but we handle it in render
-  const isCreateRoute = id === "create"
+  const isCreateRoute = id === "create" || id === "new" // Declare isCreateRoute variable
   
   const [teacher, setTeacher] = useState<Teacher | null>(null)
   const [loading, setLoading] = useState(!isCreateRoute) // Don't show loading for create route
@@ -86,12 +83,12 @@ export default function TeacherViewPage() {
   const [payments, setPayments] = useState<any[]>([]) // Declare payments variable
   const [isTeacherUser, setIsTeacherUser] = useState(false)
 
-  // Redirect to create page if id is "create"
+  // Redirect to new page if id is "create" or "new"
   useEffect(() => {
-    if (isCreateRoute) {
-      router.replace("/dashboard/teachers/create")
+    if (isCreateRoute && typeof window !== 'undefined') {
+      window.location.replace("/dashboard/teachers/new")
     }
-  }, [isCreateRoute, router])
+  }, [isCreateRoute])
 
   // Check if user is linked to this teacher (viewing own profile)
   useEffect(() => {
@@ -494,14 +491,9 @@ export default function TeacherViewPage() {
     }
   }
 
-  // Redirect immediately if id is "create"
-  if (isCreateRoute) {
-    // Use useEffect for redirect to avoid hydration issues
-    // Meanwhile return null to not show loading
-    return null
-  }
-  
-  if (loading) return <div className="p-6">טוען...</div>
+  // Note: if id is "create", the useEffect above handles redirect
+  // We show a brief loading state while redirecting
+  if (loading || isCreateRoute) return <div className="p-6">טוען...</div>
   
   if (error)
     return (
@@ -776,7 +768,7 @@ export default function TeacherViewPage() {
                         </div>
                         {/* Left side - Amount and Badge */}
                         <div className="flex items-center gap-2 whitespace-nowrap">
-                          <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400">
                             תשלום
                           </span>
                           <span className="font-bold text-green-600">{Number(e.amount).toLocaleString("he-IL")} ₪</span>
@@ -870,7 +862,7 @@ export default function TeacherViewPage() {
                         <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${
                           isPresent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
                           isAbsent ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                          "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                          "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
                         }`}>{statusLabel}</span>
                       </div>
                       {a.notes && <div className="text-sm text-muted-foreground mt-2 pt-2 border-t text-right">{a.notes}</div>}
