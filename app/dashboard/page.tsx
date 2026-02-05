@@ -102,31 +102,12 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Redirect teacher to profile - check cookie first, then API as fallback
-  const teacherCheckRef = useRef(false)
-  
+  // Redirect teacher to profile based on cookie data only (no API calls)
   useEffect(() => {
-    // If cookie already has teacher info, redirect immediately
     if (currentUser?.isTeacher && currentUser.teacherId) {
       router.replace(`/dashboard/teachers/${currentUser.teacherId}`)
-      return
     }
-    
-    // If not admin and cookie doesn't have teacher info, check API once
-    if (currentUser && !isAdmin && !currentUser.isTeacher && !teacherCheckRef.current) {
-      teacherCheckRef.current = true
-      
-      fetch(`/api/teachers/by-user/${currentUser.id}`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data?.id) {
-            // User is a teacher - redirect to profile
-            router.replace(`/dashboard/teachers/${data.id}`)
-          }
-        })
-        .catch(() => {})
-    }
-  }, [currentUser, isAdmin, router])
+  }, [currentUser, router])
 
   // Fetch data based on user type
   const dataFetchedRef = useRef(false)
@@ -176,6 +157,25 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  // If user is not admin and doesn't have isTeacher/isStudent info, they need to re-login
+  // This happens for sessions created before we added these fields to login
+  if (!isAdmin && currentUser.isTeacher === undefined && currentUser.isStudent === undefined) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" dir="rtl">
+        <p className="text-lg text-muted-foreground">נא להתנתק ולהתחבר מחדש כדי לעדכן את ההרשאות</p>
+        <Button 
+          onClick={() => {
+            document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+            window.location.href = "/login"
+          }}
+          className="gap-2"
+        >
+          התנתק והתחבר מחדש
+        </Button>
       </div>
     )
   }
