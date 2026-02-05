@@ -102,12 +102,31 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Redirect teacher to profile immediately based on login data (no API call needed)
+  // Redirect teacher to profile - check cookie first, then API as fallback
+  const teacherCheckRef = useRef(false)
+  
   useEffect(() => {
+    // If cookie already has teacher info, redirect immediately
     if (currentUser?.isTeacher && currentUser.teacherId) {
       router.replace(`/dashboard/teachers/${currentUser.teacherId}`)
+      return
     }
-  }, [currentUser, router])
+    
+    // If not admin and cookie doesn't have teacher info, check API once
+    if (currentUser && !isAdmin && !currentUser.isTeacher && !teacherCheckRef.current) {
+      teacherCheckRef.current = true
+      
+      fetch(`/api/teachers/by-user/${currentUser.id}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.id) {
+            // User is a teacher - redirect to profile
+            router.replace(`/dashboard/teachers/${data.id}`)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [currentUser, isAdmin, router])
 
   // Fetch data based on user type
   const dataFetchedRef = useRef(false)
