@@ -181,7 +181,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Navigation */}
           <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-            {isLinkedToStudent && currentUser?.role !== "admin" && currentUser?.role !== "Administrator" ? (
+            {isLinkedToTeacher && currentUser?.role !== "admin" && currentUser?.role !== "Administrator" ? (
+              // Teacher-specific navigation - no home link, profile is their home
+              <>
+                {teacherData ? (
+                  <Link
+                    href={`/dashboard/teachers/${teacherData.id}`}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                      pathname.includes(`/dashboard/teachers/${teacherData.id}`)
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Home className="h-5 w-5" />
+                    דף הבית
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground">
+                    <Home className="h-5 w-5" />
+                    טוען...
+                  </div>
+                )}
+                <Link
+                  href="/dashboard/schedule"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+                    pathname === "/dashboard/schedule"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Calendar className="h-5 w-5" />
+                  לוח זמנים
+                </Link>
+              </>
+            ) : isLinkedToStudent && currentUser?.role !== "admin" && currentUser?.role !== "Administrator" ? (
               // Student-specific navigation
               <>
                 <Link
@@ -221,53 +256,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 >
                   <Calendar className="h-5 w-5" />
                   לוח זמנים
-                </Link>
-              </>
-            ) : isLinkedToTeacher ? (
-              // Teacher-specific navigation
-              <>
-                {teacherData ? (
-                  <Link
-                    href={`/dashboard/teachers/${teacherData.id}`}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                      pathname.includes(`/dashboard/teachers/${teacherData.id}`)
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <User className="h-5 w-5" />
-                    הפרופיל שלי
-                  </Link>
-                ) : (
-                  <div className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-muted-foreground">
-                    <User className="h-5 w-5" />
-                    טוען...
-                  </div>
-                )}
-                <Link
-                  href="/dashboard/schedule"
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                    pathname === "/dashboard/schedule"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <Calendar className="h-5 w-5" />
-                  לוח זמנים
-                </Link>
-                <Link
-                  href="/dashboard/attendance"
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                    pathname === "/dashboard/attendance"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <ClipboardCheck className="h-5 w-5" />
-                  נוכחות
                 </Link>
               </>
             ) : (
