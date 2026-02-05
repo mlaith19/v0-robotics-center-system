@@ -102,21 +102,15 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Redirect teacher to profile based on cookie data only (no API calls)
-  useEffect(() => {
-    if (currentUser?.isTeacher && currentUser.teacherId) {
-      router.replace(`/dashboard/teachers/${currentUser.teacherId}`)
-    }
-  }, [currentUser, router])
-
-  // Fetch data based on user type
+  // State for teacher data (fetched from API if not in cookie)
+  const [teacherData, setTeacherData] = useState<{ id: string } | null>(null)
+  
+  // Fetch user type data (teacher/student) once when page loads
   const dataFetchedRef = useRef(false)
   
   useEffect(() => {
     if (!currentUser) return
-    if (currentUser.isTeacher) return // Teacher will be redirected
     if (dataFetchedRef.current) return
-    
     dataFetchedRef.current = true
 
     if (isAdmin) {
@@ -128,54 +122,37 @@ export default function DashboardPage() {
           setLoading(false)
         })
         .catch(() => setLoading(false))
-    } else if (currentUser.isStudent && currentUser.studentId) {
-      // Fetch full student data for display
-      fetch(`/api/students/${currentUser.studentId}`)
+    } else {
+      // For non-admin users, check if they are teacher or student
+      // Check teacher first
+      fetch(`/api/teachers/by-user/${currentUser.id}`)
         .then((res) => res.ok ? res.json() : null)
         .then((data) => {
-          if (data) setStudentData(data)
-          setLoading(false)
+          if (data?.id) {
+            // User is a teacher - save and redirect
+            setTeacherData({ id: data.id })
+            router.replace(`/dashboard/teachers/${data.id}`)
+          } else {
+            // Not a teacher, check if student
+            return fetch(`/api/students/by-user/${currentUser.id}`)
+              .then((res) => res.ok ? res.json() : null)
+              .then((studentRes) => {
+                if (studentRes?.id) {
+                  setStudentData(studentRes)
+                }
+                setLoading(false)
+              })
+          }
         })
         .catch(() => setLoading(false))
-    } else {
-      // Regular user - just stop loading
-      setLoading(false)
     }
-  }, [currentUser, isAdmin])
+  }, [currentUser, isAdmin, router])
 
-  // Teacher gets redirected - show loading while redirecting
-  if (currentUser?.isTeacher && currentUser.teacherId) {
+  // Show loading while checking user type or redirecting
+  if (loading || !currentUser || teacherData) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="mr-2 text-muted-foreground">מעביר לפרופיל...</span>
-      </div>
-    )
-  }
-
-  if (loading || !currentUser) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  // If user is not admin and doesn't have isTeacher/isStudent info, they need to re-login
-  // This happens for sessions created before we added these fields to login
-  if (!isAdmin && currentUser.isTeacher === undefined && currentUser.isStudent === undefined) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" dir="rtl">
-        <p className="text-lg text-muted-foreground">נא להתנתק ולהתחבר מחדש כדי לעדכן את ההרשאות</p>
-        <Button 
-          onClick={() => {
-            document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
-            window.location.href = "/login"
-          }}
-          className="gap-2"
-        >
-          התנתק והתחבר מחדש
-        </Button>
       </div>
     )
   }
